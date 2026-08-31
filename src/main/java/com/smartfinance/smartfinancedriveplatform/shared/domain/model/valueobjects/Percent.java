@@ -1,5 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects;
 
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -18,10 +19,10 @@ public record Percent(BigDecimal value) {
      */
     public Percent {
         if (value == null) {
-            throw new IllegalArgumentException("shared.error.percent.value.required");
+            throw new DomainValidationException("shared.error.percent.value.required");
         }
         if (value.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("shared.error.percent.value.negative");
+            throw new DomainValidationException("shared.error.percent.value.negative");
         }
         // Normalize percentage to 6 decimal places for interest rate precision
         value = value.setScale(6, RoundingMode.HALF_UP);
@@ -39,7 +40,7 @@ public record Percent(BigDecimal value) {
      */
     public static Percent fromDecimal(BigDecimal decimalFraction) {
         if (decimalFraction == null) {
-            throw new IllegalArgumentException("shared.error.percent.decimal.required");
+            throw new DomainValidationException("shared.error.percent.decimal.required");
         }
         return new Percent(decimalFraction.multiply(HUNDRED));
     }

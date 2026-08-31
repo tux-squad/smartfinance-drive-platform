@@ -1,5 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects;
 
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -19,13 +20,13 @@ public record Money(BigDecimal amount, String currency) {
      */
     public Money {
         if (amount == null) {
-            throw new IllegalArgumentException("shared.error.money.amount.required");
+            throw new DomainValidationException("shared.error.money.amount.required");
         }
         if (currency == null || currency.isBlank()) {
-            throw new IllegalArgumentException("shared.error.money.currency.required");
+            throw new DomainValidationException("shared.error.money.currency.required");
         }
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("shared.error.money.amount.negative");
+            throw new DomainValidationException("shared.error.money.amount.negative");
         }
         // Normalize to 2 decimal places with HALF_UP rounding
         amount = amount.setScale(2, RoundingMode.HALF_UP);
@@ -120,7 +121,7 @@ public record Money(BigDecimal amount, String currency) {
 
     private void checkCurrenciesMatch(Money other) {
         if (!this.currency.equals(other.currency)) {
-            throw new IllegalArgumentException(String.format(
+            throw new DomainValidationException(String.format(
                     "shared.error.money.currency.mismatch: Cannot operate on %s and %s",
                     this.currency, other.currency));
         }
