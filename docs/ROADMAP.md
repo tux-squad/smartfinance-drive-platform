@@ -44,9 +44,12 @@ Este documento registra el progreso del desarrollo de la plataforma **SmartFinan
 
 ---
 
-### 4. Bounded Context: `profiles` (Perfiles de Usuarios) `[PENDIENTE]`
-- [ ] **Dominio:** perfiles de clientes (`CustomerProfile`) y concesionarios (`PartnerProfile`).
-- [ ] Servicios de aplicación para vincular perfiles con el usuario autenticado.
+### 4. Bounded Context: `profiles` (Perfiles de Usuarios) `[COMPLETADO]`
+- [x] **Dominio:** Agregado `Profile`, Value Objects (`ProfileId`, `UserId`), comandos y consultas.
+- [x] **Aplicación:** Servicios CQRS de lectura y escritura (`ProfileCommandServiceImpl`, `ProfileQueryServiceImpl`).
+- [x] **Infraestructura:** Entidad JPA `ProfilePersistenceEntity` y adaptadores de repositorio.
+- [x] **Interfaces REST:** Controller `ProfilesController` (`/api/v1/profiles`), DTOs y transformadores.
+- [x] **Pruebas Unitarias:** Cobertura de tests para agregado, adaptador y controlador.
 
 ---
 
