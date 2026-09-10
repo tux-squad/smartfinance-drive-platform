@@ -53,8 +53,12 @@ Este documento registra el progreso del desarrollo de la plataforma **SmartFinan
 
 ---
 
-### 5. Bounded Context: `partners` (Concesionarios y Entidades Financieras) `[PENDIENTE]`
-- [ ] Gestión de bancos afiliados, tasas y condiciones comerciales de financiamiento vehicular.
+### 5. Bounded Context: `partners` (Concesionarios y Entidades Financieras) `[COMPLETADO]`
+- [x] **Dominio:** Agregado `FinancialEntity`, entidad `RateBenchmark`, Value Objects (`FinancialEntityId`, `RateBenchmarkId`), comandos y consultas.
+- [x] **Aplicación:** Servicios CQRS de lectura y escritura (`FinancialEntityCommandServiceImpl`, `FinancialEntityQueryServiceImpl`).
+- [x] **Infraestructura:** Entidades JPA `FinancialEntityPersistenceEntity` y `RateBenchmarkPersistenceEntity`, adaptadores y Spring Data.
+- [x] **Interfaces REST:** Controller `FinancialEntitiesController` (`/api/v1/financial-entities`), DTOs y transformadores.
+- [x] **Pruebas Unitarias:** Cobertura de tests para agregado, adaptador y controlador.
 
 ---
 
