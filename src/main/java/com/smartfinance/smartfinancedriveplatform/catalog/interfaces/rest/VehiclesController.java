@@ -2,7 +2,6 @@ package com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.catalog.application.commandservices.VehicleCommandService;
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
-import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.aggregates.Vehicle;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.DeleteVehicleCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
