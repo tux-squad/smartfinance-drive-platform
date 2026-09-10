@@ -1,0 +1,66 @@
+package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
+
+import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Username;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignInResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignUpResource;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("AuthenticationController Unit Tests")
+class AuthenticationControllerTest {
+
+    @Mock
+    private UserCommandService userCommandService;
+
+    @InjectMocks
+    private AuthenticationController authenticationController;
+
+    @Test
+    @DisplayName("Should return 201 Created on successful sign up")
+    void shouldReturnCreatedOnSignUp() {
+        SignUpResource resource = new SignUpResource("user@example.com", "password123", List.of("ROLE_USER"));
+        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+
+        when(userCommandService.handle(any(SignUpCommand.class))).thenReturn(Optional.of(user));
+
+        ResponseEntity<?> response = authenticationController.signUp(resource);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on successful sign in")
+    void shouldReturnOkOnSignIn() {
+        SignInResource resource = new SignInResource("user@example.com", "password123");
+        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+        UserCommandService.AuthenticationResult authResult =
+                new UserCommandService.AuthenticationResult(user, "mocked-jwt-token");
+
+        when(userCommandService.handle(any(SignInCommand.class))).thenReturn(Optional.of(authResult));
+
+        ResponseEntity<?> response = authenticationController.signIn(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+}
