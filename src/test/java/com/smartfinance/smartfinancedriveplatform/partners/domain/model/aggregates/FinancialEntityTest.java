@@ -5,7 +5,6 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.Domai
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Percent;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
