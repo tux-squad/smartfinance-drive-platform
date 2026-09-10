@@ -6,7 +6,6 @@ import com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggrega
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.commands.CreateSimulationCommand;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.commands.DeleteSimulationCommand;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetAllSimulationsQuery;
-import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetSimulationByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.valueobjects.GracePeriodType;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.valueobjects.VehicleInsuranceType;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.CreateSimulationResource;
