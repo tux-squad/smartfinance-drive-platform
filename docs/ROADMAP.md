@@ -62,13 +62,18 @@ Este documento registra el progreso del desarrollo de la plataforma **SmartFinan
 
 ---
 
-### 6. Bounded Context: `financing` (Motor Financiero SBS) `[PENDIENTE]`
-- [ ] Solicitud de crédito y simulación.
-- [ ] **Motor Financiero:** Implementación de fórmulas matemáticas SBS:
-  - Método francés vencido ordinario con amortizaciones exactas por días calendario.
-  - Periodos de gracia total y parcial.
-  - Cuotas dobles (Julio y Diciembre) y Cuota Balón (devengando intereses).
-  - Cálculo de la TCEA mediante Solver TIR (Bisección).
+### 6. Bounded Context: `financing` (Motor Financiero SBS) `[COMPLETADO]`
+- [x] **Dominio:** Agregado raíz `Simulation`, entidad `PaymentPeriod`, Value Objects (`SimulationId`, `PaymentPeriodId`, `GracePeriodType`, `VehicleInsuranceType`), comandos y consultas.
+- [x] **Motor Financiero (`FinancingPlanBuilder`):** Implementación de fórmulas matemáticas SBS:
+  - Método francés vencido ordinario con amortizaciones por base diaria exacta ($360$ días).
+  - Periodos de gracia total (capitaliza intereses) y parcial (intereses y seguros).
+  - Seguros de desgravamen y vehicular (`ENDOSADO`, `MENSUAL`, `FINANCIADO`).
+  - Cuota Balón ("Compra Inteligente") descontada a valor presente.
+  - Cálculo exacto de indicadores **TIR** (Newton-Raphson), **TCEA** y **VAN**.
+- [x] **Aplicación:** Servicios CQRS de lectura y escritura (`SimulationCommandServiceImpl`, `SimulationQueryServiceImpl`).
+- [x] **Infraestructura:** Entidades JPA `SimulationPersistenceEntity` y `PaymentPeriodPersistenceEntity`, assemblers y adaptadores de repositorio.
+- [x] **Interfaces REST:** Controller `SimulationsController` (`/api/v1/simulations`), DTOs y transformadores.
+- [x] **Pruebas Unitarias:** Cobertura de tests para motor financiero, agregado, adaptador y controlador REST.
 
 ---
 
