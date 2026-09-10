@@ -77,8 +77,16 @@ Este documento registra el progreso del desarrollo de la plataforma **SmartFinan
 
 ---
 
-### 7. Bounded Context: `scoring` `[PENDIENTE]`
-- [ ] Reglas de evaluación de riesgos del perfil solicitante frente a la simulación financiera.
+### 7. Bounded Context: `scoring` (Credit Scoring & Risk Assessment) `[COMPLETADO]`
+- [x] **Dominio:** Agregado raíz `CreditScore`, Value Objects (`ScoreId`, `RiskTier`, `ScoringStatus`), comandos y consultas.
+- [x] **Motor de Scoring (`CreditScoringEngine`):** Reglas de evaluación de riesgo basadas en el Ratio de Cobertura de Deuda (DTI - Debt-to-Income):
+  - Tier A ($\text{DTI} \le 30\%$): Estado `APPROVED`, descuento TEA $-1.5\%$.
+  - Tier B ($30\% < \text{DTI} \le 45\%$): Estado `CONDITIONALLY_APPROVED`, TEA estándar.
+  - Tier C ($\text{DTI} > 45\%$): Estado `REJECTED`, recargo por riesgo $+2.5\%$.
+- [x] **Aplicación:** Servicios CQRS de lectura y escritura (`CreditScoreCommandServiceImpl`, `CreditScoreQueryServiceImpl`).
+- [x] **Infraestructura:** Entidad JPA `CreditScorePersistenceEntity`, assemblers y `CreditScoreRepositoryAdapter`.
+- [x] **Interfaces REST:** Controller `CreditScoresController` (`/api/v1/credit-scores`), DTOs y transformadores.
+- [x] **Pruebas Unitarias:** Cobertura de tests para motor de scoring, agregado, adaptador JPA y controlador REST.
 
 ---
 

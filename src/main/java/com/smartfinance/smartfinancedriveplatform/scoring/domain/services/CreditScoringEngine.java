@@ -50,8 +50,8 @@ public class CreditScoringEngine {
         if (dtiValue <= 30.0) {
             tier = RiskTier.TIER_A;
             status = ScoringStatus.APPROVED;
-            rateAdjustment = Percent.of(-1.5);
-            notes = String.format("Low risk profile (DTI %.2f%% <= 30%%). Qualifies for -1.5%% TEA discount.", dtiValue);
+            rateAdjustment = Percent.of(1.5);
+            notes = String.format("Low risk profile (DTI %.2f%% <= 30%%). Qualifies for 1.5%% TEA discount.", dtiValue);
         } else if (dtiValue <= 45.0) {
             tier = RiskTier.TIER_B;
             status = ScoringStatus.CONDITIONALLY_APPROVED;
