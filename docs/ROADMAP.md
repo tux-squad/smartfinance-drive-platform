@@ -90,8 +90,16 @@ Este documento registra el progreso del desarrollo de la plataforma **SmartFinan
 
 ---
 
-### 8. Bounded Context: `projections` `[PENDIENTE]`
-- [ ] Reportes consolidados y estadísticas financieras para bancos y concesionarios.
+### 8. Bounded Context: `projections` (Depreciation & Valuation Projections) `[COMPLETADO]`
+- [x] **Dominio:** Agregado raíz `DepreciationProjection`, Value Objects (`ProjectionId`, `MotorizationType`, `RecommendedAction`), comandos y consultas.
+- [x] **Motor de Depreciación (`DepreciationCalculator`):** Curva de estimación de valor comercial a 2, 3 y 5 años según motorización:
+  - `COMBUSTION`: Depreciación Año 1 = $18\%$, Años posteriores = $10\%/\text{año}$.
+  - `ECOLOGICO`: Depreciación Año 1 = $12\%$, Años posteriores = $7\%/\text{año}$.
+  - Matriz de asesoramiento inteligente al vencimiento vs Cuota Balón (`TRADE_IN`, `KEEP_AND_PAY`, `RETURN_VEHICLE`).
+- [x] **Aplicación:** Servicios CQRS de lectura y escritura (`DepreciationProjectionCommandServiceImpl`, `DepreciationProjectionQueryServiceImpl`).
+- [x] **Infraestructura:** Entidad JPA `DepreciationProjectionPersistenceEntity`, assemblers y `DepreciationProjectionRepositoryAdapter`.
+- [x] **Interfaces REST:** Controller `DepreciationProjectionsController` (`/api/v1/depreciation-projections`), DTOs y transformadores.
+- [x] **Pruebas Unitarias:** Cobertura de tests para calculador de depreciación, agregado, adaptador JPA y controlador REST.
 
 ---
 
