@@ -2,12 +2,14 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Username;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.AuthenticatedUserResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.GoogleSignInResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RefreshTokenResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignInResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignUpResource;
@@ -86,4 +88,23 @@ class AuthenticationControllerTest {
         assertEquals("new-access-token", response.getBody().token());
         assertEquals("new-refresh-token", response.getBody().refreshToken());
     }
+
+    @Test
+    @DisplayName("Should return 200 OK on successful google sign in")
+    void shouldReturnOkOnGoogleSignIn() {
+        GoogleSignInResource resource = new GoogleSignInResource("valid-google-id-token");
+        User user = new User(1L, new Username("user@gmail.com"), new Password("hashedPass"), List.of());
+        UserCommandService.AuthenticationResult authResult =
+                new UserCommandService.AuthenticationResult(user, "google-access-token", "google-refresh-token");
+
+        when(userCommandService.handle(any(GoogleSignInCommand.class))).thenReturn(Optional.of(authResult));
+
+        ResponseEntity<AuthenticatedUserResource> response = authenticationController.googleSignIn(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("google-access-token", response.getBody().token());
+        assertEquals("google-refresh-token", response.getBody().refreshToken());
+    }
 }
+
