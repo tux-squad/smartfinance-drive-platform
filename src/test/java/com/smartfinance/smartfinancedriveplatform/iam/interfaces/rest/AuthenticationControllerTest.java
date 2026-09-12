@@ -2,10 +2,13 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Username;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.AuthenticatedUserResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RefreshTokenResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignInResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignUpResource;
 import org.junit.jupiter.api.DisplayName;
@@ -54,13 +57,33 @@ class AuthenticationControllerTest {
         SignInResource resource = new SignInResource("user@example.com", "password123");
         User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
         UserCommandService.AuthenticationResult authResult =
-                new UserCommandService.AuthenticationResult(user, "mocked-jwt-token");
+                new UserCommandService.AuthenticationResult(user, "mocked-jwt-token", "mocked-refresh-token");
 
         when(userCommandService.handle(any(SignInCommand.class))).thenReturn(Optional.of(authResult));
 
-        ResponseEntity<?> response = authenticationController.signIn(resource);
+        ResponseEntity<AuthenticatedUserResource> response = authenticationController.signIn(resource);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
+        assertEquals("mocked-jwt-token", response.getBody().token());
+        assertEquals("mocked-refresh-token", response.getBody().refreshToken());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on successful refresh token")
+    void shouldReturnOkOnRefreshToken() {
+        RefreshTokenResource resource = new RefreshTokenResource("valid-refresh-token");
+        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+        UserCommandService.AuthenticationResult authResult =
+                new UserCommandService.AuthenticationResult(user, "new-access-token", "new-refresh-token");
+
+        when(userCommandService.handle(any(RefreshTokenCommand.class))).thenReturn(Optional.of(authResult));
+
+        ResponseEntity<AuthenticatedUserResource> response = authenticationController.refreshToken(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("new-access-token", response.getBody().token());
+        assertEquals("new-refresh-token", response.getBody().refreshToken());
     }
 }

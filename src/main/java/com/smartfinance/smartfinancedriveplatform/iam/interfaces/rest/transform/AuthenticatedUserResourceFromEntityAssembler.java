@@ -4,11 +4,11 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.Us
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.AuthenticatedUserResource;
 
 /**
- * Assembler converting User entity and token string to {@link AuthenticatedUserResource}.
+ * Assembler converting User entity, access token, and refresh token to {@link AuthenticatedUserResource}.
  */
 public class AuthenticatedUserResourceFromEntityAssembler {
 
-    public static AuthenticatedUserResource toResourceFromEntity(User user, String token) {
+    public static AuthenticatedUserResource toResourceFromEntity(User user, String token, String refreshToken) {
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();
@@ -17,6 +17,7 @@ public class AuthenticatedUserResourceFromEntityAssembler {
                 user.getId(),
                 user.getUsername().username(),
                 token,
+                refreshToken,
                 roleNames
         );
     }
