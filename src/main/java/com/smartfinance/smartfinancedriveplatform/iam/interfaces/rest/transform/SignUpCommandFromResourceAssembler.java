@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * Assembler converting {@link SignUpResource} to {@link SignUpCommand}.
+ * Restricts public registration so that clients cannot self-assign administrative roles (ROLE_ADMIN).
  */
 public class SignUpCommandFromResourceAssembler {
 
@@ -19,10 +20,17 @@ public class SignUpCommandFromResourceAssembler {
         if (resource.roles() != null) {
             for (String roleStr : resource.roles()) {
                 try {
-                    roles.add(Roles.valueOf(roleStr));
+                    Roles role = Roles.valueOf(roleStr.trim().toUpperCase());
+                    // Exclude administrative roles from public registration
+                    if (role != Roles.ROLE_ADMIN) {
+                        roles.add(role);
+                    }
                 } catch (IllegalArgumentException ignored) {
                 }
             }
+        }
+        if (roles.isEmpty()) {
+            roles.add(Roles.ROLE_USER);
         }
         return new SignUpCommand(
                 new Username(resource.username()),

@@ -1,34 +1,46 @@
 package com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices;
 
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.tokens.GoogleTokenVerifierService;
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.tokens.TokenService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Username;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.services.HashingService;
-import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Service implementation for handling IAM write commands (Sign Up & Sign In).
+ * Service implementation for handling IAM write commands (Sign Up, Sign In, Token Refresh, Password Recovery, and Google Sign-In).
  */
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
 
     private final UserRepository userRepository;
     private final HashingService hashingService;
-    private final JwtTokenService tokenService;
+    private final TokenService tokenService;
+    private final GoogleTokenVerifierService googleTokenVerifierService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
-                                  JwtTokenService tokenService) {
+                                  TokenService tokenService,
+                                  GoogleTokenVerifierService googleTokenVerifierService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
+        this.googleTokenVerifierService = googleTokenVerifierService;
     }
 
     @Override
@@ -60,6 +72,82 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .toList();
 
         String token = tokenService.generateToken(user.getUsername().username(), roleNames);
-        return Optional.of(new AuthenticationResult(user, token));
+        String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
+        return Optional.of(new AuthenticationResult(user, token, refreshToken));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AuthenticationResult> handle(RefreshTokenCommand command) {
+        if (command.refreshToken() == null || !tokenService.validateToken(command.refreshToken())) {
+            throw new DomainValidationException("iam.error.invalidRefreshToken");
+        }
+
+        String usernameStr = tokenService.getUsernameFromToken(command.refreshToken());
+        User user = userRepository.findByUsername(new Username(usernameStr))
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        var roleNames = user.getRoles().stream()
+                .map(Enum::name)
+                .toList();
+
+        String newAccessToken = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String newRefreshToken = tokenService.generateRefreshToken(user.getUsername().username());
+        return Optional.of(new AuthenticationResult(user, newAccessToken, newRefreshToken));
+    }
+
+    @Override
+    @Transactional
+    public Optional<AuthenticationResult> handle(GoogleSignInCommand command) {
+        var googleUserInfoOpt = googleTokenVerifierService.verifyToken(command.idToken());
+        if (googleUserInfoOpt.isEmpty()) {
+            throw new DomainValidationException("iam.error.invalidGoogleToken");
+        }
+
+        var googleUserInfo = googleUserInfoOpt.get();
+        Username username = new Username(googleUserInfo.email());
+
+        User user = userRepository.findByUsername(username).orElseGet(() -> {
+            String randomSecret = UUID.randomUUID().toString();
+            String hashedPassword = hashingService.encode(randomSecret);
+            User newUser = new User(username, new Password(hashedPassword), List.of(Roles.ROLE_USER));
+            return userRepository.save(newUser);
+        });
+
+        var roleNames = user.getRoles().stream()
+                .map(Enum::name)
+                .toList();
+
+        String token = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
+
+        return Optional.of(new AuthenticationResult(user, token, refreshToken));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String handle(ForgotPasswordCommand command) {
+        User user = userRepository.findByUsername(command.username())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        return tokenService.generatePasswordResetToken(user.getUsername().username());
+    }
+
+    @Override
+    @Transactional
+    public boolean handle(ResetPasswordCommand command) {
+        if (command.resetToken() == null || !tokenService.validateToken(command.resetToken())) {
+            throw new DomainValidationException("iam.error.invalidResetToken");
+        }
+
+        String usernameStr = tokenService.getUsernameFromToken(command.resetToken());
+        User user = userRepository.findByUsername(new Username(usernameStr))
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        String hashedNewPassword = hashingService.encode(command.newPassword().password());
+        user.setPassword(new Password(hashedNewPassword));
+        userRepository.save(user);
+
+        return true;
     }
 }
