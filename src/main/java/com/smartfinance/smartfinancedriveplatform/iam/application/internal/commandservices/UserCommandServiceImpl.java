@@ -2,7 +2,9 @@ package com.smartfinance.smartfinancedriveplatform.iam.application.internal.comm
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.tokens.TokenService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
@@ -16,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 /**
- * Service implementation for handling IAM write commands (Sign Up, Sign In, and Token Refresh).
+ * Service implementation for handling IAM write commands (Sign Up, Sign In, Token Refresh, and Password Recovery).
  */
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
@@ -84,5 +86,32 @@ public class UserCommandServiceImpl implements UserCommandService {
         String newAccessToken = tokenService.generateToken(user.getUsername().username(), roleNames);
         String newRefreshToken = tokenService.generateRefreshToken(user.getUsername().username());
         return Optional.of(new AuthenticationResult(user, newAccessToken, newRefreshToken));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String handle(ForgotPasswordCommand command) {
+        User user = userRepository.findByUsername(command.username())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        return tokenService.generatePasswordResetToken(user.getUsername().username());
+    }
+
+    @Override
+    @Transactional
+    public boolean handle(ResetPasswordCommand command) {
+        if (command.resetToken() == null || !tokenService.validateToken(command.resetToken())) {
+            throw new DomainValidationException("iam.error.invalidResetToken");
+        }
+
+        String usernameStr = tokenService.getUsernameFromToken(command.resetToken());
+        User user = userRepository.findByUsername(new Username(usernameStr))
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        String hashedNewPassword = hashingService.encode(command.newPassword().password());
+        user.setPassword(new Password(hashedNewPassword));
+        userRepository.save(user);
+
+        return true;
     }
 }

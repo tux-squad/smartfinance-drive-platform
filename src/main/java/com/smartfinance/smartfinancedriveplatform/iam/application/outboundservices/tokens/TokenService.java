@@ -26,6 +26,14 @@ public interface TokenService {
     String generateRefreshToken(String username);
 
     /**
+     * Generates a password reset token for a given username.
+     *
+     * @param username The subject username.
+     * @return The password reset token string.
+     */
+    String generatePasswordResetToken(String username);
+
+    /**
      * Validates a JWT token.
      *
      * @param token The token string.

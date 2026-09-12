@@ -14,7 +14,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Service responsible for generating and validating JWT access & refresh tokens using JJWT.
+ * Service responsible for generating and validating JWT access, refresh & reset tokens using JJWT.
  */
 @Service
 public class JwtTokenService implements TokenService {
@@ -56,6 +56,20 @@ public class JwtTokenService implements TokenService {
         return Jwts.builder()
                 .subject(username)
                 .claim("type", "refresh")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    @Override
+    public String generatePasswordResetToken(String username) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 900000); // 15 minutes default for password reset
+
+        return Jwts.builder()
+                .subject(username)
+                .claim("type", "reset")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
