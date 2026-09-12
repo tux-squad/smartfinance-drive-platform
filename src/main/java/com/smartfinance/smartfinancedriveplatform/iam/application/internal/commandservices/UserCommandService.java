@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.iam.application.internal.comm
 
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
@@ -24,6 +25,8 @@ public interface UserCommandService {
     Optional<AuthenticationResult> handle(SignInCommand command);
 
     Optional<AuthenticationResult> handle(RefreshTokenCommand command);
+
+    Optional<AuthenticationResult> handle(GoogleSignInCommand command);
 
     String handle(ForgotPasswordCommand command);
 
