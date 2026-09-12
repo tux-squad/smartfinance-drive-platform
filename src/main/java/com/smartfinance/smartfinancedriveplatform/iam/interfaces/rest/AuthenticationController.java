@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
@@ -10,6 +11,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Username;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.AuthenticatedUserResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.ForgotPasswordResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.GoogleSignInResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RefreshTokenResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.ResetPasswordResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SignInResource;
@@ -121,4 +123,23 @@ public class AuthenticationController {
                 "message", "Password reset successfully"
         ));
     }
+    /**
+     * Authenticates a user using Google OAuth2 ID Token and returns signed platform JWT tokens.
+     */
+    @PostMapping("/google")
+    public ResponseEntity<AuthenticatedUserResource> googleSignIn(@RequestBody GoogleSignInResource resource) {
+        GoogleSignInCommand command = new GoogleSignInCommand(resource.idToken());
+        var authenticatedUser = userCommandService.handle(command);
+        if (authenticatedUser.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        var authResult = authenticatedUser.get();
+        AuthenticatedUserResource authResource = AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(
+                authResult.user(),
+                authResult.token(),
+                authResult.refreshToken()
+        );
+        return ResponseEntity.ok(authResource);
+    }
 }
+
