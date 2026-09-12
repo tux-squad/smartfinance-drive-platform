@@ -9,6 +9,7 @@ public record AuthenticatedUserResource(
         Long id,
         String username,
         String token,
+        String refreshToken,
         List<String> roles
 ) {
 }
