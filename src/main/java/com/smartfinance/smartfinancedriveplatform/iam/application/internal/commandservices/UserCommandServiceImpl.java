@@ -1,12 +1,12 @@
 package com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices;
 
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.tokens.TokenService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.services.HashingService;
-import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +21,11 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     private final UserRepository userRepository;
     private final HashingService hashingService;
-    private final JwtTokenService tokenService;
+    private final TokenService tokenService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
-                                  JwtTokenService tokenService) {
+                                  TokenService tokenService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
