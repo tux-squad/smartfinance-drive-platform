@@ -1,8 +1,10 @@
 package com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.catalog.application.commandservices.VehicleCommandService;
+import com.smartfinance.smartfinancedriveplatform.catalog.application.outboundservices.storage.VehicleImageStorageService;
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.DeleteVehicleCommand;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.UpdateVehicleCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.UserId;
@@ -14,8 +16,10 @@ import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transf
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.UpdateVehicleCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.VehicleResourceFromEntityAssembler;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,10 +36,14 @@ public class VehiclesController {
 
     private final VehicleCommandService vehicleCommandService;
     private final VehicleQueryService vehicleQueryService;
+    private final VehicleImageStorageService vehicleImageStorageService;
 
-    public VehiclesController(VehicleCommandService vehicleCommandService, VehicleQueryService vehicleQueryService) {
+    public VehiclesController(VehicleCommandService vehicleCommandService, 
+                              VehicleQueryService vehicleQueryService,
+                              VehicleImageStorageService vehicleImageStorageService) {
         this.vehicleCommandService = vehicleCommandService;
         this.vehicleQueryService = vehicleQueryService;
+        this.vehicleImageStorageService = vehicleImageStorageService;
     }
 
     /**
@@ -122,4 +130,43 @@ public class VehiclesController {
         vehicleCommandService.handle(command);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * POST /api/v1/vehicles/{vehicleId}/image
+     * Uploads an image for an existing vehicle to Cloudinary and updates its imagePath.
+     *
+     * @param vehicleId The vehicle UUID.
+     * @param file      The multipart image file.
+     * @return The updated vehicle resource.
+     */
+    @PostMapping(value = "/{vehicleId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VehicleResource> uploadVehicleImage(
+            @PathVariable UUID vehicleId,
+            @RequestParam("file") MultipartFile file) {
+        var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
+        var vehicleOpt = vehicleQueryService.handle(query);
+        if (vehicleOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var vehicle = vehicleOpt.get();
+        String imageUrl = vehicleImageStorageService.uploadVehicleImage(file);
+
+        var updateCommand = new UpdateVehicleCommand(
+                vehicle.getId(),
+                vehicle.getFinancialEntityId(),
+                vehicle.getBrand(),
+                vehicle.getModel(),
+                vehicle.getManufactureYear(),
+                vehicle.getCondition(),
+                vehicle.getPrice(),
+                imageUrl
+        );
+
+        var updatedOpt = vehicleCommandService.handle(updateCommand);
+        return updatedOpt
+                .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
 }
+
