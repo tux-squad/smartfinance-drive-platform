@@ -126,6 +126,37 @@ class VehiclesControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(uploadedUrl, response.getBody().imagePath());
+        verify(vehicleImageStorageService, never()).deleteVehicleImage(any());
+    }
+
+    @Test
+    void testUploadVehicleImageDeletesPreviousImageWhenPresent() {
+        UUID vehicleId = UUID.randomUUID();
+        String oldImageUrl = "https://res.cloudinary.com/jzoqodzv/image/upload/v1/smartfinance/vehicles/old_car.jpg";
+        Vehicle vehicleWithOldImage = new Vehicle(
+            new UserId(UUID.randomUUID()), new FinancialEntityId(UUID.randomUUID()), "Toyota", "Corolla", 2023, "NEW", Money.of(15000, "USD"), oldImageUrl
+        );
+
+        String newUploadedUrl = "https://res.cloudinary.com/jzoqodzv/image/upload/v1/smartfinance/vehicles/new_car.jpg";
+        MockMultipartFile file = new MockMultipartFile("file", "new_car.jpg", "image/jpeg", "image content".getBytes());
+
+        Vehicle updatedVehicle = new Vehicle(
+            vehicleWithOldImage.getUserId(), vehicleWithOldImage.getFinancialEntityId(), "Toyota", "Corolla", 2023, "NEW", Money.of(15000, "USD"), newUploadedUrl
+        );
+
+        when(vehicleQueryService.handle(any(GetVehicleByIdQuery.class))).thenReturn(Optional.of(vehicleWithOldImage));
+        when(vehicleImageStorageService.uploadVehicleImage(any())).thenReturn(newUploadedUrl);
+        when(vehicleCommandService.handle(any(UpdateVehicleCommand.class))).thenReturn(Optional.of(updatedVehicle));
+
+        ResponseEntity<VehicleResource> response = vehiclesController.uploadVehicleImage(vehicleId, file);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(newUploadedUrl, response.getBody().imagePath());
+
+        // Verify that deleteVehicleImage was explicitly called for the old image URL
+        verify(vehicleImageStorageService, times(1)).deleteVehicleImage(oldImageUrl);
     }
 }
+
 

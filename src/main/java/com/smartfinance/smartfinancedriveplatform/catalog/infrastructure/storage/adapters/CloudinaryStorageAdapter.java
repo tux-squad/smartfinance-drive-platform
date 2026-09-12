@@ -21,6 +21,8 @@ public class CloudinaryStorageAdapter implements VehicleImageStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(CloudinaryStorageAdapter.class);
 
+    private static final String UPLOAD_FOLDER = "smartfinance/vehicles";
+
     private static final List<String> ALLOWED_MIME_TYPES = List.of(
             "image/jpeg",
             "image/png",
@@ -55,7 +57,7 @@ public class CloudinaryStorageAdapter implements VehicleImageStorageService {
             Map<?, ?> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "smartfinance/vehicles",
+                            "folder", UPLOAD_FOLDER,
                             "resource_type", "image"
                     )
             );
@@ -90,20 +92,28 @@ public class CloudinaryStorageAdapter implements VehicleImageStorageService {
     }
 
     /**
-     * Helper to extract public ID from Cloudinary URL (e.g. smartfinance/vehicles/abc123).
+     * Helper to dynamically extract Cloudinary public ID from URL regardless of folder structure.
+     * Example: https://res.cloudinary.com/cloud/image/upload/v12345/smartfinance/vehicles/car.png -> smartfinance/vehicles/car
      */
     private String extractPublicId(String imageUrl) {
         try {
-            int folderIdx = imageUrl.indexOf("smartfinance/vehicles/");
-            if (folderIdx == -1) {
+            int uploadIdx = imageUrl.indexOf("/upload/");
+            if (uploadIdx == -1) {
                 return null;
             }
-            String pathWithExtension = imageUrl.substring(folderIdx);
-            int lastDotIdx = pathWithExtension.lastIndexOf('.');
+
+            // Path after /upload/
+            String pathAfterUpload = imageUrl.substring(uploadIdx + "/upload/".length());
+
+            // Remove version tag if present (e.g. v1726180000/)
+            String pathWithoutVersion = pathAfterUpload.replaceFirst("^v\\d+/", "");
+
+            // Remove file extension (e.g. .png, .jpg)
+            int lastDotIdx = pathWithoutVersion.lastIndexOf('.');
             if (lastDotIdx != -1) {
-                return pathWithExtension.substring(0, lastDotIdx);
+                return pathWithoutVersion.substring(0, lastDotIdx);
             }
-            return pathWithExtension;
+            return pathWithoutVersion;
         } catch (Exception e) {
             log.warn("Could not parse Cloudinary publicId from URL: {}", imageUrl);
             return null;
