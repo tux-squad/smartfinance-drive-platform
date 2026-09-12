@@ -1,9 +1,11 @@
 package com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.catalog.application.commandservices.VehicleCommandService;
+import com.smartfinance.smartfinancedriveplatform.catalog.application.outboundservices.storage.VehicleImageStorageService;
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.aggregates.Vehicle;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.CreateVehicleCommand;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.UpdateVehicleCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.FinancialEntityId;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -42,11 +45,14 @@ class VehiclesControllerTest {
     @Mock
     private VehicleQueryService vehicleQueryService;
 
+    @Mock
+    private VehicleImageStorageService vehicleImageStorageService;
+
     private VehiclesController vehiclesController;
 
     @BeforeEach
     void setUp() {
-        vehiclesController = new VehiclesController(vehicleCommandService, vehicleQueryService);
+        vehiclesController = new VehiclesController(vehicleCommandService, vehicleQueryService, vehicleImageStorageService);
     }
 
     @Test
@@ -96,4 +102,30 @@ class VehiclesControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isEmpty());
     }
+
+    @Test
+    void testUploadVehicleImageSuccess() {
+        UUID vehicleId = UUID.randomUUID();
+        Vehicle vehicle = new Vehicle(
+            new UserId(UUID.randomUUID()), new FinancialEntityId(UUID.randomUUID()), "Toyota", "Corolla", 2023, "NEW", Money.of(15000, "USD"), null
+        );
+
+        String uploadedUrl = "https://res.cloudinary.com/jzoqodzv/image/upload/v1/smartfinance/vehicles/test.jpg";
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "image content".getBytes());
+
+        Vehicle updatedVehicle = new Vehicle(
+            vehicle.getUserId(), vehicle.getFinancialEntityId(), "Toyota", "Corolla", 2023, "NEW", Money.of(15000, "USD"), uploadedUrl
+        );
+
+        when(vehicleQueryService.handle(any(GetVehicleByIdQuery.class))).thenReturn(Optional.of(vehicle));
+        when(vehicleImageStorageService.uploadVehicleImage(any())).thenReturn(uploadedUrl);
+        when(vehicleCommandService.handle(any(UpdateVehicleCommand.class))).thenReturn(Optional.of(updatedVehicle));
+
+        ResponseEntity<VehicleResource> response = vehiclesController.uploadVehicleImage(vehicleId, file);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(uploadedUrl, response.getBody().imagePath());
+    }
 }
+
