@@ -14,4 +14,12 @@ public interface VehicleImageStorageService {
      * @return The uploaded image HTTPS URL string.
      */
     String uploadVehicleImage(MultipartFile file);
+
+    /**
+     * Deletes an existing vehicle image from storage using its URL.
+     *
+     * @param imageUrl The URL of the image to delete.
+     */
+    void deleteVehicleImage(String imageUrl);
 }
+

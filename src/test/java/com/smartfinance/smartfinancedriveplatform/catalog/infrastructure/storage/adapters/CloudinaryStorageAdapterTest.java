@@ -55,4 +55,29 @@ class CloudinaryStorageAdapterTest {
 
         assertThrows(DomainValidationException.class, () -> cloudinaryStorageAdapter.uploadVehicleImage(emptyFile));
     }
+
+    @Test
+    void testUploadVehicleImageInvalidMimeTypeThrowsException() {
+        MockMultipartFile pdfFile = new MockMultipartFile("file", "document.pdf", "application/pdf", "fake pdf".getBytes());
+
+        assertThrows(DomainValidationException.class, () -> cloudinaryStorageAdapter.uploadVehicleImage(pdfFile));
+    }
+
+    @Test
+    void testUploadVehicleImageExceedsSizeThrowsException() {
+        byte[] largeBytes = new byte[11 * 1024 * 1024]; // 11MB
+        MockMultipartFile largeFile = new MockMultipartFile("file", "large.png", "image/png", largeBytes);
+
+        assertThrows(DomainValidationException.class, () -> cloudinaryStorageAdapter.uploadVehicleImage(largeFile));
+    }
+
+    @Test
+    void testDeleteVehicleImageSuccess() throws IOException {
+        String imageUrl = "https://res.cloudinary.com/jzoqodzv/image/upload/v1/smartfinance/vehicles/test_car.png";
+        when(cloudinary.uploader()).thenReturn(uploader);
+
+        cloudinaryStorageAdapter.deleteVehicleImage(imageUrl);
+
+        verify(uploader, times(1)).destroy(eq("smartfinance/vehicles/test_car"), any());
+    }
 }

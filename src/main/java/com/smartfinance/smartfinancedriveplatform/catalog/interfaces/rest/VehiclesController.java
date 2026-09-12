@@ -150,6 +150,9 @@ public class VehiclesController {
         }
 
         var vehicle = vehicleOpt.get();
+        if (vehicle.getImagePath() != null && !vehicle.getImagePath().isBlank()) {
+            vehicleImageStorageService.deleteVehicleImage(vehicle.getImagePath());
+        }
         String imageUrl = vehicleImageStorageService.uploadVehicleImage(file);
 
         var updateCommand = new UpdateVehicleCommand(
