@@ -1,7 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.projections.domain.model.aggregates;
 
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.valueobjects.MotorizationType;
-import com.smartfinance.smartfinancedriveplatform.projections.domain.model.valueobjects.RecommendedAction;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 import org.junit.jupiter.api.DisplayName;
