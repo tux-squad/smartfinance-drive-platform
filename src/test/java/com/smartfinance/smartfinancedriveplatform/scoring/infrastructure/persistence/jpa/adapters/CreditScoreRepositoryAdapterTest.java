@@ -1,7 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.scoring.infrastructure.persistence.jpa.adapters;
 
 import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.aggregates.CreditScore;
-import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.valueobjects.ScoreId;
 import com.smartfinance.smartfinancedriveplatform.scoring.infrastructure.persistence.jpa.entities.CreditScorePersistenceEntity;
 import com.smartfinance.smartfinancedriveplatform.scoring.infrastructure.persistence.jpa.repositories.SpringDataCreditScoreRepository;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
