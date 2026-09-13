@@ -9,7 +9,7 @@ import java.util.UUID;
  */
 public record ProfileResource(
     UUID id,
-    UUID userId,
+    String userId,
     String email,
     String nationalId,
     String fullLegalNames,

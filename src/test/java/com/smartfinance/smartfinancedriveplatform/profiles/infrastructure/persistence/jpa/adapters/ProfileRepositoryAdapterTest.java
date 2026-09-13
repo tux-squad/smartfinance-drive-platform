@@ -43,7 +43,7 @@ class ProfileRepositoryAdapterTest {
         UUID id = UUID.randomUUID();
         ProfilePersistenceEntity entity = new ProfilePersistenceEntity();
         entity.setId(id);
-        entity.setUserId(UUID.randomUUID());
+        entity.setUserId(UUID.randomUUID().toString());
         entity.setEmail("test@example.com");
         entity.setFullLegalNames("Test User");
         entity.setDateOfBirth(LocalDate.of(1995, 1, 1));
@@ -65,7 +65,7 @@ class ProfileRepositoryAdapterTest {
     @Test
     void testSaveProfile() {
         UUID id = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        String userId = UUID.randomUUID().toString();
         Profile profile = new Profile(
             new ProfileId(id),
             new UserId(userId),

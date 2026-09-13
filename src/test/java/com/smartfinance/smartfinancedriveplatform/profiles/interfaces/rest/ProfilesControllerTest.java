@@ -49,7 +49,7 @@ class ProfilesControllerTest {
 
     @Test
     void testCreateProfileSuccess() {
-        UUID userId = UUID.randomUUID();
+        String userId = UUID.randomUUID().toString();
         CreateProfileResource resource = new CreateProfileResource(
             userId,
             "john.doe@example.com",
@@ -111,7 +111,7 @@ class ProfilesControllerTest {
 
     @Test
     void testGetProfileByUserIdFound() {
-        UUID userId = UUID.randomUUID();
+        String userId = UUID.randomUUID().toString();
         Profile profile = new Profile(
             new UserId(userId),
             "john.doe@example.com",

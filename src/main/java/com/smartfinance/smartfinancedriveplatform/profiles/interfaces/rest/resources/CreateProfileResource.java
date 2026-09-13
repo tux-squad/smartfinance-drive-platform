@@ -2,13 +2,12 @@ package com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.reso
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
  * Resource DTO representing the request payload to create a new profile.
  */
 public record CreateProfileResource(
-    UUID userId,
+    String userId,
     String email,
     String nationalId,
     String fullLegalNames,

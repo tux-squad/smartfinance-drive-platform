@@ -17,7 +17,7 @@ public interface SpringDataProfileRepository extends JpaRepository<ProfilePersis
      * @param userId The user UUID.
      * @return An Optional containing the profile entity if found.
      */
-    Optional<ProfilePersistenceEntity> findByUserId(UUID userId);
+    Optional<ProfilePersistenceEntity> findByUserId(String userId);
 
     /**
      * Checks if a profile entity exists for a specific user ID.
@@ -25,5 +25,5 @@ public interface SpringDataProfileRepository extends JpaRepository<ProfilePersis
      * @param userId The user UUID.
      * @return true if it exists, false otherwise.
      */
-    boolean existsByUserId(UUID userId);
+    boolean existsByUserId(String userId);
 }

@@ -7,7 +7,7 @@ import java.util.UUID;
  * Resource DTO representing the request payload to register a new vehicle.
  */
 public record CreateVehicleResource(
-    UUID userId,
+    String userId,
     UUID financialEntityId,
     String brand,
     String model,

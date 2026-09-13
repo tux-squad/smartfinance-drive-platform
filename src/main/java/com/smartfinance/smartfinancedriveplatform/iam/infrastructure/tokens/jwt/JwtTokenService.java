@@ -35,13 +35,24 @@ public class JwtTokenService implements TokenService {
 
     @Override
     public String generateToken(String username, List<String> roles) {
+        return generateToken(null, username, roles);
+    }
+
+    @Override
+    public String generateToken(Long userId, String username, List<String> roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
                 .claim("roles", roles)
-                .claim("type", "access")
+                .claim("type", "access");
+
+        if (userId != null) {
+            builder.claim("userId", userId.toString());
+        }
+
+        return builder
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -84,6 +95,21 @@ public class JwtTokenService implements TokenService {
                 .parseSignedClaims(token)
                 .getPayload();
         return claims.getSubject();
+    }
+
+    @Override
+    public String getUserIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            Object val = claims.get("userId");
+            return val != null ? val.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

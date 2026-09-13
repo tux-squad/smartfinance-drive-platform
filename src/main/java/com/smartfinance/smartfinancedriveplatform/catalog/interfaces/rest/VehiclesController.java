@@ -15,9 +15,11 @@ import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resour
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.CreateVehicleCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.UpdateVehicleCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.VehicleResourceFromEntityAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,14 +50,16 @@ public class VehiclesController {
 
     /**
      * POST /api/v1/vehicles
-     * Registers a new vehicle in the catalog.
+     * Registers a new vehicle in the catalog, automatically associating it with the authenticated user.
      *
      * @param resource The payload resource.
      * @return The response payload of the created vehicle.
      */
     @PostMapping
     public ResponseEntity<VehicleResource> createVehicle(@RequestBody CreateVehicleResource resource) {
-        var command = CreateVehicleCommandFromResourceAssembler.toCommandFromResource(resource);
+        String authUserId = SecurityUtils.getCurrentUserId()
+                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        var command = CreateVehicleCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var vehicleOpt = vehicleCommandService.handle(command);
         return vehicleOpt
                 .map(vehicle -> new ResponseEntity<>(
@@ -85,11 +89,11 @@ public class VehiclesController {
      * GET /api/v1/vehicles/users/{userId}
      * Retrieves all vehicles belonging to a specific user.
      *
-     * @param userId The user UUID.
+     * @param userId The user ID string.
      * @return A list of vehicle resource payloads.
      */
     @GetMapping("/users/{userId}")
-    public ResponseEntity<List<VehicleResource>> getVehiclesByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<List<VehicleResource>> getVehiclesByUserId(@PathVariable String userId) {
         var query = new GetVehiclesByUserIdQuery(new UserId(userId));
         var vehicles = vehicleQueryService.handle(query);
         var resources = vehicles.stream()
@@ -100,13 +104,14 @@ public class VehiclesController {
 
     /**
      * PUT /api/v1/vehicles/{vehicleId}
-     * Updates an existing vehicle details.
+     * Updates an existing vehicle details if owned by current user.
      *
      * @param vehicleId The vehicle UUID.
      * @param resource  The update payload resource.
      * @return The updated vehicle resource.
      */
     @PutMapping("/{vehicleId}")
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<VehicleResource> updateVehicle(
             @PathVariable UUID vehicleId,
             @RequestBody UpdateVehicleResource resource) {
@@ -119,12 +124,13 @@ public class VehiclesController {
 
     /**
      * DELETE /api/v1/vehicles/{vehicleId}
-     * Deletes a vehicle from the catalog.
+     * Deletes a vehicle from the catalog if owned by current user.
      *
      * @param vehicleId The vehicle UUID.
      * @return 204 No Content.
      */
     @DeleteMapping("/{vehicleId}")
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<?> deleteVehicle(@PathVariable UUID vehicleId) {
         var command = new DeleteVehicleCommand(new VehicleId(vehicleId));
         vehicleCommandService.handle(command);
@@ -140,6 +146,7 @@ public class VehiclesController {
      * @return The updated vehicle resource.
      */
     @PostMapping(value = "/{vehicleId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<VehicleResource> uploadVehicleImage(
             @PathVariable UUID vehicleId,
             @RequestParam("file") MultipartFile file) {
@@ -172,4 +179,3 @@ public class VehiclesController {
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 }
-

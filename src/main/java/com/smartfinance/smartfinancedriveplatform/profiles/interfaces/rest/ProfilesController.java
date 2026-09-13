@@ -13,8 +13,10 @@ import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.resou
 import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.transform.CreateProfileCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.transform.ProfileResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.transform.UpdateProfileCommandFromResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -38,14 +40,16 @@ public class ProfilesController {
 
     /**
      * POST /api/v1/profiles
-     * Registers a new customer profile.
+     * Registers a new customer profile, associating it with the authenticated user.
      *
      * @param resource The creation payload.
      * @return The created profile resource.
      */
     @PostMapping
     public ResponseEntity<ProfileResource> createProfile(@RequestBody CreateProfileResource resource) {
-        var command = CreateProfileCommandFromResourceAssembler.toCommandFromResource(resource);
+        String authUserId = SecurityUtils.getCurrentUserId()
+                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        var command = CreateProfileCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var profileOpt = profileCommandService.handle(command);
         return profileOpt
                 .map(profile -> new ResponseEntity<>(
@@ -73,13 +77,13 @@ public class ProfilesController {
 
     /**
      * GET /api/v1/profiles/users/{userId}
-     * Retrieves profile details by associated user ID.
+     * Retrieves profile details by associated user ID string.
      *
-     * @param userId The user UUID.
+     * @param userId The user ID string.
      * @return The profile resource payload.
      */
     @GetMapping("/users/{userId}")
-    public ResponseEntity<ProfileResource> getProfileByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<ProfileResource> getProfileByUserId(@PathVariable String userId) {
         var query = new GetProfileByUserIdQuery(new UserId(userId));
         var profileOpt = profileQueryService.handle(query);
         return profileOpt
@@ -89,13 +93,14 @@ public class ProfilesController {
 
     /**
      * PUT /api/v1/profiles/{profileId}
-     * Updates an existing customer profile details.
+     * Updates an existing customer profile details if owned by authenticated user.
      *
      * @param profileId The profile UUID.
      * @param resource  The update payload.
      * @return The updated profile resource payload.
      */
     @PutMapping("/{profileId}")
+    @PreAuthorize("@ownershipChecker.isProfileOwner(#profileId, authentication)")
     public ResponseEntity<ProfileResource> updateProfile(
             @PathVariable UUID profileId,
             @RequestBody UpdateProfileResource resource) {
@@ -108,12 +113,13 @@ public class ProfilesController {
 
     /**
      * DELETE /api/v1/profiles/{profileId}
-     * Deletes a customer profile.
+     * Deletes a customer profile if owned by authenticated user.
      *
      * @param profileId The profile UUID.
      * @return 204 No Content.
      */
     @DeleteMapping("/{profileId}")
+    @PreAuthorize("@ownershipChecker.isProfileOwner(#profileId, authentication)")
     public ResponseEntity<?> deleteProfile(@PathVariable UUID profileId) {
         var command = new DeleteProfileCommand(new ProfileId(profileId));
         profileCommandService.handle(command);

@@ -10,11 +10,14 @@ import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.reso
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.SimulationResource;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.transform.CreateSimulationCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.transform.SimulationResourceFromEntityAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,11 +39,13 @@ public class SimulationsController {
 
     /**
      * POST /api/v1/simulations
-     * Creates and computes a new credit simulation plan.
+     * Creates and computes a new credit simulation plan associated with the authenticated user.
      */
     @PostMapping
     public ResponseEntity<SimulationResource> createSimulation(@RequestBody CreateSimulationResource resource) {
-        var command = CreateSimulationCommandFromResourceAssembler.toCommandFromResource(resource);
+        String authUserId = SecurityUtils.getCurrentUserId()
+                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        var command = CreateSimulationCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var simulationOpt = simulationCommandService.handle(command);
         return simulationOpt
                 .map(simulation -> new ResponseEntity<>(
@@ -52,13 +57,24 @@ public class SimulationsController {
 
     /**
      * GET /api/v1/simulations
-     * Retrieves all credit simulations.
+     * Retrieves credit simulations belonging to the authenticated user.
      */
     @GetMapping
     public ResponseEntity<List<SimulationResource>> getAllSimulations() {
+        String authUserId = SecurityUtils.getCurrentUserId()
+                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(null));
+
         var query = new GetAllSimulationsQuery();
         var simulations = simulationQueryService.handle(query);
-        var resources = simulations.stream()
+
+        // Filter simulations by authenticated user unless unauthenticated/admin
+        var filteredSimulations = (authUserId != null)
+                ? simulations.stream()
+                        .filter(s -> Objects.equals(s.getUserId(), authUserId))
+                        .collect(Collectors.toList())
+                : simulations;
+
+        var resources = filteredSimulations.stream()
                 .map(SimulationResourceFromEntityAssembler::toResourceFromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(resources);
@@ -79,9 +95,10 @@ public class SimulationsController {
 
     /**
      * DELETE /api/v1/simulations/{id}
-     * Deletes a credit simulation.
+     * Deletes a credit simulation if owned by authenticated user.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ownershipChecker.isSimulationOwner(#id, authentication)")
     public ResponseEntity<?> deleteSimulation(@PathVariable UUID id) {
         var command = new DeleteSimulationCommand(new SimulationId(id));
         simulationCommandService.handle(command);

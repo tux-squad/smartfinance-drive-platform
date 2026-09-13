@@ -43,7 +43,7 @@ class VehicleRepositoryAdapterTest {
         UUID id = UUID.randomUUID();
         VehiclePersistenceEntity entity = new VehiclePersistenceEntity();
         entity.setId(id);
-        entity.setUserId(UUID.randomUUID());
+        entity.setUserId(UUID.randomUUID().toString());
         entity.setFinancialEntityId(UUID.randomUUID());
         entity.setBrand("Toyota");
         entity.setModel("Corolla");

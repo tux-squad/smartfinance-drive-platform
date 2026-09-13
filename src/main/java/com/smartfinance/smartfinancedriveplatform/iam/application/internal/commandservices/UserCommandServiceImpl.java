@@ -71,7 +71,7 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .map(Enum::name)
                 .toList();
 
-        String token = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String token = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
         return Optional.of(new AuthenticationResult(user, token, refreshToken));
     }
@@ -91,7 +91,7 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .map(Enum::name)
                 .toList();
 
-        String newAccessToken = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String newAccessToken = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String newRefreshToken = tokenService.generateRefreshToken(user.getUsername().username());
         return Optional.of(new AuthenticationResult(user, newAccessToken, newRefreshToken));
     }
@@ -122,7 +122,7 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .map(Enum::name)
                 .toList();
 
-        String token = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String token = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
 
         return Optional.of(new AuthenticationResult(user, token, refreshToken));

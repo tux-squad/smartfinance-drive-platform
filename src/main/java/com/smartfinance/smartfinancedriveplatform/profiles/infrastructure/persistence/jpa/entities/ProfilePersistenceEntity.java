@@ -23,7 +23,7 @@ import java.util.UUID;
 public class ProfilePersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     @Column(name = "user_id", nullable = false, unique = true)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "email", nullable = false)
     private String email;

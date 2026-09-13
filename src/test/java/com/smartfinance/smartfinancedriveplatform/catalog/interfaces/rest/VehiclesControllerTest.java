@@ -57,7 +57,7 @@ class VehiclesControllerTest {
 
     @Test
     void testCreateVehicleSuccess() {
-        UUID userId = UUID.randomUUID();
+        String userId = UUID.randomUUID().toString();
         UUID bankId = UUID.randomUUID();
         CreateVehicleResource resource = new CreateVehicleResource(
             userId, bankId, "Toyota", "Corolla", 2023, "NEW", BigDecimal.valueOf(15000), "USD", null
@@ -94,7 +94,7 @@ class VehiclesControllerTest {
 
     @Test
     void testGetVehiclesByUserId() {
-        UUID userId = UUID.randomUUID();
+        String userId = UUID.randomUUID().toString();
         when(vehicleQueryService.handle(any(GetVehiclesByUserIdQuery.class))).thenReturn(Collections.emptyList());
 
         ResponseEntity<List<VehicleResource>> response = vehiclesController.getVehiclesByUserId(userId);
@@ -158,5 +158,3 @@ class VehiclesControllerTest {
         verify(vehicleImageStorageService, times(1)).deleteVehicleImage(oldImageUrl);
     }
 }
-
-

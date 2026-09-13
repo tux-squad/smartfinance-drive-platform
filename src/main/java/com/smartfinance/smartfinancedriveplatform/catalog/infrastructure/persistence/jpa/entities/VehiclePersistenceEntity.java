@@ -22,7 +22,7 @@ import java.util.UUID;
 public class VehiclePersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "financial_entity_id", nullable = false)
     private UUID financialEntityId;
