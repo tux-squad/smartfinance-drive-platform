@@ -29,5 +29,14 @@ public record CreatePlanCommand(
         if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Plan price must not be negative");
         }
+        if (currency != null && currency.length() != 3) {
+            throw new IllegalArgumentException("Currency code must be exactly 3 characters");
+        }
+        if (maxVehicleListings != null && maxVehicleListings <= 0) {
+            throw new IllegalArgumentException("Max vehicle listings must be greater than zero");
+        }
+        if (maxSimulationsPerMonth != null && maxSimulationsPerMonth <= 0) {
+            throw new IllegalArgumentException("Max simulations per month must be greater than zero");
+        }
     }
 }
