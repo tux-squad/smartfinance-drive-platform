@@ -16,7 +16,7 @@ public interface SubscriptionCommandService {
     Optional<Subscription> handle(CancelSubscriptionCommand command);
     Optional<Invoice> handle(PayInvoiceCommand command);
 
-    void handleStripeCheckoutCompleted(String userId, String stripeCustomerId, String stripeSubscriptionId);
-    void handleStripeSubscriptionDeleted(String stripeSubscriptionId);
-    void handleStripePaymentFailed(String stripeCustomerId);
+    boolean handleStripeCheckoutCompleted(String userId, String stripeCustomerId, String stripeSubscriptionId);
+    boolean handleStripeSubscriptionDeleted(String stripeSubscriptionId);
+    boolean handleStripePaymentFailed(String stripeCustomerId);
 }

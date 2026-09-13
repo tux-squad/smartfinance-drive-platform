@@ -99,44 +99,56 @@ public class SubscriptionCommandServiceImpl implements SubscriptionCommandServic
 
     @Override
     @Transactional
-    public void handleStripeCheckoutCompleted(String userId, String stripeCustomerId, String stripeSubscriptionId) {
-        if (userId != null && !userId.isBlank()) {
-            subscriptionRepository.findFirstByUserIdAndStatusOrderByEndDateDesc(userId, SubscriptionStatus.ACTIVE)
-                    .ifPresent(subscription -> {
-                        subscription.updateStripeDetails(stripeCustomerId, stripeSubscriptionId);
-                        subscriptionRepository.save(subscription);
-                    });
-
-            invoiceRepository.findAllByUserId(userId).stream()
-                    .filter(inv -> inv.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PENDING)
-                    .forEach(inv -> {
-                        inv.markPaid();
-                        invoiceRepository.save(inv);
-                    });
+    public boolean handleStripeCheckoutCompleted(String userId, String stripeCustomerId, String stripeSubscriptionId) {
+        if (userId == null || userId.isBlank()) {
+            return false;
         }
+
+        var subOpt = subscriptionRepository.findFirstByUserIdAndStatusOrderByEndDateDesc(userId, SubscriptionStatus.ACTIVE);
+        subOpt.ifPresent(subscription -> {
+            subscription.updateStripeDetails(stripeCustomerId, stripeSubscriptionId);
+            subscriptionRepository.save(subscription);
+        });
+
+        invoiceRepository.findAllByUserId(userId).stream()
+                .filter(inv -> inv.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PENDING)
+                .forEach(inv -> {
+                    inv.markPaid();
+                    invoiceRepository.save(inv);
+                });
+
+        return subOpt.isPresent();
     }
 
     @Override
     @Transactional
-    public void handleStripeSubscriptionDeleted(String stripeSubscriptionId) {
-        if (stripeSubscriptionId != null && !stripeSubscriptionId.isBlank()) {
-            subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
-                    .ifPresent(subscription -> {
-                        subscription.cancel();
-                        subscriptionRepository.save(subscription);
-                    });
+    public boolean handleStripeSubscriptionDeleted(String stripeSubscriptionId) {
+        if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
+            return false;
         }
+
+        var subOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+        subOpt.ifPresent(subscription -> {
+            subscription.cancel();
+            subscriptionRepository.save(subscription);
+        });
+
+        return subOpt.isPresent();
     }
 
     @Override
     @Transactional
-    public void handleStripePaymentFailed(String stripeCustomerId) {
-        if (stripeCustomerId != null && !stripeCustomerId.isBlank()) {
-            subscriptionRepository.findByStripeCustomerId(stripeCustomerId)
-                    .ifPresent(subscription -> {
-                        subscription.markPastDue();
-                        subscriptionRepository.save(subscription);
-                    });
+    public boolean handleStripePaymentFailed(String stripeCustomerId) {
+        if (stripeCustomerId == null || stripeCustomerId.isBlank()) {
+            return false;
         }
+
+        var subOpt = subscriptionRepository.findByStripeCustomerId(stripeCustomerId);
+        subOpt.ifPresent(subscription -> {
+            subscription.markPastDue();
+            subscriptionRepository.save(subscription);
+        });
+
+        return subOpt.isPresent();
     }
 }
