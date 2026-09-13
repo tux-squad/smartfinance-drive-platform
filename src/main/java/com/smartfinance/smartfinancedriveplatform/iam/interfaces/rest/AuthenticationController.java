@@ -38,6 +38,7 @@ import java.util.Map;
 @RequestMapping(value = "/api/v1/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AuthenticationController {
 
+    private final UserCommandService userCommandService;
     private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
     private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService jwtTokenService;
 

@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.financing.application.commandservices.SimulationCommandService;
 import com.smartfinance.smartfinancedriveplatform.financing.application.queryservices.SimulationQueryService;
+import com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggregates.Simulation;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.commands.DeleteSimulationCommand;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetAllSimulationsQuery;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetSimulationByIdQuery;

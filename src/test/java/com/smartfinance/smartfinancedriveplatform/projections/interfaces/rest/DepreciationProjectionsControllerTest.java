@@ -87,14 +87,16 @@ class DepreciationProjectionsControllerTest {
     @Test
     @DisplayName("Should get all projections and return 200 OK")
     void shouldGetAllProjections() {
-        when(queryService.handle(any(GetAllDepreciationProjectionsQuery.class))).thenReturn(List.of(sampleProjection));
+        when(queryService.handle(any(GetAllDepreciationProjectionsQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleProjection)));
         when(ownershipChecker.isDepreciationProjectionOwner(any(), any())).thenReturn(true);
 
-        ResponseEntity<List<DepreciationProjectionResource>> response = controller.getAllProjections();
+        ResponseEntity<org.springframework.data.domain.Page<DepreciationProjectionResource>> response =
+                controller.getAllProjections(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

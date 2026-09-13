@@ -123,13 +123,15 @@ class SimulationsControllerTest {
     @Test
     @DisplayName("Should get all simulations and return 200 OK")
     void shouldGetAllSimulations() {
-        when(simulationQueryService.handle(any(GetAllSimulationsQuery.class))).thenReturn(List.of(sampleSimulation));
+        when(simulationQueryService.handle(any(GetAllSimulationsQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleSimulation)));
 
-        ResponseEntity<List<SimulationResource>> response = simulationsController.getAllSimulations();
+        ResponseEntity<org.springframework.data.domain.Page<SimulationResource>> response =
+                simulationsController.getAllSimulations(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

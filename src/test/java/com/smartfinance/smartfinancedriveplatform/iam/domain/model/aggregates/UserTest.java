@@ -45,7 +45,7 @@ class UserTest {
     @Test
     @DisplayName("Should allow adding and removing roles")
     void shouldAddAndRemoveRoles() {
-        User user = new User(new Username("admin@smartfinance.com"), new Password("pass123"));
+        User user = new User(new Username("admin@smartfinance.com"), new Password("SecretPassword123"));
 
         user.addRole(Roles.ROLE_ADMIN);
         assertEquals(2, user.getRoles().size());

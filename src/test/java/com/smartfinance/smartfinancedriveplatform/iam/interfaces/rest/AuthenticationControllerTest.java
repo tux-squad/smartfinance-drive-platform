@@ -42,8 +42,8 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Should return 201 Created on successful sign up")
     void shouldReturnCreatedOnSignUp() {
-        SignUpResource resource = new SignUpResource("user@example.com", "password123", List.of("ROLE_USER"));
-        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+        SignUpResource resource = new SignUpResource("user@example.com", "Password123!", List.of("ROLE_USER"));
+        User user = new User(1L, new Username("user@example.com"), new Password("$2a$10$hashed1Password123"), List.of());
 
         when(userCommandService.handle(any(SignUpCommand.class))).thenReturn(Optional.of(user));
 
@@ -56,8 +56,8 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Should return 200 OK on successful sign in")
     void shouldReturnOkOnSignIn() {
-        SignInResource resource = new SignInResource("user@example.com", "password123");
-        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+        SignInResource resource = new SignInResource("user@example.com", "Password123!");
+        User user = new User(1L, new Username("user@example.com"), new Password("$2a$10$hashed1Password123"), List.of());
         UserCommandService.AuthenticationResult authResult =
                 new UserCommandService.AuthenticationResult(user, "mocked-jwt-token", "mocked-refresh-token");
 
@@ -75,7 +75,7 @@ class AuthenticationControllerTest {
     @DisplayName("Should return 200 OK on successful refresh token")
     void shouldReturnOkOnRefreshToken() {
         RefreshTokenResource resource = new RefreshTokenResource("valid-refresh-token");
-        User user = new User(1L, new Username("user@example.com"), new Password("hashedPass"), List.of());
+        User user = new User(1L, new Username("user@example.com"), new Password("$2a$10$hashed1Password123"), List.of());
         UserCommandService.AuthenticationResult authResult =
                 new UserCommandService.AuthenticationResult(user, "new-access-token", "new-refresh-token");
 
@@ -93,7 +93,7 @@ class AuthenticationControllerTest {
     @DisplayName("Should return 200 OK on successful google sign in")
     void shouldReturnOkOnGoogleSignIn() {
         GoogleSignInResource resource = new GoogleSignInResource("valid-google-id-token");
-        User user = new User(1L, new Username("user@gmail.com"), new Password("hashedPass"), List.of());
+        User user = new User(1L, new Username("user@gmail.com"), new Password("$2a$10$hashed1Password123"), List.of());
         UserCommandService.AuthenticationResult authResult =
                 new UserCommandService.AuthenticationResult(user, "google-access-token", "google-refresh-token");
 

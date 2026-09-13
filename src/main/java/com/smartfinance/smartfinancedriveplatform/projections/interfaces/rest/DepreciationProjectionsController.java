@@ -69,9 +69,13 @@ public class DepreciationProjectionsController {
         var query = new GetAllDepreciationProjectionsQuery();
         var projectionsPage = queryService.handle(query, pageable);
 
-        var resourcesPage = projectionsPage
+        List<DepreciationProjectionResource> filteredList = projectionsPage.getContent().stream()
                 .filter(p -> ownershipChecker.isDepreciationProjectionOwner(p.getId().value(), auth))
-                .map(DepreciationProjectionResourceFromEntityAssembler::toResourceFromEntity);
+                .map(DepreciationProjectionResourceFromEntityAssembler::toResourceFromEntity)
+                .collect(Collectors.toList());
+
+        org.springframework.data.domain.Page<DepreciationProjectionResource> resourcesPage =
+                new org.springframework.data.domain.PageImpl<>(filteredList, pageable, projectionsPage.getTotalElements());
 
         return ResponseEntity.ok(resourcesPage);
     }

@@ -13,6 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -36,23 +39,23 @@ class UsersControllerTest {
     @Test
     @DisplayName("Should return list of users on getAllUsers")
     void shouldReturnAllUsers() {
-        User user1 = new User(1L, new Username("john@example.com"), new Password("hashed1"), List.of());
-        User user2 = new User(2L, new Username("jane@example.com"), new Password("hashed2"), List.of());
+        User user1 = new User(1L, new Username("john@example.com"), new Password("$2a$10$hashed1Password123"), List.of());
+        User user2 = new User(2L, new Username("jane@example.com"), new Password("$2a$10$hashed2Password123"), List.of());
 
-        when(userQueryService.handle(any(GetAllUsersQuery.class))).thenReturn(List.of(user1, user2));
+        when(userQueryService.handle(any(GetAllUsersQuery.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(user1, user2)));
 
-        ResponseEntity<List<UserResource>> response = usersController.getAllUsers();
+        ResponseEntity<Page<UserResource>> response = usersController.getAllUsers(Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(2, response.getBody().size());
-        assertEquals("john@example.com", response.getBody().get(0).username());
+        assertEquals(2, response.getBody().getContent().size());
+        assertEquals("john@example.com", response.getBody().getContent().get(0).username());
     }
 
     @Test
     @DisplayName("Should return user resource on getUserById when found")
     void shouldReturnUserByIdWhenFound() {
-        User user = new User(1L, new Username("john@example.com"), new Password("hashed1"), List.of());
+        User user = new User(1L, new Username("john@example.com"), new Password("$2a$10$hashed1Password123"), List.of());
 
         when(userQueryService.handle(any(GetUserByIdQuery.class))).thenReturn(Optional.of(user));
 

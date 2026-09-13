@@ -82,14 +82,16 @@ class CreditScoresControllerTest {
     @Test
     @DisplayName("Should get all credit scores and return 200 OK")
     void shouldGetAllCreditScores() {
-        when(creditScoreQueryService.handle(any(GetAllCreditScoresQuery.class))).thenReturn(List.of(sampleScore));
+        when(creditScoreQueryService.handle(any(GetAllCreditScoresQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleScore)));
         when(ownershipChecker.isCreditScoreOwner(any(), any())).thenReturn(true);
 
-        ResponseEntity<List<CreditScoreResource>> response = creditScoresController.getAllCreditScores();
+        ResponseEntity<org.springframework.data.domain.Page<CreditScoreResource>> response =
+                creditScoresController.getAllCreditScores(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

@@ -69,9 +69,13 @@ public class CreditScoresController {
         var query = new GetAllCreditScoresQuery();
         var scoresPage = creditScoreQueryService.handle(query, pageable);
         
-        var resourcesPage = scoresPage
+        List<CreditScoreResource> filteredList = scoresPage.getContent().stream()
                 .filter(score -> ownershipChecker.isCreditScoreOwner(score.getId().value(), auth))
-                .map(CreditScoreResourceFromEntityAssembler::toResourceFromEntity);
+                .map(CreditScoreResourceFromEntityAssembler::toResourceFromEntity)
+                .collect(Collectors.toList());
+
+        org.springframework.data.domain.Page<CreditScoreResource> resourcesPage =
+                new org.springframework.data.domain.PageImpl<>(filteredList, pageable, scoresPage.getTotalElements());
 
         return ResponseEntity.ok(resourcesPage);
     }
