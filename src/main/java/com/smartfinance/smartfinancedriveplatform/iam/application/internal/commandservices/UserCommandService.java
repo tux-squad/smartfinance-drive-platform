@@ -8,6 +8,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.Rese
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestFinancialInstitutionRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
 
 import java.util.Optional;
@@ -37,4 +38,6 @@ public interface UserCommandService {
     Optional<User> handle(UpdateUserRoleCommand command);
 
     Optional<User> handle(RequestDealerRoleCommand command);
+
+    Optional<User> handle(RequestFinancialInstitutionRoleCommand command);
 }

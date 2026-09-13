@@ -7,7 +7,10 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.Forg
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestFinancialInstitutionRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles;
@@ -214,6 +217,32 @@ public class UserCommandServiceImpl implements UserCommandService {
         }
 
         user.addRole(Roles.ROLE_DEALER);
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(RequestFinancialInstitutionRoleCommand command) {
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        var rucInfoOpt = sunatRucVerifierService.verifyRuc(command.ruc());
+        if (rucInfoOpt.isEmpty()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotFound");
+        }
+
+        var rucInfo = rucInfoOpt.get();
+        if (!rucInfo.isActiveAndHabido()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotActiveOrHabido");
+        }
+
+        if (!rucInfo.isFinancialInstitutionCiiu()) {
+            throw new DomainValidationException("iam.error.sunat.notFinancialInstitution");
+        }
+
+        user.addRole(Roles.ROLE_FINANCIAL_INSTITUTION);
         User updatedUser = userRepository.save(user);
 
         return Optional.of(updatedUser);

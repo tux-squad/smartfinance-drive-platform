@@ -24,4 +24,12 @@ public record SunatRucInfo(
         // CIIU 451 / 4510 / 45100 represents sale of motor vehicles
         return ciiu.startsWith("451");
     }
+
+    public boolean isFinancialInstitutionCiiu() {
+        if (ciiu == null || ciiu.isBlank()) {
+            return false;
+        }
+        // CIIU 64xx and 66xx represent financial intermediation & auxiliary financial activities
+        return ciiu.startsWith("64") || ciiu.startsWith("66");
+    }
 }
