@@ -63,6 +63,9 @@ public class UserRepositoryAdapter implements UserRepository {
         if (domain.getId() != null) {
             entity.setId(domain.getId());
         }
+        entity.setFailedLoginAttempts(domain.getFailedLoginAttempts());
+        entity.setAccountLocked(domain.isAccountLocked());
+        entity.setLockoutUntil(domain.getLockoutUntil());
         return entity;
     }
 
@@ -71,7 +74,10 @@ public class UserRepositoryAdapter implements UserRepository {
                 entity.getId(),
                 new Username(entity.getUsername()),
                 new Password(entity.getPassword()),
-                entity.getRoles()
+                entity.getRoles(),
+                entity.getFailedLoginAttempts(),
+                entity.isAccountLocked(),
+                entity.getLockoutUntil()
         );
     }
 }

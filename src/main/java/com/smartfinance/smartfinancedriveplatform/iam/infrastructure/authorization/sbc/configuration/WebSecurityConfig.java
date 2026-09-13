@@ -30,14 +30,14 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 public class WebSecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:8080}")
-    private List<String> allowedOrigins;
-
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.authorization.sbc.pipeline.RateLimitingFilter rateLimitingFilter;
     private final org.springframework.core.env.Environment environment;
 
-    public WebSecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, org.springframework.core.env.Environment environment) {
+    public WebSecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                             com.smartfinance.smartfinancedriveplatform.iam.infrastructure.authorization.sbc.pipeline.RateLimitingFilter rateLimitingFilter,
+                             org.springframework.core.env.Environment environment) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitingFilter = rateLimitingFilter;
         this.environment = environment;
     }
 
@@ -82,6 +82,7 @@ public class WebSecurityConfig {
                     }
                     auth.anyRequest().authenticated();
                 })
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

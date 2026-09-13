@@ -58,13 +58,24 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<AuthenticationResult> handle(SignInCommand command) {
         User user = userRepository.findByUsername(command.username())
                 .orElseThrow(() -> new DomainValidationException("iam.error.invalidCredentials"));
 
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
+
         if (!hashingService.matches(command.password().password(), user.getPassword().password())) {
+            user.recordFailedLoginAttempt();
+            userRepository.save(user);
             throw new DomainValidationException("iam.error.invalidCredentials");
+        }
+
+        if (user.getFailedLoginAttempts() > 0) {
+            user.resetFailedLoginAttempts();
+            userRepository.save(user);
         }
 
         var roleNames = user.getRoles().stream()

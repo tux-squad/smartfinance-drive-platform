@@ -8,13 +8,14 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.model.aggregates
 
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
  * User aggregate root in the IAM Bounded Context.
- * Controls access identity, encrypted credentials, and user roles.
+ * Controls access identity, encrypted credentials, user roles, and login lockout.
  */
 @Getter
 public class User extends AbstractDomainAggregateRoot<User> {
@@ -23,17 +24,27 @@ public class User extends AbstractDomainAggregateRoot<User> {
     private Username username;
     private Password password;
     private final List<Roles> roles = new ArrayList<>();
+    private int failedLoginAttempts;
+    private boolean accountLocked;
+    private LocalDateTime lockoutUntil;
 
     /**
      * Reconstitution constructor for persistence adapters.
      */
-    public User(Long id, Username username, Password password, List<Roles> roles) {
+    public User(Long id, Username username, Password password, List<Roles> roles, int failedLoginAttempts, boolean accountLocked, LocalDateTime lockoutUntil) {
         this.id = id;
         this.username = username;
         this.password = password;
         if (roles != null) {
             this.roles.addAll(roles);
         }
+        this.failedLoginAttempts = failedLoginAttempts;
+        this.accountLocked = accountLocked;
+        this.lockoutUntil = lockoutUntil;
+    }
+
+    public User(Long id, Username username, Password password, List<Roles> roles) {
+        this(id, username, password, roles, 0, false, null);
     }
 
     /**
@@ -54,6 +65,9 @@ public class User extends AbstractDomainAggregateRoot<User> {
         } else {
             this.roles.add(Roles.ROLE_USER);
         }
+        this.failedLoginAttempts = 0;
+        this.accountLocked = false;
+        this.lockoutUntil = null;
     }
 
     public void setUsername(Username username) {
@@ -89,5 +103,32 @@ public class User extends AbstractDomainAggregateRoot<User> {
             this.roles.remove(role);
         }
         return this;
+    }
+
+    public boolean isAccountLocked() {
+        if (accountLocked && lockoutUntil != null) {
+            if (LocalDateTime.now().isAfter(lockoutUntil)) {
+                this.accountLocked = false;
+                this.failedLoginAttempts = 0;
+                this.lockoutUntil = null;
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public void recordFailedLoginAttempt() {
+        this.failedLoginAttempts++;
+        if (this.failedLoginAttempts >= 5) {
+            this.accountLocked = true;
+            this.lockoutUntil = LocalDateTime.now().plusMinutes(15);
+        }
+    }
+
+    public void resetFailedLoginAttempts() {
+        this.failedLoginAttempts = 0;
+        this.accountLocked = false;
+        this.lockoutUntil = null;
     }
 }
