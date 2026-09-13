@@ -2,10 +2,12 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.queryservices.UserQueryService;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetAllUsersQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RequestDealerRoleResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UpdateUserRoleResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UserResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.transform.UserResourceFromEntityAssembler;
@@ -75,6 +77,21 @@ public class UsersController {
         }
 
         var command = new UpdateUserRoleCommand(userId, role);
+        var updatedUserOpt = userCommandService.handle(command);
+        return updatedUserOpt
+                .map(user -> ResponseEntity.ok(UserResourceFromEntityAssembler.toResourceFromEntity(user)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Requests automatic dealer role upgrade via SUNAT RUC verification. Restricted to self or ADMIN.
+     */
+    @PostMapping("/{userId}/request-dealer-role")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelf(#userId, authentication)")
+    public ResponseEntity<UserResource> requestDealerRole(
+            @PathVariable Long userId,
+            @Valid @RequestBody RequestDealerRoleResource resource) {
+        var command = new RequestDealerRoleCommand(userId, resource.ruc());
         var updatedUserOpt = userCommandService.handle(command);
         return updatedUserOpt
                 .map(user -> ResponseEntity.ok(UserResourceFromEntityAssembler.toResourceFromEntity(user)))
