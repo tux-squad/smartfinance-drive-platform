@@ -7,6 +7,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.Refr
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
 
 import java.util.Optional;
 
@@ -31,4 +32,6 @@ public interface UserCommandService {
     String handle(ForgotPasswordCommand command);
 
     boolean handle(ResetPasswordCommand command);
+
+    Optional<User> handle(UpdateUserRoleCommand command);
 }

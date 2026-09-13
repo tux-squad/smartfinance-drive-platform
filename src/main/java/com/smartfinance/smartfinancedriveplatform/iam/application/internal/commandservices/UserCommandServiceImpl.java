@@ -173,4 +173,20 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         return true;
     }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand command) {
+        if (command.role() == Roles.ROLE_ADMIN) {
+            throw new DomainValidationException("iam.error.role.adminAssignmentNotAllowed");
+        }
+
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        user.addRole(command.role());
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
+    }
 }
