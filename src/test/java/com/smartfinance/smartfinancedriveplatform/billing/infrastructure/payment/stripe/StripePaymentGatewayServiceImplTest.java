@@ -12,7 +12,7 @@ class StripePaymentGatewayServiceImplTest {
     @Test
     @DisplayName("Should throw exception when Stripe API key is unconfigured")
     void shouldThrowExceptionWhenStripeNotConfigured() {
-        StripePaymentGatewayServiceImpl service = new StripePaymentGatewayServiceImpl("");
+        StripePaymentGatewayServiceImpl service = new StripePaymentGatewayServiceImpl("", "http://success", "http://cancel");
 
         assertThrows(DomainValidationException.class, () ->
                 service.createCustomer("user@example.com", "Test User"));

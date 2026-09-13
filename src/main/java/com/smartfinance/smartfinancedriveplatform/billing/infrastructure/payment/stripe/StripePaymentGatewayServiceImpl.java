@@ -19,9 +19,16 @@ public class StripePaymentGatewayServiceImpl implements StripePaymentGatewayServ
     private static final Logger LOGGER = LoggerFactory.getLogger(StripePaymentGatewayServiceImpl.class);
 
     private final String apiKey;
+    private final String defaultSuccessUrl;
+    private final String defaultCancelUrl;
 
-    public StripePaymentGatewayServiceImpl(@Value("${stripe.api-key:}") String apiKey) {
+    public StripePaymentGatewayServiceImpl(
+            @Value("${stripe.api-key:}") String apiKey,
+            @Value("${stripe.success-url:http://localhost:5173/billing/success?session_id={CHECKOUT_SESSION_ID}}") String defaultSuccessUrl,
+            @Value("${stripe.cancel-url:http://localhost:5173/billing/cancel}") String defaultCancelUrl) {
         this.apiKey = apiKey;
+        this.defaultSuccessUrl = defaultSuccessUrl;
+        this.defaultCancelUrl = defaultCancelUrl;
         if (apiKey != null && !apiKey.isBlank()) {
             Stripe.apiKey = apiKey;
         }
@@ -50,8 +57,8 @@ public class StripePaymentGatewayServiceImpl implements StripePaymentGatewayServ
             SessionCreateParams params = SessionCreateParams.builder()
                     .setCustomer(stripeCustomerId)
                     .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
-                    .setSuccessUrl(successUrl != null ? successUrl : "https://smartfinance.drive/billing/success?session_id={CHECKOUT_SESSION_ID}")
-                    .setCancelUrl(cancelUrl != null ? cancelUrl : "https://smartfinance.drive/billing/cancel")
+                    .setSuccessUrl(successUrl != null && !successUrl.isBlank() ? successUrl : defaultSuccessUrl)
+                    .setCancelUrl(cancelUrl != null && !cancelUrl.isBlank() ? cancelUrl : defaultCancelUrl)
                     .addLineItem(
                             SessionCreateParams.LineItem.builder()
                                     .setPrice(stripePriceId)
