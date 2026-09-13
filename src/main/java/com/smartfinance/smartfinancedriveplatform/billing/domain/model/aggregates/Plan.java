@@ -3,7 +3,6 @@ package com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregat
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.BillingCycle;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 
