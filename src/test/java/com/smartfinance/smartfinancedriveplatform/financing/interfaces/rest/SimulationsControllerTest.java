@@ -12,6 +12,8 @@ import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.reso
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.SimulationResource;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Percent;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,9 +23,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,9 +75,20 @@ class SimulationsControllerTest {
         );
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("Should create simulation and return 201 Created with full payload")
     void shouldCreateSimulation() {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "usr-1", "password", Collections.emptyList()
+        );
+        auth.setDetails(new SecurityUtils.AuthenticatedUserDetails("usr-1", "usr-1"));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
         CreateSimulationResource resource = new CreateSimulationResource(
                 "RAV4 BCP 2026",
                 "usr-1",
@@ -107,13 +123,15 @@ class SimulationsControllerTest {
     @Test
     @DisplayName("Should get all simulations and return 200 OK")
     void shouldGetAllSimulations() {
-        when(simulationQueryService.handle(any(GetAllSimulationsQuery.class))).thenReturn(List.of(sampleSimulation));
+        when(simulationQueryService.handle(any(GetAllSimulationsQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleSimulation)));
 
-        ResponseEntity<List<SimulationResource>> response = simulationsController.getAllSimulations();
+        ResponseEntity<org.springframework.data.domain.Page<SimulationResource>> response =
+                simulationsController.getAllSimulations(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

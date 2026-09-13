@@ -7,7 +7,10 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.Forg
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestFinancialInstitutionRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignUpCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Password;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles;
@@ -32,15 +35,21 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final HashingService hashingService;
     private final TokenService tokenService;
     private final GoogleTokenVerifierService googleTokenVerifierService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
+    private final com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
                                   TokenService tokenService,
-                                  GoogleTokenVerifierService googleTokenVerifierService) {
+                                  GoogleTokenVerifierService googleTokenVerifierService,
+                                  com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
+                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.googleTokenVerifierService = googleTokenVerifierService;
+        this.tokenBlacklistService = tokenBlacklistService;
+        this.sunatRucVerifierService = sunatRucVerifierService;
     }
 
     @Override
@@ -58,30 +67,46 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<AuthenticationResult> handle(SignInCommand command) {
         User user = userRepository.findByUsername(command.username())
                 .orElseThrow(() -> new DomainValidationException("iam.error.invalidCredentials"));
 
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
+
         if (!hashingService.matches(command.password().password(), user.getPassword().password())) {
+            user.recordFailedLoginAttempt();
+            userRepository.save(user);
             throw new DomainValidationException("iam.error.invalidCredentials");
+        }
+
+        if (user.getFailedLoginAttempts() > 0) {
+            user.resetFailedLoginAttempts();
+            userRepository.save(user);
         }
 
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();
 
-        String token = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String token = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
         return Optional.of(new AuthenticationResult(user, token, refreshToken));
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<AuthenticationResult> handle(RefreshTokenCommand command) {
-        if (command.refreshToken() == null || !tokenService.validateRefreshToken(command.refreshToken())) {
+        if (command.refreshToken() == null ||
+            tokenBlacklistService.isBlacklisted(command.refreshToken()) ||
+            !tokenService.validateRefreshToken(command.refreshToken())) {
             throw new DomainValidationException("iam.error.invalidRefreshToken");
         }
+
+        // Invalidate old refresh token (Token Rotation)
+        tokenBlacklistService.blacklistToken(command.refreshToken(), System.currentTimeMillis() + 604800000L);
 
         String usernameStr = tokenService.getUsernameFromToken(command.refreshToken());
         User user = userRepository.findByUsername(new Username(usernameStr))
@@ -91,7 +116,7 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .map(Enum::name)
                 .toList();
 
-        String newAccessToken = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String newAccessToken = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String newRefreshToken = tokenService.generateRefreshToken(user.getUsername().username());
         return Optional.of(new AuthenticationResult(user, newAccessToken, newRefreshToken));
     }
@@ -122,7 +147,7 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .map(Enum::name)
                 .toList();
 
-        String token = tokenService.generateToken(user.getUsername().username(), roleNames);
+        String token = tokenService.generateToken(user.getId(), user.getUsername().username(), roleNames);
         String refreshToken = tokenService.generateRefreshToken(user.getUsername().username());
 
         return Optional.of(new AuthenticationResult(user, token, refreshToken));
@@ -153,5 +178,73 @@ public class UserCommandServiceImpl implements UserCommandService {
         userRepository.save(user);
 
         return true;
+    }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(UpdateUserRoleCommand command) {
+        if (command.role() == Roles.ROLE_ADMIN) {
+            throw new DomainValidationException("iam.error.role.adminAssignmentNotAllowed");
+        }
+
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        user.addRole(command.role());
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(RequestDealerRoleCommand command) {
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        var rucInfoOpt = sunatRucVerifierService.verifyRuc(command.ruc());
+        if (rucInfoOpt.isEmpty()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotFound");
+        }
+
+        var rucInfo = rucInfoOpt.get();
+        if (!rucInfo.isActiveAndHabido()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotActiveOrHabido");
+        }
+
+        if (!rucInfo.isAutomotiveCiiu()) {
+            throw new DomainValidationException("iam.error.sunat.notAutomotiveDealer");
+        }
+
+        user.addRole(Roles.ROLE_DEALER);
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(RequestFinancialInstitutionRoleCommand command) {
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        var rucInfoOpt = sunatRucVerifierService.verifyRuc(command.ruc());
+        if (rucInfoOpt.isEmpty()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotFound");
+        }
+
+        var rucInfo = rucInfoOpt.get();
+        if (!rucInfo.isActiveAndHabido()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotActiveOrHabido");
+        }
+
+        if (!rucInfo.isFinancialInstitutionCiiu()) {
+            throw new DomainValidationException("iam.error.sunat.notFinancialInstitution");
+        }
+
+        user.addRole(Roles.ROLE_FINANCIAL_INSTITUTION);
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
     }
 }

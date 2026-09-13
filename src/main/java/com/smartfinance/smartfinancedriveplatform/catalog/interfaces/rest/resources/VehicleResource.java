@@ -8,7 +8,7 @@ import java.util.UUID;
  */
 public record VehicleResource(
     UUID id,
-    UUID userId,
+    String userId,
     UUID financialEntityId,
     String brand,
     String model,

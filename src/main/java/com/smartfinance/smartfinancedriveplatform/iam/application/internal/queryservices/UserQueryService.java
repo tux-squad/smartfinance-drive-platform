@@ -4,6 +4,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.Us
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetAllUsersQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByUsernameQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,4 +20,6 @@ public interface UserQueryService {
     Optional<User> handle(GetUserByUsernameQuery query);
 
     List<User> handle(GetAllUsersQuery query);
+
+    Page<User> handle(GetAllUsersQuery query, Pageable pageable);
 }

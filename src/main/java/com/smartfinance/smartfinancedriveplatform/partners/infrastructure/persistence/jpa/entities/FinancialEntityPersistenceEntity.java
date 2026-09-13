@@ -22,7 +22,7 @@ public class FinancialEntityPersistenceEntity extends AuditableAbstractPersisten
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @OneToMany(mappedBy = "financialEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "financialEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<RateBenchmarkPersistenceEntity> rateBenchmarks = new ArrayList<>();
 
     public void addRateBenchmark(RateBenchmarkPersistenceEntity benchmark) {

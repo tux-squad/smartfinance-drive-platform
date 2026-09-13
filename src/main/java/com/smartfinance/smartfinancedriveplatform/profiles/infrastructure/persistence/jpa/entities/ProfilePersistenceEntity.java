@@ -10,7 +10,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
  * JPA entity representing the 'profiles' table in the database.
@@ -23,7 +22,7 @@ import java.util.UUID;
 public class ProfilePersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     @Column(name = "user_id", nullable = false, unique = true)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "email", nullable = false)
     private String email;

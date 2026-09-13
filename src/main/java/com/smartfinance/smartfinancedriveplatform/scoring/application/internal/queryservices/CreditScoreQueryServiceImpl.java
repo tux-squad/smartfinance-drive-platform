@@ -6,6 +6,8 @@ import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.queries.G
 import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.queries.GetCreditScoreByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.queries.GetCreditScoreByProfileIdQuery;
 import com.smartfinance.smartfinancedriveplatform.scoring.domain.repositories.CreditScoreRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,5 +42,17 @@ public class CreditScoreQueryServiceImpl implements CreditScoreQueryService {
     @Transactional(readOnly = true)
     public List<CreditScore> handle(GetAllCreditScoresQuery query) {
         return creditScoreRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CreditScore> handle(GetAllCreditScoresQuery query, Pageable pageable) {
+        return creditScoreRepository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CreditScore> handle(GetCreditScoreByProfileIdQuery query, Pageable pageable) {
+        return creditScoreRepository.findByProfileId(query.profileId(), pageable);
     }
 }

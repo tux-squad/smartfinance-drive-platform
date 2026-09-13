@@ -6,6 +6,8 @@ import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queri
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queries.GetDepreciationProjectionByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queries.GetDepreciationProjectionsByVehicleIdQuery;
 import com.smartfinance.smartfinancedriveplatform.projections.domain.repositories.DepreciationProjectionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,5 +42,17 @@ public class DepreciationProjectionQueryServiceImpl implements DepreciationProje
     @Transactional(readOnly = true)
     public List<DepreciationProjection> handle(GetAllDepreciationProjectionsQuery query) {
         return repository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<DepreciationProjection> handle(GetAllDepreciationProjectionsQuery query, Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<DepreciationProjection> handle(GetDepreciationProjectionsByVehicleIdQuery query, Pageable pageable) {
+        return repository.findByVehicleId(query.vehicleId(), pageable);
     }
 }

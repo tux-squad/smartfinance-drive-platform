@@ -1,6 +1,8 @@
 package com.smartfinance.smartfinancedriveplatform.projections.infrastructure.persistence.jpa.repositories;
 
 import com.smartfinance.smartfinancedriveplatform.projections.infrastructure.persistence.jpa.entities.DepreciationProjectionPersistenceEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +15,5 @@ import java.util.UUID;
 @Repository
 public interface SpringDataDepreciationProjectionRepository extends JpaRepository<DepreciationProjectionPersistenceEntity, UUID> {
     List<DepreciationProjectionPersistenceEntity> findByVehicleId(String vehicleId);
+    Page<DepreciationProjectionPersistenceEntity> findByVehicleId(String vehicleId, Pageable pageable);
 }
