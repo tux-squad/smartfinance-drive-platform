@@ -44,27 +44,24 @@ public class StripeWebhookController {
             @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader) {
 
         Event event;
-        if (webhookSecret != null && !webhookSecret.isBlank()) {
-            if (sigHeader == null) {
-                LOGGER.warn("Missing Stripe-Signature header in webhook request");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing Stripe-Signature header");
-            }
-            try {
-                event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
-            } catch (SignatureVerificationException e) {
-                LOGGER.error("Invalid Stripe webhook signature: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
-            } catch (Exception e) {
-                LOGGER.error("Error constructing Stripe webhook event: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook error");
-            }
-        } else {
-            LOGGER.warn("Stripe webhook-secret is unconfigured. Processing raw payload without signature verification.");
-            try {
-                event = Event.GSON.fromJson(payload, Event.class);
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid JSON payload");
-            }
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            LOGGER.error("Stripe webhook secret is not configured on server. Rejecting webhook request.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook secret is not configured");
+        }
+
+        if (sigHeader == null || sigHeader.isBlank()) {
+            LOGGER.warn("Missing Stripe-Signature header in webhook request");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing Stripe-Signature header");
+        }
+
+        try {
+            event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
+        } catch (SignatureVerificationException e) {
+            LOGGER.error("Invalid Stripe webhook signature: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
+        } catch (Exception e) {
+            LOGGER.error("Error constructing Stripe webhook event: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook error");
         }
 
         if (event == null) {

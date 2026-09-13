@@ -34,8 +34,8 @@ class StripeWebhookControllerTest {
     }
 
     @Test
-    @DisplayName("Should accept raw JSON event when secret is unconfigured")
-    void shouldAcceptRawEventWhenSecretUnconfigured() {
+    @DisplayName("Should return 400 Bad Request when webhook secret is unconfigured")
+    void shouldReturnBadRequestWhenSecretUnconfigured() {
         StripeWebhookController controller = new StripeWebhookController("", subscriptionRepository, invoiceRepository);
 
         String sampleEventJson = """
@@ -47,7 +47,7 @@ class StripeWebhookControllerTest {
 
         ResponseEntity<String> response = controller.handleStripeWebhook(sampleEventJson, null);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Event received", response.getBody());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Webhook secret is not configured", response.getBody());
     }
 }
