@@ -3,9 +3,11 @@ package com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest;
 import com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.SunatRucResource;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.SunatRucResourceFromInfoAssembler;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api/v1/partners/sunat", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 public class SunatRucController {
 
     private final SunatRucVerifierService sunatRucVerifierService;
@@ -33,7 +36,10 @@ public class SunatRucController {
      */
     @GetMapping("/ruc/{ruc}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<SunatRucResource> getRucInfo(@PathVariable String ruc) {
+    public ResponseEntity<SunatRucResource> getRucInfo(
+            @PathVariable
+            @Pattern(regexp = "^\\d{11}$", message = "RUC must consist of exactly 11 numeric digits")
+            String ruc) {
         var rucInfoOpt = sunatRucVerifierService.verifyRuc(ruc);
         return rucInfoOpt
                 .map(info -> ResponseEntity.ok(SunatRucResourceFromInfoAssembler.toResourceFromInfo(info)))
