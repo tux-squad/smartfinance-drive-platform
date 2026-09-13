@@ -102,6 +102,13 @@ public class StripeWebhookController {
                                 subscription.setStripeSubscriptionId(subscriptionIdStr);
                                 subscriptionRepository.save(subscription);
                             });
+
+                    invoiceRepository.findAllByUserId(clientReferenceId).stream()
+                            .filter(inv -> inv.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PENDING)
+                            .forEach(inv -> {
+                                inv.markPaid();
+                                invoiceRepository.save(inv);
+                            });
                 }
             }
         }
