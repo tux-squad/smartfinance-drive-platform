@@ -45,10 +45,19 @@ public class Plan {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "stripe_price_id")
+    private String stripePriceId;
+
     public Plan() {}
 
     public Plan(String name, String description, BigDecimal price, String currency,
                 BillingCycle billingCycle, Integer maxVehicleListings, Integer maxSimulationsPerMonth) {
+        this(name, description, price, currency, billingCycle, maxVehicleListings, maxSimulationsPerMonth, null);
+    }
+
+    public Plan(String name, String description, BigDecimal price, String currency,
+                BillingCycle billingCycle, Integer maxVehicleListings, Integer maxSimulationsPerMonth,
+                String stripePriceId) {
         this.name = name;
         this.description = description;
         this.price = price;
@@ -57,5 +66,6 @@ public class Plan {
         this.maxVehicleListings = maxVehicleListings != null ? maxVehicleListings : 10;
         this.maxSimulationsPerMonth = maxSimulationsPerMonth != null ? maxSimulationsPerMonth : 50;
         this.active = true;
+        this.stripePriceId = stripePriceId;
     }
 }

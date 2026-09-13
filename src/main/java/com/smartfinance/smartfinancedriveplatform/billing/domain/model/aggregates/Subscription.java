@@ -43,6 +43,12 @@ public class Subscription {
     @Column(nullable = false)
     private boolean autoRenew = true;
 
+    @Column(name = "stripe_subscription_id")
+    private String stripeSubscriptionId;
+
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
+
     public Subscription() {}
 
     public Subscription(String userId, Plan plan, boolean autoRenew) {

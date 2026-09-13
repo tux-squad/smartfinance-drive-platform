@@ -48,6 +48,9 @@ public class Invoice {
 
     private LocalDateTime paidAt;
 
+    @Column(name = "stripe_payment_intent_id")
+    private String stripePaymentIntentId;
+
     public Invoice() {}
 
     public Invoice(Long subscriptionId, String userId, BigDecimal amount, String currency) {
