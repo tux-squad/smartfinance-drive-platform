@@ -32,6 +32,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final HashingService hashingService;
     private final TokenService tokenService;
     private final GoogleTokenVerifierService googleTokenVerifierService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
     private final com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService;
 
     public UserCommandServiceImpl(UserRepository userRepository,

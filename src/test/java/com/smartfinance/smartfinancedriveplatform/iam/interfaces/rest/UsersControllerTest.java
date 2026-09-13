@@ -96,4 +96,20 @@ class UsersControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getBody().roles().contains("ROLE_DEALER"));
     }
+
+    @Test
+    @DisplayName("Should return 200 OK on requestDealerRole when SUNAT verification passes")
+    void shouldReturnOkOnRequestDealerRole() {
+        User user = new User(1L, new Username("dealer@example.com"), new Password("$2a$10$hashed1Password123"), List.of(com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles.ROLE_DEALER));
+        com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RequestDealerRoleResource resource =
+                new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.RequestDealerRoleResource("20100128056");
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand.class))).thenReturn(Optional.of(user));
+
+        ResponseEntity<UserResource> response = usersController.requestDealerRole(1L, resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().roles().contains("ROLE_DEALER"));
+    }
 }
