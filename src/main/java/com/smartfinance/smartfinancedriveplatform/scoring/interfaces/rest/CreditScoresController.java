@@ -63,19 +63,17 @@ public class CreditScoresController {
      * Retrieves credit score evaluations belonging to caller's profile(s) or all if ADMIN.
      */
     @GetMapping
-    public ResponseEntity<List<CreditScoreResource>> getAllCreditScores() {
+    public ResponseEntity<org.springframework.data.domain.Page<CreditScoreResource>> getAllCreditScores(
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         var query = new GetAllCreditScoresQuery();
-        var scores = creditScoreQueryService.handle(query);
+        var scoresPage = creditScoreQueryService.handle(query, pageable);
         
-        var filteredScores = scores.stream()
+        var resourcesPage = scoresPage
                 .filter(score -> ownershipChecker.isCreditScoreOwner(score.getId().value(), auth))
-                .collect(Collectors.toList());
+                .map(CreditScoreResourceFromEntityAssembler::toResourceFromEntity);
 
-        var resources = filteredScores.stream()
-                .map(CreditScoreResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(resources);
+        return ResponseEntity.ok(resourcesPage);
     }
 
     /**

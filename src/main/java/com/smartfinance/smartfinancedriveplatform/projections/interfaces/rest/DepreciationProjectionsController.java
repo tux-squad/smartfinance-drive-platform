@@ -63,19 +63,17 @@ public class DepreciationProjectionsController {
      * Retrieves vehicle depreciation projections belonging to caller's vehicle(s) or all if ADMIN.
      */
     @GetMapping
-    public ResponseEntity<List<DepreciationProjectionResource>> getAllProjections() {
+    public ResponseEntity<org.springframework.data.domain.Page<DepreciationProjectionResource>> getAllProjections(
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         var query = new GetAllDepreciationProjectionsQuery();
-        var projections = queryService.handle(query);
+        var projectionsPage = queryService.handle(query, pageable);
 
-        var filteredProjections = projections.stream()
+        var resourcesPage = projectionsPage
                 .filter(p -> ownershipChecker.isDepreciationProjectionOwner(p.getId().value(), auth))
-                .collect(Collectors.toList());
+                .map(DepreciationProjectionResourceFromEntityAssembler::toResourceFromEntity);
 
-        var resources = filteredProjections.stream()
-                .map(DepreciationProjectionResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(resources);
+        return ResponseEntity.ok(resourcesPage);
     }
 
     /**

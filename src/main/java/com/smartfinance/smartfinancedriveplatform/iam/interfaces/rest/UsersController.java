@@ -5,6 +5,9 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetAl
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UserResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.transform.UserResourceFromEntityAssembler;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,8 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * REST Controller for User management queries.
@@ -29,16 +30,14 @@ public class UsersController {
     }
 
     /**
-     * Retrieves all registered users. Restricted to ADMIN role.
+     * Retrieves paged list of registered users. Restricted to ADMIN role.
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserResource>> getAllUsers() {
-        var users = userQueryService.handle(new GetAllUsersQuery());
-        var userResources = users.stream()
-                .map(UserResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(userResources);
+    public ResponseEntity<Page<UserResource>> getAllUsers(@PageableDefault(size = 20) Pageable pageable) {
+        var usersPage = userQueryService.handle(new GetAllUsersQuery(), pageable);
+        var userResourcesPage = usersPage.map(UserResourceFromEntityAssembler::toResourceFromEntity);
+        return ResponseEntity.ok(userResourcesPage);
     }
 
     /**

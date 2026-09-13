@@ -15,7 +15,9 @@ import java.util.List;
  * JPA entity representing the 'simulations' table in the database.
  */
 @Entity
-@Table(name = "simulations")
+@Table(name = "simulations", indexes = {
+        @Index(name = "idx_simulations_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,37 +26,46 @@ public class SimulationPersistenceEntity extends AuditableAbstractPersistenceEnt
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(name = "vehicle_id")
+    @Column(name = "vehicle_id", nullable = false)
     private String vehicleId;
 
-    @Column(name = "financial_entity_id")
+    @Column(name = "financial_entity_id", nullable = false)
     private String financialEntityId;
-
-    @Column(name = "currency", nullable = false, length = 10)
-    private String currency;
 
     @Column(name = "vehicle_price_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal vehiclePriceAmount;
 
-    @Column(name = "down_payment_percentage", nullable = false, precision = 9, scale = 6)
+    @Column(name = "currency", nullable = false, length = 10)
+    private String currency;
+
+    @Column(name = "down_payment_percentage", nullable = false, precision = 7, scale = 4)
     private BigDecimal downPaymentPercentage;
 
-    @Column(name = "balloon_payment_percentage", nullable = false, precision = 9, scale = 6)
+    @Column(name = "down_payment_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal downPaymentAmount;
+
+    @Column(name = "financed_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal financedAmount;
+
+    @Column(name = "balloon_payment_percentage", nullable = false, precision = 7, scale = 4)
     private BigDecimal balloonPaymentPercentage;
 
-    @Column(name = "annual_effective_rate", nullable = false, precision = 9, scale = 6)
+    @Column(name = "balloon_payment_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal balloonPaymentAmount;
+
+    @Column(name = "annual_effective_rate", nullable = false, precision = 7, scale = 4)
     private BigDecimal annualEffectiveRate;
 
-    @Column(name = "monthly_credit_life_insurance_rate", precision = 9, scale = 6)
+    @Column(name = "monthly_credit_life_insurance_rate", precision = 7, scale = 4)
     private BigDecimal monthlyCreditLifeInsuranceRate;
 
     @Column(name = "vehicle_insurance_fee_amount", precision = 12, scale = 2)
     private BigDecimal vehicleInsuranceFeeAmount;
 
-    @Column(name = "vehicle_insurance_type", nullable = false, length = 20)
+    @Column(name = "vehicle_insurance_type", length = 20)
     private String vehicleInsuranceType;
 
     @Column(name = "loan_term_months", nullable = false)
@@ -69,26 +80,16 @@ public class SimulationPersistenceEntity extends AuditableAbstractPersistenceEnt
     @Column(name = "initial_fees_amount", precision = 12, scale = 2)
     private BigDecimal initialFeesAmount;
 
-    @Column(name = "discount_rate", precision = 9, scale = 6)
+    @Column(name = "discount_rate", precision = 7, scale = 4)
     private BigDecimal discountRate;
 
-    @Column(name = "start_date", nullable = false)
+    @Column(name = "start_date")
     private LocalDate startDate;
 
-    // Computed Output Persistence Fields
-    @Column(name = "financed_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal financedAmount;
-
-    @Column(name = "down_payment_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal downPaymentAmount;
-
-    @Column(name = "balloon_payment_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal balloonPaymentAmount;
-
-    @Column(name = "tcea", nullable = false, precision = 9, scale = 6)
+    @Column(name = "tcea", nullable = false, precision = 7, scale = 4)
     private BigDecimal tcea;
 
-    @Column(name = "tir", nullable = false, precision = 9, scale = 6)
+    @Column(name = "tir", nullable = false, precision = 7, scale = 4)
     private BigDecimal tir;
 
     @Column(name = "van", nullable = false, precision = 12, scale = 2)
@@ -100,7 +101,7 @@ public class SimulationPersistenceEntity extends AuditableAbstractPersistenceEnt
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
-    @OneToMany(mappedBy = "simulation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "simulation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PaymentPeriodPersistenceEntity> paymentPeriods = new ArrayList<>();
 
     public void addPaymentPeriod(PaymentPeriodPersistenceEntity period) {

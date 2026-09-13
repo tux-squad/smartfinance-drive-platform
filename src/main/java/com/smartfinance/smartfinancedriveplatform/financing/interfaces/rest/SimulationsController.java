@@ -59,22 +59,16 @@ public class SimulationsController {
      * Retrieves credit simulations belonging to the authenticated user (or all if ADMIN).
      */
     @GetMapping
-    public ResponseEntity<List<SimulationResource>> getAllSimulations() {
+    public ResponseEntity<org.springframework.data.domain.Page<SimulationResource>> getAllSimulations(
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         String authUserId = SecurityUtils.getCurrentUserId().orElse(null);
 
-        var query = new GetAllSimulationsQuery();
-        var simulations = simulationQueryService.handle(query);
+        org.springframework.data.domain.Page<Simulation> simulationsPage = (authUserId != null)
+                ? simulationQueryService.handleGetByUserId(authUserId, pageable)
+                : simulationQueryService.handle(new GetAllSimulationsQuery(), pageable);
 
-        var filteredSimulations = (authUserId != null)
-                ? simulations.stream()
-                        .filter(s -> Objects.equals(s.getUserId(), authUserId))
-                        .collect(Collectors.toList())
-                : simulations;
-
-        var resources = filteredSimulations.stream()
-                .map(SimulationResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(resources);
+        var resourcesPage = simulationsPage.map(SimulationResourceFromEntityAssembler::toResourceFromEntity);
+        return ResponseEntity.ok(resourcesPage);
     }
 
     /**
