@@ -21,7 +21,7 @@ public record SunatRucInfo(
         if (ciiu == null || ciiu.isBlank()) {
             return false;
         }
-        // CIIU 4510 / 45100 represents sale of motor vehicles
-        return ciiu.startsWith("451") || ciiu.startsWith("4510");
+        // CIIU 451 / 4510 / 45100 represents sale of motor vehicles
+        return ciiu.startsWith("451");
     }
 }

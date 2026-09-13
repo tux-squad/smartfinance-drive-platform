@@ -2,17 +2,21 @@ package com.smartfinance.smartfinancedriveplatform.partners.infrastructure.token
 
 import com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.SunatRucInfo;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Optional;
 
 /**
- * Implementation of {@link SunatRucVerifierService} invoking the Chequea.pe REST API.
+ * Implementation of {@link SunatRucVerifierService} invoking the Chequea.pe REST API with timeouts and caching.
  */
 @Service
 public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
@@ -24,7 +28,12 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
     public ChequeaRucVerifierServiceImpl(
             @Value("${chequea.base-url:https://api.chequea.pe}") String baseUrl,
             @Value("${chequea.api-key:ak_live_KVZ4-T3DFFPl5WzMckwyet54TnzhTHV_q6GOj10bntE}") String apiKey) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(5000);
+
         this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .build();
@@ -36,6 +45,7 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
     }
 
     @Override
+    @Cacheable(value = "sunatRucCache", key = "#ruc", unless = "#result == null || !#result.isPresent()")
     public Optional<SunatRucInfo> verifyRuc(String ruc) {
         if (ruc == null || !ruc.matches("\\d{11}")) {
             LOGGER.warn("Invalid RUC format supplied: {}", ruc);
@@ -62,9 +72,15 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
                     response.direccion(),
                     response.ciiu()
             ));
-        } catch (Exception e) {
-            LOGGER.error("Failed to query Chequea.pe API for RUC {}: {}", ruc, e.getMessage());
+        } catch (HttpClientErrorException.NotFound e) {
+            LOGGER.info("RUC {} not found in SUNAT database", ruc);
             return Optional.empty();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warn("Client error when querying Chequea.pe for RUC {}: Status {}", ruc, e.getStatusCode());
+            return Optional.empty();
+        } catch (Exception e) {
+            LOGGER.error("External SUNAT API service failure for RUC {}: {}", ruc, e.getMessage());
+            throw new DomainValidationException("partners.error.sunatServiceUnavailable");
         }
     }
 
