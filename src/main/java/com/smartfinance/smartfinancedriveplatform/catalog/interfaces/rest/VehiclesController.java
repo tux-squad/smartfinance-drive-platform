@@ -56,6 +56,7 @@ public class VehiclesController {
      * @return The response payload of the created vehicle.
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'DEALER')")
     public ResponseEntity<VehicleResource> createVehicle(@jakarta.validation.Valid @RequestBody CreateVehicleResource resource) {
         String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateVehicleCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);

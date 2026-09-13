@@ -49,7 +49,7 @@ public class FinancialEntitiesController {
      * @return The created financial entity resource payload.
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> createFinancialEntity(@jakarta.validation.Valid @RequestBody CreateFinancialEntityResource resource) {
         var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource);
         var entityOpt = financialEntityCommandService.handle(command);
@@ -68,7 +68,7 @@ public class FinancialEntitiesController {
      * @return List of financial entity resources.
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<List<FinancialEntityResource>> getAllFinancialEntities() {
         var query = new GetAllFinancialEntitiesQuery();
         var entities = financialEntityQueryService.handle(query);
@@ -86,7 +86,7 @@ public class FinancialEntitiesController {
      * @return The financial entity resource payload.
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<FinancialEntityResource> getFinancialEntityById(@PathVariable UUID id) {
         var query = new GetFinancialEntityByIdQuery(new FinancialEntityId(id));
         var entityOpt = financialEntityQueryService.handle(query);
@@ -104,7 +104,7 @@ public class FinancialEntitiesController {
      * @return The updated financial entity resource payload.
      */
     @PostMapping("/{id}/rate-benchmarks")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> addRateBenchmark(
             @PathVariable UUID id,
             @jakarta.validation.Valid @RequestBody AddRateBenchmarkResource resource) {
@@ -127,7 +127,7 @@ public class FinancialEntitiesController {
      * @return The updated financial entity resource payload.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> updateFinancialEntity(
             @PathVariable UUID id,
             @jakarta.validation.Valid @RequestBody UpdateFinancialEntityResource resource) {
