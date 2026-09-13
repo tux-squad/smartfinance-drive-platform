@@ -15,7 +15,8 @@ public class PlanResourceFromEntityAssembler {
                 plan.getBillingCycle(),
                 plan.getMaxVehicleListings(),
                 plan.getMaxSimulationsPerMonth(),
-                plan.isActive()
+                plan.isActive(),
+                plan.getStripePriceId()
         );
     }
 }

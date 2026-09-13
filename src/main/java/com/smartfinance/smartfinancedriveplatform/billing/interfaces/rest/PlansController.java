@@ -70,7 +70,8 @@ public class PlansController {
                 resource.currency(),
                 resource.billingCycle(),
                 resource.maxVehicleListings(),
-                resource.maxSimulationsPerMonth()
+                resource.maxSimulationsPerMonth(),
+                resource.stripePriceId()
         );
         var createdPlanOpt = planCommandService.handle(command);
         return createdPlanOpt

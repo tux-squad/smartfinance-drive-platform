@@ -14,8 +14,14 @@ public record CreatePlanCommand(
         String currency,
         BillingCycle billingCycle,
         Integer maxVehicleListings,
-        Integer maxSimulationsPerMonth
+        Integer maxSimulationsPerMonth,
+        String stripePriceId
 ) {
+    public CreatePlanCommand(String name, String description, BigDecimal price, String currency,
+                             BillingCycle billingCycle, Integer maxVehicleListings, Integer maxSimulationsPerMonth) {
+        this(name, description, price, currency, billingCycle, maxVehicleListings, maxSimulationsPerMonth, null);
+    }
+
     public CreatePlanCommand {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Plan name must not be blank");

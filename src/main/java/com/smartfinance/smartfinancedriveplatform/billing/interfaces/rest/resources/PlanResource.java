@@ -13,5 +13,6 @@ public record PlanResource(
         BillingCycle billingCycle,
         Integer maxVehicleListings,
         Integer maxSimulationsPerMonth,
-        boolean active
+        boolean active,
+        String stripePriceId
 ) {}

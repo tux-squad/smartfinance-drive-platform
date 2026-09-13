@@ -32,7 +32,8 @@ public class PlanCommandServiceImpl implements PlanCommandService {
                 command.currency(),
                 command.billingCycle(),
                 command.maxVehicleListings(),
-                command.maxSimulationsPerMonth()
+                command.maxSimulationsPerMonth(),
+                command.stripePriceId()
         );
 
         Plan savedPlan = planRepository.save(plan);

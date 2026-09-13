@@ -15,5 +15,6 @@ public record CreatePlanResource(
         String currency,
         BillingCycle billingCycle,
         @Min(1) Integer maxVehicleListings,
-        @Min(1) Integer maxSimulationsPerMonth
+        @Min(1) Integer maxSimulationsPerMonth,
+        String stripePriceId
 ) {}
