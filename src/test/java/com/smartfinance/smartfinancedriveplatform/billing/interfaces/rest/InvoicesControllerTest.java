@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,25 +75,29 @@ class InvoicesControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 200 OK on successful payInvoice")
+    @DisplayName("Should return 200 OK on successful payInvoice and verify user ownership check parameter")
     void shouldPayInvoiceSuccessfully() {
         testInvoice.markPaid();
-        when(subscriptionCommandService.handle(any(PayInvoiceCommand.class))).thenReturn(Optional.of(testInvoice));
+        when(subscriptionCommandService.handle(new PayInvoiceCommand(50L, "usr_100")))
+                .thenReturn(Optional.of(testInvoice));
 
         ResponseEntity<InvoiceResource> response = invoicesController.payInvoice(50L);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(InvoiceStatus.PAID, response.getBody().status());
+        verify(subscriptionCommandService).handle(new PayInvoiceCommand(50L, "usr_100"));
     }
 
     @Test
-    @DisplayName("Should return 404 Not Found when paying non-existent invoice")
+    @DisplayName("Should return 404 Not Found when paying non-existent or unauthorized invoice")
     void shouldReturnNotFoundWhenInvoiceDoesNotExist() {
-        when(subscriptionCommandService.handle(any(PayInvoiceCommand.class))).thenReturn(Optional.empty());
+        when(subscriptionCommandService.handle(new PayInvoiceCommand(999L, "usr_100")))
+                .thenReturn(Optional.empty());
 
         ResponseEntity<InvoiceResource> response = invoicesController.payInvoice(999L);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(subscriptionCommandService).handle(new PayInvoiceCommand(999L, "usr_100"));
     }
 }

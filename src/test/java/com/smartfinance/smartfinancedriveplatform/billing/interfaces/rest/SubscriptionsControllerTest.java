@@ -37,6 +37,10 @@ import com.smartfinance.smartfinancedriveplatform.billing.application.outboundse
 import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CheckoutSessionResponseResource;
 import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CreateCheckoutSessionResource;
 
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.commands.CancelSubscriptionCommand;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.SubscriptionStatus;
+import static org.mockito.Mockito.verify;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SubscriptionsController Unit Tests")
 class SubscriptionsControllerTest {
@@ -101,7 +105,37 @@ class SubscriptionsControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 200 OK with checkout URL on createCheckoutSession")
+    @DisplayName("Should cancel subscription successfully and enforce ownership with current user ID")
+    void shouldCancelSubscriptionSuccessfully() {
+        Subscription subscription = new Subscription("100", testPlan, true);
+        subscription.cancel();
+        ReflectionTestUtils.setField(subscription, "id", 10L);
+
+        when(subscriptionCommandService.handle(new CancelSubscriptionCommand(10L, "100")))
+                .thenReturn(Optional.of(subscription));
+
+        ResponseEntity<SubscriptionResource> response = subscriptionsController.cancelSubscription(10L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(SubscriptionStatus.CANCELED, response.getBody().status());
+        verify(subscriptionCommandService).handle(new CancelSubscriptionCommand(10L, "100"));
+    }
+
+    @Test
+    @DisplayName("Should return 404 Not Found when canceling non-existent or unauthorized subscription")
+    void shouldReturnNotFoundWhenCancelingUnauthorizedSubscription() {
+        when(subscriptionCommandService.handle(new CancelSubscriptionCommand(999L, "100")))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<SubscriptionResource> response = subscriptionsController.cancelSubscription(999L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(subscriptionCommandService).handle(new CancelSubscriptionCommand(999L, "100"));
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK with checkout URL and verify current user ID is passed")
     void shouldCreateCheckoutSessionSuccessfully() {
         when(stripePaymentGatewayService.createCheckoutSession(null, "price_123", "100", "http://success", "http://cancel"))
                 .thenReturn("https://checkout.stripe.com/c/pay/cs_test_123");
@@ -112,5 +146,6 @@ class SubscriptionsControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("https://checkout.stripe.com/c/pay/cs_test_123", response.getBody().checkoutUrl());
+        verify(stripePaymentGatewayService).createCheckoutSession(null, "price_123", "100", "http://success", "http://cancel");
     }
 }
