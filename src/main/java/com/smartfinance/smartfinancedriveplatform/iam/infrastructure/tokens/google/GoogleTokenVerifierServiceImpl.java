@@ -24,12 +24,16 @@ public class GoogleTokenVerifierServiceImpl implements GoogleTokenVerifierServic
     private final GoogleIdTokenVerifier verifier;
 
     public GoogleTokenVerifierServiceImpl(@Value("${google.client-id}") String clientId) {
-        this.verifier = new GoogleIdTokenVerifier.Builder(
+        this(new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(),
                 GsonFactory.getDefaultInstance()
         )
                 .setAudience(Collections.singletonList(clientId))
-                .build();
+                .build());
+    }
+
+    public GoogleTokenVerifierServiceImpl(GoogleIdTokenVerifier verifier) {
+        this.verifier = verifier;
     }
 
     @Override
