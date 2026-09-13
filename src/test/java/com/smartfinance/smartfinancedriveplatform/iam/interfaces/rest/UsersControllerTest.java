@@ -33,6 +33,9 @@ class UsersControllerTest {
     @Mock
     private UserQueryService userQueryService;
 
+    @Mock
+    private com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.UserCommandService userCommandService;
+
     @InjectMocks
     private UsersController usersController;
 
@@ -76,5 +79,21 @@ class UsersControllerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNull(response.getBody());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on updateUserRole when valid")
+    void shouldReturnOkOnUpdateUserRole() {
+        User user = new User(1L, new Username("john@example.com"), new Password("$2a$10$hashed1Password123"), List.of(com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.Roles.ROLE_DEALER));
+        com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UpdateUserRoleResource resource =
+                new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UpdateUserRoleResource("ROLE_DEALER");
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand.class))).thenReturn(Optional.of(user));
+
+        ResponseEntity<UserResource> response = usersController.updateUserRole(1L, resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().roles().contains("ROLE_DEALER"));
     }
 }
