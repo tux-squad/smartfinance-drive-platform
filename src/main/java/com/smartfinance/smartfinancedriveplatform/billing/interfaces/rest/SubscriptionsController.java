@@ -16,6 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartfinance.smartfinancedriveplatform.billing.application.outboundservices.StripePaymentGatewayService;
+import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CheckoutSessionResponseResource;
+import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CreateCheckoutSessionResource;
+
 /**
  * REST Controller for User Subscription management.
  */
@@ -25,11 +29,14 @@ public class SubscriptionsController {
 
     private final SubscriptionCommandService subscriptionCommandService;
     private final SubscriptionQueryService subscriptionQueryService;
+    private final StripePaymentGatewayService stripePaymentGatewayService;
 
     public SubscriptionsController(SubscriptionCommandService subscriptionCommandService,
-                                   SubscriptionQueryService subscriptionQueryService) {
+                                   SubscriptionQueryService subscriptionQueryService,
+                                   StripePaymentGatewayService stripePaymentGatewayService) {
         this.subscriptionCommandService = subscriptionCommandService;
         this.subscriptionQueryService = subscriptionQueryService;
+        this.stripePaymentGatewayService = stripePaymentGatewayService;
     }
 
     /**
@@ -71,5 +78,22 @@ public class SubscriptionsController {
         return subscriptionOpt
                 .map(sub -> ResponseEntity.ok(SubscriptionResourceFromEntityAssembler.toResourceFromEntity(sub)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Initiates a Stripe Checkout Session for subscription purchase.
+     */
+    @PostMapping("/checkout-session")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CheckoutSessionResponseResource> createCheckoutSession(@Valid @RequestBody CreateCheckoutSessionResource resource) {
+        String currentUserId = SecurityUtils.getRequiredCurrentUserId();
+        String checkoutUrl = stripePaymentGatewayService.createCheckoutSession(
+                null,
+                resource.stripePriceId(),
+                currentUserId,
+                resource.successUrl(),
+                resource.cancelUrl()
+        );
+        return ResponseEntity.ok(new CheckoutSessionResponseResource(checkoutUrl));
     }
 }

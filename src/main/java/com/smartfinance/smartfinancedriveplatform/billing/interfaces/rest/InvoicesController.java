@@ -45,7 +45,12 @@ public class InvoicesController {
     }
 
     /**
-     * Pays a pending invoice.
+     * Marks a pending invoice as paid directly in internal billing.
+     * <p>
+     * Note: This endpoint serves as an internal, manual, or offline payment reconciliation shortcut.
+     * For automated credit card payments, use Stripe Checkout via {@code POST /api/v1/billing/subscriptions/checkout-session}
+     * and handle completion via webhooks.
+     * </p>
      */
     @PostMapping("/{invoiceId}/pay")
     @PreAuthorize("isAuthenticated()")
