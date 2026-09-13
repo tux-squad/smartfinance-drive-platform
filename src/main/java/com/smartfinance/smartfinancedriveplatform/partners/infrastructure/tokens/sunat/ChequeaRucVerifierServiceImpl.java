@@ -27,7 +27,7 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
 
     public ChequeaRucVerifierServiceImpl(
             @Value("${chequea.base-url:https://api.chequea.pe}") String baseUrl,
-            @Value("${chequea.api-key:ak_live_KVZ4-T3DFFPl5WzMckwyet54TnzhTHV_q6GOj10bntE}") String apiKey) {
+            @Value("${chequea.api-key:}") String apiKey) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(3000);
         requestFactory.setReadTimeout(5000);
