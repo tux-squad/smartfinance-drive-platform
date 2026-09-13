@@ -32,18 +32,20 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final HashingService hashingService;
     private final TokenService tokenService;
     private final GoogleTokenVerifierService googleTokenVerifierService;
-    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
+    private final com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
                                   TokenService tokenService,
                                   GoogleTokenVerifierService googleTokenVerifierService,
-                                  com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService) {
+                                  com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
+                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.googleTokenVerifierService = googleTokenVerifierService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.sunatRucVerifierService = sunatRucVerifierService;
     }
 
     @Override
@@ -185,6 +187,32 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
 
         user.addRole(command.role());
+        User updatedUser = userRepository.save(user);
+
+        return Optional.of(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public Optional<User> handle(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand command) {
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+
+        var rucInfoOpt = sunatRucVerifierService.verifyRuc(command.ruc());
+        if (rucInfoOpt.isEmpty()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotFound");
+        }
+
+        var rucInfo = rucInfoOpt.get();
+        if (!rucInfo.isActiveAndHabido()) {
+            throw new DomainValidationException("iam.error.sunat.rucNotActiveOrHabido");
+        }
+
+        if (!rucInfo.isAutomotiveCiiu()) {
+            throw new DomainValidationException("iam.error.sunat.notAutomotiveDealer");
+        }
+
+        user.addRole(Roles.ROLE_DEALER);
         User updatedUser = userRepository.save(user);
 
         return Optional.of(updatedUser);
