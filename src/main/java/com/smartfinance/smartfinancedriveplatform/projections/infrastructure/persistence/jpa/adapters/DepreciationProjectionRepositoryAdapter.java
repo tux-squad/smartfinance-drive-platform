@@ -53,6 +53,18 @@ public class DepreciationProjectionRepositoryAdapter implements DepreciationProj
     }
 
     @Override
+    public org.springframework.data.domain.Page<DepreciationProjection> findAll(org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(DepreciationProjectionPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<DepreciationProjection> findByVehicleId(String vehicleId, org.springframework.data.domain.Pageable pageable) {
+        return repository.findByVehicleId(vehicleId, pageable)
+                .map(DepreciationProjectionPersistenceAssembler::toDomain);
+    }
+
+    @Override
     public void deleteById(ProjectionId projectionId) {
         repository.deleteById(projectionId.value());
     }

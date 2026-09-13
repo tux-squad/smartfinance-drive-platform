@@ -10,11 +10,15 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+import jakarta.persistence.Index;
+
 /**
  * JPA entity representing the 'depreciation_projections' table in the database.
  */
 @Entity
-@Table(name = "depreciation_projections")
+@Table(name = "depreciation_projections", indexes = {
+        @Index(name = "idx_deprec_proj_vehicle_id", columnList = "vehicle_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

@@ -16,5 +16,5 @@ public interface SpringDataVehicleRepository extends JpaRepository<VehiclePersis
      * @param userId The user UUID.
      * @return A list of vehicle persistence entities.
      */
-    List<VehiclePersistenceEntity> findAllByUserId(UUID userId);
+    List<VehiclePersistenceEntity> findAllByUserId(String userId);
 }

@@ -53,6 +53,18 @@ public class CreditScoreRepositoryAdapter implements CreditScoreRepository {
     }
 
     @Override
+    public org.springframework.data.domain.Page<CreditScore> findAll(org.springframework.data.domain.Pageable pageable) {
+        return springDataCreditScoreRepository.findAll(pageable)
+                .map(CreditScorePersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<CreditScore> findByProfileId(String profileId, org.springframework.data.domain.Pageable pageable) {
+        return springDataCreditScoreRepository.findByProfileId(profileId, pageable)
+                .map(CreditScorePersistenceAssembler::toDomain);
+    }
+
+    @Override
     public void deleteById(ScoreId scoreId) {
         springDataCreditScoreRepository.deleteById(scoreId.value());
     }

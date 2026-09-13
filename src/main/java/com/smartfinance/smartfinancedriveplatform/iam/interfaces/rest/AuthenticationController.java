@@ -39,16 +39,22 @@ import java.util.Map;
 public class AuthenticationController {
 
     private final UserCommandService userCommandService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService jwtTokenService;
 
-    public AuthenticationController(UserCommandService userCommandService) {
+    public AuthenticationController(UserCommandService userCommandService,
+                                    com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
+                                    com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService jwtTokenService) {
         this.userCommandService = userCommandService;
+        this.tokenBlacklistService = tokenBlacklistService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     /**
      * Registers a new user account.
      */
     @PostMapping("/sign-up")
-    public ResponseEntity<UserResource> signUp(@RequestBody SignUpResource resource) {
+    public ResponseEntity<UserResource> signUp(@jakarta.validation.Valid @RequestBody SignUpResource resource) {
         SignUpCommand command = SignUpCommandFromResourceAssembler.toCommandFromResource(resource);
         var user = userCommandService.handle(command);
         if (user.isEmpty()) {
@@ -62,7 +68,7 @@ public class AuthenticationController {
      * Authenticates a user and returns signed JWT access & refresh tokens.
      */
     @PostMapping("/sign-in")
-    public ResponseEntity<AuthenticatedUserResource> signIn(@RequestBody SignInResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> signIn(@jakarta.validation.Valid @RequestBody SignInResource resource) {
         SignInCommand command = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {
@@ -81,7 +87,7 @@ public class AuthenticationController {
      * Refreshes an expired JWT access token using a valid Refresh Token.
      */
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthenticatedUserResource> refreshToken(@RequestBody RefreshTokenResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> refreshToken(@jakarta.validation.Valid @RequestBody RefreshTokenResource resource) {
         RefreshTokenCommand command = new RefreshTokenCommand(resource.refreshToken());
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {
@@ -97,15 +103,32 @@ public class AuthenticationController {
     }
 
     /**
-     * Initiates password recovery process and returns password reset token.
+     * Revokes current JWT bearer token and logs out the user.
+     */
+    @PostMapping("/sign-out")
+    public ResponseEntity<Map<String, String>> signOut(jakarta.servlet.http.HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+        if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
+            String token = headerAuth.substring(7);
+            String jti = jwtTokenService.getJtiFromToken(token);
+            long expiry = System.currentTimeMillis() + 86400000;
+            if (jti != null) {
+                tokenBlacklistService.blacklistToken(jti, expiry);
+            }
+            tokenBlacklistService.blacklistToken(token, expiry);
+        }
+        return ResponseEntity.ok(Map.of("message", "User signed out successfully"));
+    }
+
+    /**
+     * Initiates password recovery process without exposing the raw token in response body.
      */
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordResource resource) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@jakarta.validation.Valid @RequestBody ForgotPasswordResource resource) {
         ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
-        String resetToken = userCommandService.handle(command);
+        userCommandService.handle(command);
         return ResponseEntity.ok(Map.of(
-                "message", "Password reset token generated successfully",
-                "resetToken", resetToken
+                "message", "If an account with that email exists, password reset instructions have been processed."
         ));
     }
 
@@ -113,7 +136,7 @@ public class AuthenticationController {
      * Resets user password using password reset token.
      */
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordResource resource) {
+    public ResponseEntity<Map<String, String>> resetPassword(@jakarta.validation.Valid @RequestBody ResetPasswordResource resource) {
         ResetPasswordCommand command = new ResetPasswordCommand(
                 resource.resetToken(),
                 new Password(resource.newPassword())
@@ -123,11 +146,12 @@ public class AuthenticationController {
                 "message", "Password reset successfully"
         ));
     }
+
     /**
      * Authenticates a user using Google OAuth2 ID Token and returns signed platform JWT tokens.
      */
     @PostMapping("/google")
-    public ResponseEntity<AuthenticatedUserResource> googleSignIn(@RequestBody GoogleSignInResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> googleSignIn(@jakarta.validation.Valid @RequestBody GoogleSignInResource resource) {
         GoogleSignInCommand command = new GoogleSignInCommand(resource.idToken());
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {

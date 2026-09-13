@@ -47,6 +47,18 @@ public class SimulationRepositoryAdapter implements SimulationRepository {
     }
 
     @Override
+    public org.springframework.data.domain.Page<Simulation> findAll(org.springframework.data.domain.Pageable pageable) {
+        return springDataSimulationRepository.findAll(pageable)
+                .map(SimulationPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<Simulation> findByUserId(String userId, org.springframework.data.domain.Pageable pageable) {
+        return springDataSimulationRepository.findByUserId(userId, pageable)
+                .map(SimulationPersistenceAssembler::toDomain);
+    }
+
+    @Override
     public void deleteById(SimulationId id) {
         springDataSimulationRepository.deleteById(id.value());
     }

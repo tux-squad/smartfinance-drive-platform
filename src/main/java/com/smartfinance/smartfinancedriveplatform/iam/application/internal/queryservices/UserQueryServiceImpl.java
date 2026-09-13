@@ -5,6 +5,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetAl
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.queries.GetUserByUsernameQuery;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,5 +41,11 @@ public class UserQueryServiceImpl implements UserQueryService {
     @Transactional(readOnly = true)
     public List<User> handle(GetAllUsersQuery query) {
         return userRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<User> handle(GetAllUsersQuery query, Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 }

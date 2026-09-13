@@ -4,6 +4,8 @@ import com.smartfinance.smartfinancedriveplatform.projections.domain.model.aggre
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queries.GetAllDepreciationProjectionsQuery;
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queries.GetDepreciationProjectionByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.projections.domain.model.queries.GetDepreciationProjectionsByVehicleIdQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,4 +17,6 @@ public interface DepreciationProjectionQueryService {
     Optional<DepreciationProjection> handle(GetDepreciationProjectionByIdQuery query);
     List<DepreciationProjection> handle(GetDepreciationProjectionsByVehicleIdQuery query);
     List<DepreciationProjection> handle(GetAllDepreciationProjectionsQuery query);
+    Page<DepreciationProjection> handle(GetAllDepreciationProjectionsQuery query, Pageable pageable);
+    Page<DepreciationProjection> handle(GetDepreciationProjectionsByVehicleIdQuery query, Pageable pageable);
 }

@@ -10,6 +10,7 @@ import com.smartfinance.smartfinancedriveplatform.scoring.domain.model.queries.G
 import com.smartfinance.smartfinancedriveplatform.scoring.interfaces.rest.resources.CreditScoreResource;
 import com.smartfinance.smartfinancedriveplatform.scoring.interfaces.rest.resources.EvaluateCreditScoreResource;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class CreditScoresControllerTest {
 
     @Mock
     private CreditScoreQueryService creditScoreQueryService;
+
+    @Mock
+    private OwnershipChecker ownershipChecker;
 
     @InjectMocks
     private CreditScoresController creditScoresController;
@@ -78,13 +82,16 @@ class CreditScoresControllerTest {
     @Test
     @DisplayName("Should get all credit scores and return 200 OK")
     void shouldGetAllCreditScores() {
-        when(creditScoreQueryService.handle(any(GetAllCreditScoresQuery.class))).thenReturn(List.of(sampleScore));
+        when(creditScoreQueryService.handle(any(GetAllCreditScoresQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleScore)));
+        when(ownershipChecker.isCreditScoreOwner(any(), any())).thenReturn(true);
 
-        ResponseEntity<List<CreditScoreResource>> response = creditScoresController.getAllCreditScores();
+        ResponseEntity<org.springframework.data.domain.Page<CreditScoreResource>> response =
+                creditScoresController.getAllCreditScores(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

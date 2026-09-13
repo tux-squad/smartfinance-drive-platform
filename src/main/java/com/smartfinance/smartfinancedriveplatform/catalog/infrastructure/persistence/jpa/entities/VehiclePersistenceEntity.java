@@ -11,18 +11,22 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import jakarta.persistence.Index;
+
 /**
  * JPA entity representing the 'vehicles' table in the database.
  */
 @Entity
-@Table(name = "vehicles")
+@Table(name = "vehicles", indexes = {
+        @Index(name = "idx_vehicles_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
 public class VehiclePersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "financial_entity_id", nullable = false)
     private UUID financialEntityId;

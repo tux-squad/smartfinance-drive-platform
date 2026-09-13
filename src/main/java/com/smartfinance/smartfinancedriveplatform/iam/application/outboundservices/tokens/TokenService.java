@@ -72,10 +72,36 @@ public interface TokenService {
     }
 
     /**
+     * Generates a new access JWT token for a given userId, username, and list of roles.
+     *
+     * @param userId   The user ID.
+     * @param username The subject username.
+     * @param roles    List of role names.
+     * @return The JWT token string.
+     */
+    String generateToken(Long userId, String username, List<String> roles);
+
+    /**
      * Extracts the subject username from a valid token.
      *
      * @param token The token string.
      * @return The subject username.
      */
     String getUsernameFromToken(String token);
+
+    /**
+     * Extracts the userId from a valid token if present.
+     *
+     * @param token The token string.
+     * @return The userId as String, or null if not present.
+     */
+    String getUserIdFromToken(String token);
+
+    /**
+     * Extracts the JTI (JWT ID) from a valid token if present.
+     *
+     * @param token The token string.
+     * @return The JTI string, or null if not present.
+     */
+    String getJtiFromToken(String token);
 }

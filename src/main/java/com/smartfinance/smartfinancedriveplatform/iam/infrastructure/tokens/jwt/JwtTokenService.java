@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service responsible for generating and validating JWT access, refresh & reset tokens using JJWT.
@@ -22,7 +23,7 @@ public class JwtTokenService implements TokenService {
     @Value("${authorization.jwt.secret:SmartFinanceDrivePlatformSecretKeyForJwtTokenGenerationAndValidation2026!}")
     private String secret;
 
-    @Value("${authorization.jwt.expiration-ms:86400000}") // 24 hours default
+    @Value("${authorization.jwt.expiration-ms:900000}") // 15 minutes default
     private long expirationMs;
 
     @Value("${authorization.jwt.refresh-expiration-ms:604800000}") // 7 days default
@@ -35,13 +36,25 @@ public class JwtTokenService implements TokenService {
 
     @Override
     public String generateToken(String username, List<String> roles) {
+        return generateToken(null, username, roles);
+    }
+
+    @Override
+    public String generateToken(Long userId, String username, List<String> roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("roles", roles)
-                .claim("type", "access")
+                .claim("type", "access");
+
+        if (userId != null) {
+            builder.claim("userId", userId.toString());
+        }
+
+        return builder
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -54,6 +67,7 @@ public class JwtTokenService implements TokenService {
         Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("type", "refresh")
                 .issuedAt(now)
@@ -68,6 +82,7 @@ public class JwtTokenService implements TokenService {
         Date expiryDate = new Date(now.getTime() + 900000); // 15 minutes default for password reset
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("type", "reset")
                 .issuedAt(now)
@@ -84,6 +99,35 @@ public class JwtTokenService implements TokenService {
                 .parseSignedClaims(token)
                 .getPayload();
         return claims.getSubject();
+    }
+
+    @Override
+    public String getUserIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            Object val = claims.get("userId");
+            return val != null ? val.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    public String getJtiFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getId();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

@@ -20,8 +20,23 @@ public final class CreateVehicleCommandFromResourceAssembler {
      * @return The command.
      */
     public static CreateVehicleCommand toCommandFromResource(CreateVehicleResource resource) {
+        return toCommandFromResource(resource, null);
+    }
+
+    /**
+     * Converts a CreateVehicleResource and authenticated userId to a CreateVehicleCommand.
+     *
+     * @param resource            The resource DTO.
+     * @param authenticatedUserId The authenticated user ID.
+     * @return The command.
+     */
+    public static CreateVehicleCommand toCommandFromResource(CreateVehicleResource resource, String authenticatedUserId) {
+        String targetUserId = (authenticatedUserId != null && !authenticatedUserId.isBlank())
+                ? authenticatedUserId
+                : resource.userId();
+
         return new CreateVehicleCommand(
-            new UserId(resource.userId()),
+            new UserId(targetUserId),
             new FinancialEntityId(resource.financialEntityId()),
             resource.brand(),
             resource.model(),

@@ -1,6 +1,8 @@
 package com.smartfinance.smartfinancedriveplatform.scoring.infrastructure.persistence.jpa.repositories;
 
 import com.smartfinance.smartfinancedriveplatform.scoring.infrastructure.persistence.jpa.entities.CreditScorePersistenceEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +15,5 @@ import java.util.UUID;
 @Repository
 public interface SpringDataCreditScoreRepository extends JpaRepository<CreditScorePersistenceEntity, UUID> {
     List<CreditScorePersistenceEntity> findByProfileId(String profileId);
+    Page<CreditScorePersistenceEntity> findByProfileId(String profileId, Pageable pageable);
 }

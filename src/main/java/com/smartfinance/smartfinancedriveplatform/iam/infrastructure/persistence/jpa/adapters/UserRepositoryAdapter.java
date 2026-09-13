@@ -54,6 +54,11 @@ public class UserRepositoryAdapter implements UserRepository {
                 .toList();
     }
 
+    @Override
+    public org.springframework.data.domain.Page<User> findAll(org.springframework.data.domain.Pageable pageable) {
+        return repository.findAllPaged(pageable).map(this::toDomain);
+    }
+
     private UserJPAEntity toEntity(User domain) {
         UserJPAEntity entity = new UserJPAEntity(
                 domain.getUsername().username(),
@@ -63,6 +68,9 @@ public class UserRepositoryAdapter implements UserRepository {
         if (domain.getId() != null) {
             entity.setId(domain.getId());
         }
+        entity.setFailedLoginAttempts(domain.getFailedLoginAttempts());
+        entity.setAccountLocked(domain.isAccountLocked());
+        entity.setLockoutUntil(domain.getLockoutUntil());
         return entity;
     }
 
@@ -71,7 +79,10 @@ public class UserRepositoryAdapter implements UserRepository {
                 entity.getId(),
                 new Username(entity.getUsername()),
                 new Password(entity.getPassword()),
-                entity.getRoles()
+                entity.getRoles(),
+                entity.getFailedLoginAttempts(),
+                entity.isAccountLocked(),
+                entity.getLockoutUntil()
         );
     }
 }

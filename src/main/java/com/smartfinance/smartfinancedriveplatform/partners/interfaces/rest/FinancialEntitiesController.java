@@ -14,6 +14,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.trans
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.CreateFinancialEntityCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.FinancialEntityResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.UpdateFinancialEntityCommandFromResourceAssembler;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,7 +49,8 @@ public class FinancialEntitiesController {
      * @return The created financial entity resource payload.
      */
     @PostMapping
-    public ResponseEntity<FinancialEntityResource> createFinancialEntity(@RequestBody CreateFinancialEntityResource resource) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
+    public ResponseEntity<FinancialEntityResource> createFinancialEntity(@jakarta.validation.Valid @RequestBody CreateFinancialEntityResource resource) {
         var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -66,6 +68,7 @@ public class FinancialEntitiesController {
      * @return List of financial entity resources.
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<List<FinancialEntityResource>> getAllFinancialEntities() {
         var query = new GetAllFinancialEntitiesQuery();
         var entities = financialEntityQueryService.handle(query);
@@ -83,6 +86,7 @@ public class FinancialEntitiesController {
      * @return The financial entity resource payload.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<FinancialEntityResource> getFinancialEntityById(@PathVariable UUID id) {
         var query = new GetFinancialEntityByIdQuery(new FinancialEntityId(id));
         var entityOpt = financialEntityQueryService.handle(query);
@@ -100,9 +104,10 @@ public class FinancialEntitiesController {
      * @return The updated financial entity resource payload.
      */
     @PostMapping("/{id}/rate-benchmarks")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> addRateBenchmark(
             @PathVariable UUID id,
-            @RequestBody AddRateBenchmarkResource resource) {
+            @jakarta.validation.Valid @RequestBody AddRateBenchmarkResource resource) {
         var command = AddRateBenchmarkCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -122,9 +127,10 @@ public class FinancialEntitiesController {
      * @return The updated financial entity resource payload.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> updateFinancialEntity(
             @PathVariable UUID id,
-            @RequestBody UpdateFinancialEntityResource resource) {
+            @jakarta.validation.Valid @RequestBody UpdateFinancialEntityResource resource) {
         var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -140,6 +146,7 @@ public class FinancialEntitiesController {
      * @return 204 No Content.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteFinancialEntity(@PathVariable UUID id) {
         var command = new DeleteFinancialEntityCommand(new FinancialEntityId(id));
         financialEntityCommandService.handle(command);

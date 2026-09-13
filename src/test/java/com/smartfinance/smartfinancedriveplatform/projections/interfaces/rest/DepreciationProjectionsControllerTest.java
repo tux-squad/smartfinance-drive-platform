@@ -11,6 +11,7 @@ import com.smartfinance.smartfinancedriveplatform.projections.domain.model.value
 import com.smartfinance.smartfinancedriveplatform.projections.interfaces.rest.resources.CalculateDepreciationProjectionResource;
 import com.smartfinance.smartfinancedriveplatform.projections.interfaces.rest.resources.DepreciationProjectionResource;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class DepreciationProjectionsControllerTest {
 
     @Mock
     private DepreciationProjectionQueryService queryService;
+
+    @Mock
+    private OwnershipChecker ownershipChecker;
 
     @InjectMocks
     private DepreciationProjectionsController controller;
@@ -83,13 +87,16 @@ class DepreciationProjectionsControllerTest {
     @Test
     @DisplayName("Should get all projections and return 200 OK")
     void shouldGetAllProjections() {
-        when(queryService.handle(any(GetAllDepreciationProjectionsQuery.class))).thenReturn(List.of(sampleProjection));
+        when(queryService.handle(any(GetAllDepreciationProjectionsQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(sampleProjection)));
+        when(ownershipChecker.isDepreciationProjectionOwner(any(), any())).thenReturn(true);
 
-        ResponseEntity<List<DepreciationProjectionResource>> response = controller.getAllProjections();
+        ResponseEntity<org.springframework.data.domain.Page<DepreciationProjectionResource>> response =
+                controller.getAllProjections(org.springframework.data.domain.Pageable.unpaged());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test

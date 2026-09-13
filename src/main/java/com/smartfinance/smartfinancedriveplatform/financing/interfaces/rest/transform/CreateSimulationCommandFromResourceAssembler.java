@@ -15,6 +15,10 @@ public final class CreateSimulationCommandFromResourceAssembler {
     private CreateSimulationCommandFromResourceAssembler() {}
 
     public static CreateSimulationCommand toCommandFromResource(CreateSimulationResource resource) {
+        return toCommandFromResource(resource, null);
+    }
+
+    public static CreateSimulationCommand toCommandFromResource(CreateSimulationResource resource, String authenticatedUserId) {
         String currency = (resource.currency() != null && !resource.currency().isBlank()) ? resource.currency() : Money.DEFAULT_CURRENCY;
         Money price = resource.vehiclePriceAmount() != null ? new Money(resource.vehiclePriceAmount(), currency) : Money.zero(currency);
         Percent downPayment = resource.downPaymentPercentage() != null ? new Percent(resource.downPaymentPercentage()) : Percent.of(20.0);
@@ -27,9 +31,13 @@ public final class CreateSimulationCommandFromResourceAssembler {
         Money initialFees = resource.initialFeesAmount() != null ? new Money(resource.initialFeesAmount(), currency) : Money.zero(currency);
         Percent discountRate = resource.discountRate() != null ? new Percent(resource.discountRate()) : Percent.of(10.0);
 
+        String targetUserId = (authenticatedUserId != null && !authenticatedUserId.isBlank())
+                ? authenticatedUserId
+                : resource.userId();
+
         return new CreateSimulationCommand(
                 resource.title(),
-                resource.userId(),
+                targetUserId,
                 resource.vehicleId(),
                 resource.financialEntityId(),
                 price,
