@@ -23,6 +23,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.test.util.ReflectionTestUtils;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +51,7 @@ class SubscriptionsControllerTest {
     @BeforeEach
     void setUp() {
         testPlan = new Plan("DEALER_PRO", "Dealer Pro Plan", new BigDecimal("99.99"), "USD", BillingCycle.MONTHLY, 20, 100);
-        testPlan.setId(1L);
+        ReflectionTestUtils.setField(testPlan, "id", 1L);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken("user@example.com", null, List.of());
         auth.setDetails(new SecurityUtils.AuthenticatedUserDetails("100", "user@example.com"));
@@ -65,7 +67,7 @@ class SubscriptionsControllerTest {
     @DisplayName("Should return subscription on getCurrentUserSubscription when found")
     void shouldReturnCurrentUserSubscriptionWhenFound() {
         Subscription subscription = new Subscription("100", testPlan, true);
-        subscription.setId(10L);
+        ReflectionTestUtils.setField(subscription, "id", 10L);
 
         when(subscriptionQueryService.handle(any(GetSubscriptionByUserIdQuery.class))).thenReturn(Optional.of(subscription));
 
@@ -80,7 +82,7 @@ class SubscriptionsControllerTest {
     @DisplayName("Should return 201 Created on subscribeCurrentUser")
     void shouldSubscribeCurrentUserSuccessfully() {
         Subscription subscription = new Subscription("100", testPlan, true);
-        subscription.setId(10L);
+        ReflectionTestUtils.setField(subscription, "id", 10L);
 
         when(subscriptionCommandService.handle(any(SubscribeUserCommand.class))).thenReturn(Optional.of(subscription));
 
