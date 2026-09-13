@@ -1,7 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest;
 
-import com.smartfinance.smartfinancedriveplatform.billing.domain.repositories.InvoiceRepository;
-import com.smartfinance.smartfinancedriveplatform.billing.domain.repositories.SubscriptionRepository;
+import com.smartfinance.smartfinancedriveplatform.billing.application.internal.commandservices.SubscriptionCommandService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,15 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class StripeWebhookControllerTest {
 
     @Mock
-    private SubscriptionRepository subscriptionRepository;
-
-    @Mock
-    private InvoiceRepository invoiceRepository;
+    private SubscriptionCommandService subscriptionCommandService;
 
     @Test
     @DisplayName("Should return 400 Bad Request on missing signature when secret is set")
     void shouldReturnBadRequestOnMissingSignature() {
-        StripeWebhookController controller = new StripeWebhookController("whsec_secret", subscriptionRepository, invoiceRepository);
+        StripeWebhookController controller = new StripeWebhookController("whsec_secret", subscriptionCommandService);
 
         ResponseEntity<String> response = controller.handleStripeWebhook("{}", null);
 
@@ -36,7 +32,7 @@ class StripeWebhookControllerTest {
     @Test
     @DisplayName("Should return 400 Bad Request when webhook secret is unconfigured")
     void shouldReturnBadRequestWhenSecretUnconfigured() {
-        StripeWebhookController controller = new StripeWebhookController("", subscriptionRepository, invoiceRepository);
+        StripeWebhookController controller = new StripeWebhookController("", subscriptionCommandService);
 
         String sampleEventJson = """
                 {

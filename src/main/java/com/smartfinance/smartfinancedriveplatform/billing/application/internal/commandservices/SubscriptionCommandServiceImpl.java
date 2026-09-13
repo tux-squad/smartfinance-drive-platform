@@ -88,8 +88,55 @@ public class SubscriptionCommandServiceImpl implements SubscriptionCommandServic
             throw new DomainValidationException("billing.error.unauthorizedInvoiceAccess");
         }
 
+        if (invoice.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PAID) {
+            throw new DomainValidationException("billing.error.invoiceAlreadyPaid");
+        }
+
         invoice.markPaid();
         Invoice paidInvoice = invoiceRepository.save(invoice);
         return Optional.of(paidInvoice);
+    }
+
+    @Override
+    @Transactional
+    public void handleStripeCheckoutCompleted(String userId, String stripeCustomerId, String stripeSubscriptionId) {
+        if (userId != null && !userId.isBlank()) {
+            subscriptionRepository.findFirstByUserIdAndStatusOrderByEndDateDesc(userId, SubscriptionStatus.ACTIVE)
+                    .ifPresent(subscription -> {
+                        subscription.updateStripeDetails(stripeCustomerId, stripeSubscriptionId);
+                        subscriptionRepository.save(subscription);
+                    });
+
+            invoiceRepository.findAllByUserId(userId).stream()
+                    .filter(inv -> inv.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PENDING)
+                    .forEach(inv -> {
+                        inv.markPaid();
+                        invoiceRepository.save(inv);
+                    });
+        }
+    }
+
+    @Override
+    @Transactional
+    public void handleStripeSubscriptionDeleted(String stripeSubscriptionId) {
+        if (stripeSubscriptionId != null && !stripeSubscriptionId.isBlank()) {
+            subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
+                    .ifPresent(subscription -> {
+                        subscription.cancel();
+                        subscriptionRepository.save(subscription);
+                    });
+        }
+    }
+
+    @Override
+    @Transactional
+    public void handleStripePaymentFailed(String stripeCustomerId) {
+        if (stripeCustomerId != null && !stripeCustomerId.isBlank()) {
+            subscriptionRepository.findByStripeCustomerId(stripeCustomerId)
+                    .ifPresent(subscription -> {
+                        subscription.markPastDue();
+                        subscriptionRepository.save(subscription);
+                    });
+        }
     }
 }

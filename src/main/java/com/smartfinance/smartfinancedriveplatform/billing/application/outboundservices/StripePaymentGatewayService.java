@@ -12,5 +12,5 @@ public interface StripePaymentGatewayService {
     /**
      * Creates a Stripe Checkout Session for subscription payment.
      */
-    String createCheckoutSession(String stripeCustomerId, String stripePriceId, String successUrl, String cancelUrl);
+    String createCheckoutSession(String stripeCustomerId, String stripePriceId, String clientReferenceId, String successUrl, String cancelUrl);
 }

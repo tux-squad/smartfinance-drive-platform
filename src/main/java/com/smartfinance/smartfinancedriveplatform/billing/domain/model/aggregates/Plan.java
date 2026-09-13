@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "plans")
 @Getter
-@Setter
 public class Plan {
 
     @Id
@@ -66,6 +65,18 @@ public class Plan {
         this.maxVehicleListings = maxVehicleListings != null ? maxVehicleListings : 10;
         this.maxSimulationsPerMonth = maxSimulationsPerMonth != null ? maxSimulationsPerMonth : 50;
         this.active = true;
+        this.stripePriceId = stripePriceId;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
+    }
+
+    public void updateStripePriceId(String stripePriceId) {
         this.stripePriceId = stripePriceId;
     }
 }

@@ -14,4 +14,6 @@ public interface SubscriptionRepository {
     Optional<Subscription> findById(Long id);
     Optional<Subscription> findFirstByUserIdAndStatusOrderByEndDateDesc(String userId, SubscriptionStatus status);
     List<Subscription> findAllByUserId(String userId);
+    Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId);
+    Optional<Subscription> findByStripeCustomerId(String stripeCustomerId);
 }

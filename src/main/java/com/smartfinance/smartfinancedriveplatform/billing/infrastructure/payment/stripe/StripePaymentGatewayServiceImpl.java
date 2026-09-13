@@ -51,10 +51,10 @@ public class StripePaymentGatewayServiceImpl implements StripePaymentGatewayServ
     }
 
     @Override
-    public String createCheckoutSession(String stripeCustomerId, String stripePriceId, String successUrl, String cancelUrl) {
+    public String createCheckoutSession(String stripeCustomerId, String stripePriceId, String clientReferenceId, String successUrl, String cancelUrl) {
         ensureStripeConfigured();
         try {
-            SessionCreateParams params = SessionCreateParams.builder()
+            SessionCreateParams.Builder builder = SessionCreateParams.builder()
                     .setCustomer(stripeCustomerId)
                     .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                     .setSuccessUrl(successUrl != null && !successUrl.isBlank() ? successUrl : defaultSuccessUrl)
@@ -64,10 +64,13 @@ public class StripePaymentGatewayServiceImpl implements StripePaymentGatewayServ
                                     .setPrice(stripePriceId)
                                     .setQuantity(1L)
                                     .build()
-                    )
-                    .build();
+                    );
 
-            Session session = Session.create(params);
+            if (clientReferenceId != null && !clientReferenceId.isBlank()) {
+                builder.setClientReferenceId(clientReferenceId);
+            }
+
+            Session session = Session.create(builder.build());
             return session.getUrl();
         } catch (StripeException e) {
             LOGGER.error("Failed to create Stripe checkout session: {}", e.getMessage());

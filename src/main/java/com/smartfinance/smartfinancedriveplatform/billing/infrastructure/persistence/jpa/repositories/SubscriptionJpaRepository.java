@@ -12,4 +12,6 @@ import java.util.Optional;
 public interface SubscriptionJpaRepository extends JpaRepository<Subscription, Long> {
     Optional<Subscription> findFirstByUserIdAndStatusOrderByEndDateDesc(String userId, SubscriptionStatus status);
     List<Subscription> findByUserId(String userId);
+    Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId);
+    Optional<Subscription> findByStripeCustomerId(String stripeCustomerId);
 }

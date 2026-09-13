@@ -2,9 +2,9 @@ package com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregat
 
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.BillingCycle;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.SubscriptionStatus;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
         @Index(name = "idx_subscription_user_id", columnList = "user_id")
 })
 @Getter
-@Setter
 public class Subscription {
 
     @Id
@@ -65,8 +64,25 @@ public class Subscription {
     }
 
     public void cancel() {
+        if (this.status == SubscriptionStatus.CANCELED) {
+            throw new DomainValidationException("billing.error.subscriptionAlreadyCancelled");
+        }
         this.status = SubscriptionStatus.CANCELED;
         this.autoRenew = false;
+    }
+
+    public void markPastDue() {
+        this.status = SubscriptionStatus.PAST_DUE;
+    }
+
+    public void expire() {
+        this.status = SubscriptionStatus.EXPIRED;
+        this.autoRenew = false;
+    }
+
+    public void updateStripeDetails(String stripeCustomerId, String stripeSubscriptionId) {
+        if (stripeCustomerId != null) this.stripeCustomerId = stripeCustomerId;
+        if (stripeSubscriptionId != null) this.stripeSubscriptionId = stripeSubscriptionId;
     }
 
     public boolean isActive() {

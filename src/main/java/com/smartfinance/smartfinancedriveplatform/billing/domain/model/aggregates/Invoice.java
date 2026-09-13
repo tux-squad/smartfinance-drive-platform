@@ -1,9 +1,9 @@
 package com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregates;
 
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
         @Index(name = "idx_invoice_subscription_id", columnList = "subscription_id")
 })
 @Getter
-@Setter
 public class Invoice {
 
     @Id
@@ -64,7 +63,18 @@ public class Invoice {
     }
 
     public void markPaid() {
+        if (this.status == InvoiceStatus.PAID) {
+            throw new DomainValidationException("billing.error.invoiceAlreadyPaid");
+        }
         this.status = InvoiceStatus.PAID;
         this.paidAt = LocalDateTime.now();
+    }
+
+    public void markFailed() {
+        this.status = InvoiceStatus.FAILED;
+    }
+
+    public void updateStripePaymentIntent(String stripePaymentIntentId) {
+        this.stripePaymentIntentId = stripePaymentIntentId;
     }
 }

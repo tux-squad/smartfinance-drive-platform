@@ -37,4 +37,14 @@ public class SubscriptionRepositoryAdapter implements SubscriptionRepository {
     public List<Subscription> findAllByUserId(String userId) {
         return subscriptionJpaRepository.findByUserId(userId);
     }
+
+    @Override
+    public Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId) {
+        return subscriptionJpaRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    }
+
+    @Override
+    public Optional<Subscription> findByStripeCustomerId(String stripeCustomerId) {
+        return subscriptionJpaRepository.findByStripeCustomerId(stripeCustomerId);
+    }
 }

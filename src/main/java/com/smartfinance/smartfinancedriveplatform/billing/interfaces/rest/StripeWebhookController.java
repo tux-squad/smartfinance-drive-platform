@@ -1,8 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest;
 
-import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.SubscriptionStatus;
-import com.smartfinance.smartfinancedriveplatform.billing.domain.repositories.InvoiceRepository;
-import com.smartfinance.smartfinancedriveplatform.billing.domain.repositories.SubscriptionRepository;
+import com.smartfinance.smartfinancedriveplatform.billing.application.internal.commandservices.SubscriptionCommandService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
@@ -26,16 +24,13 @@ public class StripeWebhookController {
     private static final Logger LOGGER = LoggerFactory.getLogger(StripeWebhookController.class);
 
     private final String webhookSecret;
-    private final SubscriptionRepository subscriptionRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final SubscriptionCommandService subscriptionCommandService;
 
     public StripeWebhookController(
             @Value("${stripe.webhook-secret:}") String webhookSecret,
-            SubscriptionRepository subscriptionRepository,
-            InvoiceRepository invoiceRepository) {
+            SubscriptionCommandService subscriptionCommandService) {
         this.webhookSecret = webhookSecret;
-        this.subscriptionRepository = subscriptionRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.subscriptionCommandService = subscriptionCommandService;
     }
 
     @PostMapping
@@ -87,26 +82,12 @@ public class StripeWebhookController {
             if (stripeObject instanceof Session session) {
                 String customerId = session.getCustomer();
                 String subscriptionIdStr = session.getSubscription();
-                String clientReferenceId = session.getClientReferenceId(); // userId or internal subscriptionId
+                String clientReferenceId = session.getClientReferenceId();
 
                 LOGGER.info("Stripe Checkout completed: customer={}, stripeSubscription={}, clientRef={}",
                         customerId, subscriptionIdStr, clientReferenceId);
 
-                if (clientReferenceId != null && !clientReferenceId.isBlank()) {
-                    subscriptionRepository.findFirstByUserIdAndStatusOrderByEndDateDesc(clientReferenceId, SubscriptionStatus.ACTIVE)
-                            .ifPresent(subscription -> {
-                                subscription.setStripeCustomerId(customerId);
-                                subscription.setStripeSubscriptionId(subscriptionIdStr);
-                                subscriptionRepository.save(subscription);
-                            });
-
-                    invoiceRepository.findAllByUserId(clientReferenceId).stream()
-                            .filter(inv -> inv.getStatus() == com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus.PENDING)
-                            .forEach(inv -> {
-                                inv.markPaid();
-                                invoiceRepository.save(inv);
-                            });
-                }
+                subscriptionCommandService.handleStripeCheckoutCompleted(clientReferenceId, customerId, subscriptionIdStr);
             }
         }
     }
@@ -118,6 +99,7 @@ public class StripeWebhookController {
             if (stripeObject instanceof com.stripe.model.Subscription stripeSub) {
                 String stripeSubId = stripeSub.getId();
                 LOGGER.info("Stripe subscription deleted: {}", stripeSubId);
+                subscriptionCommandService.handleStripeSubscriptionDeleted(stripeSubId);
             }
         }
     }
@@ -129,6 +111,7 @@ public class StripeWebhookController {
             if (stripeObject instanceof com.stripe.model.Invoice stripeInvoice) {
                 String customerId = stripeInvoice.getCustomer();
                 LOGGER.warn("Stripe invoice payment failed for customer {}", customerId);
+                subscriptionCommandService.handleStripePaymentFailed(customerId);
             }
         }
     }
