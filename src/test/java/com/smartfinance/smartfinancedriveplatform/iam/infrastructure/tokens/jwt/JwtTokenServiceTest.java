@@ -19,6 +19,7 @@ class JwtTokenServiceTest {
         jwtTokenService = new JwtTokenService();
         ReflectionTestUtils.setField(jwtTokenService, "secret", "SecretKeyForTestingJwtTokenServiceInSmartFinanceDrivePlatform2026!");
         ReflectionTestUtils.setField(jwtTokenService, "expirationMs", 3600000L); // 1 hour
+        ReflectionTestUtils.setField(jwtTokenService, "refreshExpirationMs", 604800000L); // 7 days
     }
 
     @Test
@@ -46,5 +47,31 @@ class JwtTokenServiceTest {
 
         assertTrue(jwtTokenService.validateToken(token));
         assertFalse(jwtTokenService.validateToken("invalid.token.string"));
+    }
+
+    @Test
+    @DisplayName("Should validate typed tokens correctly and reject mismatched types")
+    void shouldValidateTypedTokensCorrectly() {
+        String username = "user@smartfinance.com";
+        List<String> roles = List.of("ROLE_USER");
+
+        String accessToken = jwtTokenService.generateToken(username, roles);
+        String refreshToken = jwtTokenService.generateRefreshToken(username);
+        String resetToken = jwtTokenService.generatePasswordResetToken(username);
+
+        // Access token validations
+        assertTrue(jwtTokenService.validateAccessToken(accessToken));
+        assertFalse(jwtTokenService.validateRefreshToken(accessToken));
+        assertFalse(jwtTokenService.validateResetToken(accessToken));
+
+        // Refresh token validations
+        assertTrue(jwtTokenService.validateRefreshToken(refreshToken));
+        assertFalse(jwtTokenService.validateAccessToken(refreshToken));
+        assertFalse(jwtTokenService.validateResetToken(refreshToken));
+
+        // Reset token validations
+        assertTrue(jwtTokenService.validateResetToken(resetToken));
+        assertFalse(jwtTokenService.validateAccessToken(resetToken));
+        assertFalse(jwtTokenService.validateRefreshToken(resetToken));
     }
 }
