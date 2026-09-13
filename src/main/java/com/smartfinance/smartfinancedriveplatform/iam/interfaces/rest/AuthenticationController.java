@@ -38,10 +38,15 @@ import java.util.Map;
 @RequestMapping(value = "/api/v1/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AuthenticationController {
 
-    private final UserCommandService userCommandService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService jwtTokenService;
 
-    public AuthenticationController(UserCommandService userCommandService) {
+    public AuthenticationController(UserCommandService userCommandService,
+                                    com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
+                                    com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.JwtTokenService jwtTokenService) {
         this.userCommandService = userCommandService;
+        this.tokenBlacklistService = tokenBlacklistService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     /**
@@ -94,6 +99,24 @@ public class AuthenticationController {
                 authResult.refreshToken()
         );
         return ResponseEntity.ok(authResource);
+    }
+
+    /**
+     * Revokes current JWT bearer token and logs out the user.
+     */
+    @PostMapping("/sign-out")
+    public ResponseEntity<Map<String, String>> signOut(jakarta.servlet.http.HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+        if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
+            String token = headerAuth.substring(7);
+            String jti = jwtTokenService.getJtiFromToken(token);
+            long expiry = System.currentTimeMillis() + 86400000;
+            if (jti != null) {
+                tokenBlacklistService.blacklistToken(jti, expiry);
+            }
+            tokenBlacklistService.blacklistToken(token, expiry);
+        }
+        return ResponseEntity.ok(Map.of("message", "User signed out successfully"));
     }
 
     /**

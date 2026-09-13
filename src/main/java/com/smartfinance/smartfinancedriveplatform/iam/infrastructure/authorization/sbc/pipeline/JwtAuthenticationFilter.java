@@ -29,10 +29,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService tokenService;
     private final UserDetailsServiceImpl userDetailsService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
 
-    public JwtAuthenticationFilter(JwtTokenService tokenService, UserDetailsServiceImpl userDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenService tokenService,
+                                   UserDetailsServiceImpl userDetailsService,
+                                   com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService) {
         this.tokenService = tokenService;
         this.userDetailsService = userDetailsService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -45,20 +49,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = parseBearerToken(request);
 
-            if (StringUtils.hasText(token) && tokenService.validateAccessToken(token)) {
-                String username = tokenService.getUsernameFromToken(token);
-                String userId = tokenService.getUserIdFromToken(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (StringUtils.hasText(token)) {
+                String jti = tokenService.getJtiFromToken(token);
+                if (tokenBlacklistService.isBlacklisted(token) || (jti != null && tokenBlacklistService.isBlacklisted(jti))) {
+                    log.warn("Access attempt with blacklisted token or JTI");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                if (tokenService.validateAccessToken(token)) {
+                    String username = tokenService.getUsernameFromToken(token);
+                    String userId = tokenService.getUserIdFromToken(token);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                authentication.setDetails(new com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.AuthenticatedUserDetails(userId, username));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    authentication.setDetails(new com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.AuthenticatedUserDetails(userId, username));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception e) {
             log.error("Cannot set user authentication: {}", e.getMessage());

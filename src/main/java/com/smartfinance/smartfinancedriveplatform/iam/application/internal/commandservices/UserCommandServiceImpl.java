@@ -32,15 +32,18 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final HashingService hashingService;
     private final TokenService tokenService;
     private final GoogleTokenVerifierService googleTokenVerifierService;
+    private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
                                   TokenService tokenService,
-                                  GoogleTokenVerifierService googleTokenVerifierService) {
+                                  GoogleTokenVerifierService googleTokenVerifierService,
+                                  com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.googleTokenVerifierService = googleTokenVerifierService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -88,11 +91,16 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<AuthenticationResult> handle(RefreshTokenCommand command) {
-        if (command.refreshToken() == null || !tokenService.validateRefreshToken(command.refreshToken())) {
+        if (command.refreshToken() == null ||
+            tokenBlacklistService.isBlacklisted(command.refreshToken()) ||
+            !tokenService.validateRefreshToken(command.refreshToken())) {
             throw new DomainValidationException("iam.error.invalidRefreshToken");
         }
+
+        // Invalidate old refresh token (Token Rotation)
+        tokenBlacklistService.blacklistToken(command.refreshToken(), System.currentTimeMillis() + 604800000L);
 
         String usernameStr = tokenService.getUsernameFromToken(command.refreshToken());
         User user = userRepository.findByUsername(new Username(usernameStr))

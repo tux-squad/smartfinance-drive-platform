@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service responsible for generating and validating JWT access, refresh & reset tokens using JJWT.
@@ -22,7 +23,7 @@ public class JwtTokenService implements TokenService {
     @Value("${authorization.jwt.secret:SmartFinanceDrivePlatformSecretKeyForJwtTokenGenerationAndValidation2026!}")
     private String secret;
 
-    @Value("${authorization.jwt.expiration-ms:86400000}") // 24 hours default
+    @Value("${authorization.jwt.expiration-ms:900000}") // 15 minutes default
     private long expirationMs;
 
     @Value("${authorization.jwt.refresh-expiration-ms:604800000}") // 7 days default
@@ -44,6 +45,7 @@ public class JwtTokenService implements TokenService {
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
         var builder = Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("roles", roles)
                 .claim("type", "access");
@@ -65,6 +67,7 @@ public class JwtTokenService implements TokenService {
         Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("type", "refresh")
                 .issuedAt(now)
@@ -79,6 +82,7 @@ public class JwtTokenService implements TokenService {
         Date expiryDate = new Date(now.getTime() + 900000); // 15 minutes default for password reset
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("type", "reset")
                 .issuedAt(now)
@@ -107,6 +111,20 @@ public class JwtTokenService implements TokenService {
                     .getPayload();
             Object val = claims.get("userId");
             return val != null ? val.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    public String getJtiFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getId();
         } catch (Exception e) {
             return null;
         }

@@ -96,4 +96,12 @@ public interface TokenService {
      * @return The userId as String, or null if not present.
      */
     String getUserIdFromToken(String token);
+
+    /**
+     * Extracts the JTI (JWT ID) from a valid token if present.
+     *
+     * @param token The token string.
+     * @return The JTI string, or null if not present.
+     */
+    String getJtiFromToken(String token);
 }
