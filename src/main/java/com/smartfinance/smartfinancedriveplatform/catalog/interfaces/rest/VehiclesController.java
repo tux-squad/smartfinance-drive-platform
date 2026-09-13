@@ -57,8 +57,7 @@ public class VehiclesController {
      */
     @PostMapping
     public ResponseEntity<VehicleResource> createVehicle(@RequestBody CreateVehicleResource resource) {
-        String authUserId = SecurityUtils.getCurrentUserId()
-                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateVehicleCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var vehicleOpt = vehicleCommandService.handle(command);
         return vehicleOpt

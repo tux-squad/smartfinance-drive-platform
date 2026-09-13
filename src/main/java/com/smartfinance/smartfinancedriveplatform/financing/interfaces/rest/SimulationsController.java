@@ -43,8 +43,7 @@ public class SimulationsController {
      */
     @PostMapping
     public ResponseEntity<SimulationResource> createSimulation(@RequestBody CreateSimulationResource resource) {
-        String authUserId = SecurityUtils.getCurrentUserId()
-                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateSimulationCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var simulationOpt = simulationCommandService.handle(command);
         return simulationOpt

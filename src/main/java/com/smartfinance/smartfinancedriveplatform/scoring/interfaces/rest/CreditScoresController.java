@@ -97,6 +97,7 @@ public class CreditScoresController {
      * Retrieves credit score evaluations for a specific customer profile if owned by caller or ADMIN.
      */
     @GetMapping("/profile/{profileId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isProfileOwnerStr(#profileId, authentication)")
     public ResponseEntity<List<CreditScoreResource>> getCreditScoresByProfileId(@PathVariable String profileId) {
         var query = new GetCreditScoreByProfileIdQuery(profileId);
         var scores = creditScoreQueryService.handle(query);

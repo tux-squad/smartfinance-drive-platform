@@ -10,6 +10,8 @@ import com.smartfinance.smartfinancedriveplatform.profiles.domain.model.valueobj
 import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.resources.CreateProfileResource;
 import com.smartfinance.smartfinancedriveplatform.profiles.interfaces.rest.resources.ProfileResource;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,9 +19,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,9 +52,20 @@ class ProfilesControllerTest {
         profilesController = new ProfilesController(profileCommandService, profileQueryService);
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void testCreateProfileSuccess() {
         String userId = UUID.randomUUID().toString();
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "john.doe@example.com", "password", Collections.emptyList()
+        );
+        auth.setDetails(new SecurityUtils.AuthenticatedUserDetails(userId, "john.doe@example.com"));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
         CreateProfileResource resource = new CreateProfileResource(
             userId,
             "john.doe@example.com",

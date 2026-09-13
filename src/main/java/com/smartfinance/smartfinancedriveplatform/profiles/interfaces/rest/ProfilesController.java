@@ -47,8 +47,7 @@ public class ProfilesController {
      */
     @PostMapping
     public ResponseEntity<ProfileResource> createProfile(@RequestBody CreateProfileResource resource) {
-        String authUserId = SecurityUtils.getCurrentUserId()
-                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(resource.userId()));
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateProfileCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var profileOpt = profileCommandService.handle(command);
         return profileOpt

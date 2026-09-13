@@ -83,6 +83,19 @@ public class OwnershipChecker {
     }
 
     /**
+     * Checks if the currently authenticated user owns the vehicle specified by string ID.
+     */
+    public boolean isVehicleOwnerStr(String vehicleIdStr, Authentication authentication) {
+        if (isAdmin(authentication)) return true;
+        if (vehicleIdStr == null || vehicleIdStr.isBlank()) return false;
+        try {
+            return isVehicleOwner(UUID.fromString(vehicleIdStr), authentication);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Checks if the currently authenticated user owns the specified profile.
      */
     public boolean isProfileOwner(UUID profileId, Authentication authentication) {
@@ -93,6 +106,19 @@ public class OwnershipChecker {
         return profileQueryService.handle(new GetProfileByIdQuery(new ProfileId(profileId)))
                 .map(profile -> Objects.equals(profile.getUserId().value(), currentUserId))
                 .orElse(false);
+    }
+
+    /**
+     * Checks if the currently authenticated user owns the profile specified by string ID.
+     */
+    public boolean isProfileOwnerStr(String profileIdStr, Authentication authentication) {
+        if (isAdmin(authentication)) return true;
+        if (profileIdStr == null || profileIdStr.isBlank()) return false;
+        try {
+            return isProfileOwner(UUID.fromString(profileIdStr), authentication);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

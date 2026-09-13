@@ -94,9 +94,10 @@ public class DepreciationProjectionsController {
 
     /**
      * GET /api/v1/depreciation-projections/vehicle/{vehicleId}
-     * Retrieves depreciation projections for a specific vehicle.
+     * Retrieves depreciation projections for a specific vehicle if owned by caller or ADMIN.
      */
     @GetMapping("/vehicle/{vehicleId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isVehicleOwnerStr(#vehicleId, authentication)")
     public ResponseEntity<List<DepreciationProjectionResource>> getProjectionsByVehicleId(@PathVariable String vehicleId) {
         var query = new GetDepreciationProjectionsByVehicleIdQuery(vehicleId);
         var projections = queryService.handle(query);
