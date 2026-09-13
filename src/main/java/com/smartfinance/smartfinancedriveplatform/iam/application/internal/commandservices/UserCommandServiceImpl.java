@@ -79,7 +79,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional(readOnly = true)
     public Optional<AuthenticationResult> handle(RefreshTokenCommand command) {
-        if (command.refreshToken() == null || !tokenService.validateToken(command.refreshToken())) {
+        if (command.refreshToken() == null || !tokenService.validateRefreshToken(command.refreshToken())) {
             throw new DomainValidationException("iam.error.invalidRefreshToken");
         }
 
@@ -105,10 +105,14 @@ public class UserCommandServiceImpl implements UserCommandService {
         }
 
         var googleUserInfo = googleUserInfoOpt.get();
+        if (!googleUserInfo.emailVerified()) {
+            throw new DomainValidationException("iam.error.googleEmailNotVerified");
+        }
+
         Username username = new Username(googleUserInfo.email());
 
         User user = userRepository.findByUsername(username).orElseGet(() -> {
-            String randomSecret = UUID.randomUUID().toString();
+            String randomSecret = "G00gle#OAuth2_" + UUID.randomUUID().toString();
             String hashedPassword = hashingService.encode(randomSecret);
             User newUser = new User(username, new Password(hashedPassword), List.of(Roles.ROLE_USER));
             return userRepository.save(newUser);
@@ -136,7 +140,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional
     public boolean handle(ResetPasswordCommand command) {
-        if (command.resetToken() == null || !tokenService.validateToken(command.resetToken())) {
+        if (command.resetToken() == null || !tokenService.validateResetToken(command.resetToken())) {
             throw new DomainValidationException("iam.error.invalidResetToken");
         }
 

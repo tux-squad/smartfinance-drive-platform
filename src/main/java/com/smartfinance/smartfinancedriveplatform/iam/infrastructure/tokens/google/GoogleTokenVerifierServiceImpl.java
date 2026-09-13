@@ -24,12 +24,16 @@ public class GoogleTokenVerifierServiceImpl implements GoogleTokenVerifierServic
     private final GoogleIdTokenVerifier verifier;
 
     public GoogleTokenVerifierServiceImpl(@Value("${google.client-id}") String clientId) {
-        this.verifier = new GoogleIdTokenVerifier.Builder(
+        this(new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(),
                 GsonFactory.getDefaultInstance()
         )
                 .setAudience(Collections.singletonList(clientId))
-                .build();
+                .build());
+    }
+
+    public GoogleTokenVerifierServiceImpl(GoogleIdTokenVerifier verifier) {
+        this.verifier = verifier;
     }
 
     @Override
@@ -50,13 +54,14 @@ public class GoogleTokenVerifierServiceImpl implements GoogleTokenVerifierServic
             String givenName = (String) payload.get("given_name");
             String familyName = (String) payload.get("family_name");
             String pictureUrl = (String) payload.get("picture");
+            Boolean emailVerified = payload.getEmailVerified();
 
             if (email == null || email.isBlank()) {
                 log.warn("Google ID token payload did not contain email");
                 return Optional.empty();
             }
 
-            return Optional.of(new GoogleUserInfo(email, givenName, familyName, pictureUrl));
+            return Optional.of(new GoogleUserInfo(email, givenName, familyName, pictureUrl, Boolean.TRUE.equals(emailVerified)));
         } catch (Exception e) {
             log.error("Failed to verify Google ID token: {}", e.getMessage());
             return Optional.empty();

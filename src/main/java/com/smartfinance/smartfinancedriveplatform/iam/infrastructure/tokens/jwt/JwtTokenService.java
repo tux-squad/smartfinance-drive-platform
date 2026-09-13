@@ -98,4 +98,23 @@ public class JwtTokenService implements TokenService {
             return false;
         }
     }
+
+    @Override
+    public boolean validateToken(String token, String expectedType) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            String tokenType = claims.get("type", String.class);
+            return expectedType != null && expectedType.equals(tokenType);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
 }

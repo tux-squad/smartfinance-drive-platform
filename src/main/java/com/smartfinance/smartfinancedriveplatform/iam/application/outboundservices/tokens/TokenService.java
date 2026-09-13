@@ -42,6 +42,36 @@ public interface TokenService {
     boolean validateToken(String token);
 
     /**
+     * Validates a JWT token and verifies that its 'type' claim matches expectedType.
+     *
+     * @param token        The token string.
+     * @param expectedType Expected token type ("access", "refresh", "reset").
+     * @return true if valid and type matches, false otherwise.
+     */
+    boolean validateToken(String token, String expectedType);
+
+    /**
+     * Validates a JWT token specifically expecting type 'access'.
+     */
+    default boolean validateAccessToken(String token) {
+        return validateToken(token, "access");
+    }
+
+    /**
+     * Validates a JWT token specifically expecting type 'refresh'.
+     */
+    default boolean validateRefreshToken(String token) {
+        return validateToken(token, "refresh");
+    }
+
+    /**
+     * Validates a JWT token specifically expecting type 'reset'.
+     */
+    default boolean validateResetToken(String token) {
+        return validateToken(token, "reset");
+    }
+
+    /**
      * Extracts the subject username from a valid token.
      *
      * @param token The token string.
