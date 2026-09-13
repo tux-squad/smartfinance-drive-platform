@@ -40,7 +40,7 @@ public class ProfilesController {
 
     /**
      * POST /api/v1/profiles
-     * Registers a new customer profile, associating it with the authenticated user.
+     * Registers a new customer profile, strictly using the authenticated user's ID.
      *
      * @param resource The creation payload.
      * @return The created profile resource.
@@ -61,12 +61,13 @@ public class ProfilesController {
 
     /**
      * GET /api/v1/profiles/{profileId}
-     * Retrieves profile details by profile ID.
+     * Retrieves profile details by profile ID. Restricted to owner or ADMIN.
      *
      * @param profileId The profile UUID.
      * @return The profile resource payload.
      */
     @GetMapping("/{profileId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isProfileOwner(#profileId, authentication)")
     public ResponseEntity<ProfileResource> getProfileById(@PathVariable UUID profileId) {
         var query = new GetProfileByIdQuery(new ProfileId(profileId));
         var profileOpt = profileQueryService.handle(query);
@@ -77,12 +78,13 @@ public class ProfilesController {
 
     /**
      * GET /api/v1/profiles/users/{userId}
-     * Retrieves profile details by associated user ID string.
+     * Retrieves profile details by associated user ID string. Restricted to self or ADMIN.
      *
      * @param userId The user ID string.
      * @return The profile resource payload.
      */
     @GetMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelfStr(#userId, authentication)")
     public ResponseEntity<ProfileResource> getProfileByUserId(@PathVariable String userId) {
         var query = new GetProfileByUserIdQuery(new UserId(userId));
         var profileOpt = profileQueryService.handle(query);

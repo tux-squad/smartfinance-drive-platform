@@ -50,7 +50,7 @@ public class VehiclesController {
 
     /**
      * POST /api/v1/vehicles
-     * Registers a new vehicle in the catalog, automatically associating it with the authenticated user.
+     * Registers a new vehicle in the catalog, strictly using the authenticated user's ID.
      *
      * @param resource The payload resource.
      * @return The response payload of the created vehicle.
@@ -71,12 +71,13 @@ public class VehiclesController {
 
     /**
      * GET /api/v1/vehicles/{vehicleId}
-     * Retrieves vehicle details by identifier.
+     * Retrieves vehicle details by identifier if owned by caller or ADMIN.
      *
      * @param vehicleId The vehicle UUID.
      * @return The vehicle resource payload.
      */
     @GetMapping("/{vehicleId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<VehicleResource> getVehicleById(@PathVariable UUID vehicleId) {
         var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
         var vehicleOpt = vehicleQueryService.handle(query);
@@ -87,12 +88,13 @@ public class VehiclesController {
 
     /**
      * GET /api/v1/vehicles/users/{userId}
-     * Retrieves all vehicles belonging to a specific user.
+     * Retrieves all vehicles belonging to a specific user. Restricted to caller or ADMIN.
      *
      * @param userId The user ID string.
      * @return A list of vehicle resource payloads.
      */
     @GetMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelfStr(#userId, authentication)")
     public ResponseEntity<List<VehicleResource>> getVehiclesByUserId(@PathVariable String userId) {
         var query = new GetVehiclesByUserIdQuery(new UserId(userId));
         var vehicles = vehicleQueryService.handle(query);

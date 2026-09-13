@@ -11,6 +11,7 @@ import com.smartfinance.smartfinancedriveplatform.projections.domain.model.value
 import com.smartfinance.smartfinancedriveplatform.projections.interfaces.rest.resources.CalculateDepreciationProjectionResource;
 import com.smartfinance.smartfinancedriveplatform.projections.interfaces.rest.resources.DepreciationProjectionResource;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class DepreciationProjectionsControllerTest {
 
     @Mock
     private DepreciationProjectionQueryService queryService;
+
+    @Mock
+    private OwnershipChecker ownershipChecker;
 
     @InjectMocks
     private DepreciationProjectionsController controller;
@@ -84,6 +88,7 @@ class DepreciationProjectionsControllerTest {
     @DisplayName("Should get all projections and return 200 OK")
     void shouldGetAllProjections() {
         when(queryService.handle(any(GetAllDepreciationProjectionsQuery.class))).thenReturn(List.of(sampleProjection));
+        when(ownershipChecker.isDepreciationProjectionOwner(any(), any())).thenReturn(true);
 
         ResponseEntity<List<DepreciationProjectionResource>> response = controller.getAllProjections();
 

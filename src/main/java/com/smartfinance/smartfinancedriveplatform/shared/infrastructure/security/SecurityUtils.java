@@ -1,5 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -28,7 +29,7 @@ public final class SecurityUtils {
     }
 
     /**
-     * Obtains the authenticated user ID if stored in authentication details or principal.
+     * Obtains the authenticated user ID if stored in authentication details.
      *
      * @return Optional containing the userId as String if present, empty otherwise.
      */
@@ -41,6 +42,16 @@ public final class SecurityUtils {
             return Optional.ofNullable(details.userId());
         }
         return Optional.empty();
+    }
+
+    /**
+     * Obtains the authenticated user ID strictly, throwing AccessDeniedException if unauthenticated or missing.
+     *
+     * @return The user ID as String.
+     */
+    public static String getRequiredCurrentUserId() {
+        return getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException("iam.error.unauthenticated"));
     }
 
     /**

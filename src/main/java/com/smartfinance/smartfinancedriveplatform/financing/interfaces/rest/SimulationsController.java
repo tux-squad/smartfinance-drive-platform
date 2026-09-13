@@ -39,7 +39,7 @@ public class SimulationsController {
 
     /**
      * POST /api/v1/simulations
-     * Creates and computes a new credit simulation plan associated with the authenticated user.
+     * Creates and computes a new credit simulation plan strictly associated with the authenticated user.
      */
     @PostMapping
     public ResponseEntity<SimulationResource> createSimulation(@RequestBody CreateSimulationResource resource) {
@@ -57,17 +57,15 @@ public class SimulationsController {
 
     /**
      * GET /api/v1/simulations
-     * Retrieves credit simulations belonging to the authenticated user.
+     * Retrieves credit simulations belonging to the authenticated user (or all if ADMIN).
      */
     @GetMapping
     public ResponseEntity<List<SimulationResource>> getAllSimulations() {
-        String authUserId = SecurityUtils.getCurrentUserId()
-                .orElseGet(() -> SecurityUtils.getCurrentUsername().orElse(null));
+        String authUserId = SecurityUtils.getCurrentUserId().orElse(null);
 
         var query = new GetAllSimulationsQuery();
         var simulations = simulationQueryService.handle(query);
 
-        // Filter simulations by authenticated user unless unauthenticated/admin
         var filteredSimulations = (authUserId != null)
                 ? simulations.stream()
                         .filter(s -> Objects.equals(s.getUserId(), authUserId))
@@ -82,9 +80,10 @@ public class SimulationsController {
 
     /**
      * GET /api/v1/simulations/{id}
-     * Retrieves a credit simulation by ID with its full payment schedule and financial metrics.
+     * Retrieves a credit simulation by ID if owned by caller or ADMIN.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isSimulationOwner(#id, authentication)")
     public ResponseEntity<SimulationResource> getSimulationById(@PathVariable UUID id) {
         var query = new GetSimulationByIdQuery(new SimulationId(id));
         var simulationOpt = simulationQueryService.handle(query);
