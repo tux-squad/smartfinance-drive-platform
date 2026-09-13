@@ -33,6 +33,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.smartfinance.smartfinancedriveplatform.billing.application.outboundservices.StripePaymentGatewayService;
+import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CheckoutSessionResponseResource;
+import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.CreateCheckoutSessionResource;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SubscriptionsController Unit Tests")
 class SubscriptionsControllerTest {
@@ -42,6 +46,9 @@ class SubscriptionsControllerTest {
 
     @Mock
     private SubscriptionQueryService subscriptionQueryService;
+
+    @Mock
+    private StripePaymentGatewayService stripePaymentGatewayService;
 
     @InjectMocks
     private SubscriptionsController subscriptionsController;
@@ -91,5 +98,19 @@ class SubscriptionsControllerTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("100", response.getBody().userId());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK with checkout URL on createCheckoutSession")
+    void shouldCreateCheckoutSessionSuccessfully() {
+        when(stripePaymentGatewayService.createCheckoutSession(null, "price_123", "100", "http://success", "http://cancel"))
+                .thenReturn("https://checkout.stripe.com/c/pay/cs_test_123");
+
+        CreateCheckoutSessionResource resource = new CreateCheckoutSessionResource("price_123", "http://success", "http://cancel");
+        ResponseEntity<CheckoutSessionResponseResource> response = subscriptionsController.createCheckoutSession(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("https://checkout.stripe.com/c/pay/cs_test_123", response.getBody().checkoutUrl());
     }
 }
