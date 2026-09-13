@@ -10,7 +10,7 @@ public interface GoogleTokenVerifierService {
     /**
      * Value object containing verified Google user information.
      */
-    record GoogleUserInfo(String email, String givenName, String familyName, String pictureUrl) {}
+    record GoogleUserInfo(String email, String givenName, String familyName, String pictureUrl, boolean emailVerified) {}
 
     /**
      * Verifies a Google ID token string and returns GoogleUserInfo if valid.
