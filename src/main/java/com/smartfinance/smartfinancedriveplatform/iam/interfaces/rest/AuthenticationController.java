@@ -48,7 +48,7 @@ public class AuthenticationController {
      * Registers a new user account.
      */
     @PostMapping("/sign-up")
-    public ResponseEntity<UserResource> signUp(@RequestBody SignUpResource resource) {
+    public ResponseEntity<UserResource> signUp(@jakarta.validation.Valid @RequestBody SignUpResource resource) {
         SignUpCommand command = SignUpCommandFromResourceAssembler.toCommandFromResource(resource);
         var user = userCommandService.handle(command);
         if (user.isEmpty()) {
@@ -62,7 +62,7 @@ public class AuthenticationController {
      * Authenticates a user and returns signed JWT access & refresh tokens.
      */
     @PostMapping("/sign-in")
-    public ResponseEntity<AuthenticatedUserResource> signIn(@RequestBody SignInResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> signIn(@jakarta.validation.Valid @RequestBody SignInResource resource) {
         SignInCommand command = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {
@@ -81,7 +81,7 @@ public class AuthenticationController {
      * Refreshes an expired JWT access token using a valid Refresh Token.
      */
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthenticatedUserResource> refreshToken(@RequestBody RefreshTokenResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> refreshToken(@jakarta.validation.Valid @RequestBody RefreshTokenResource resource) {
         RefreshTokenCommand command = new RefreshTokenCommand(resource.refreshToken());
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {
@@ -97,15 +97,14 @@ public class AuthenticationController {
     }
 
     /**
-     * Initiates password recovery process and returns password reset token.
+     * Initiates password recovery process without exposing the raw token in response body.
      */
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordResource resource) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@jakarta.validation.Valid @RequestBody ForgotPasswordResource resource) {
         ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
-        String resetToken = userCommandService.handle(command);
+        userCommandService.handle(command);
         return ResponseEntity.ok(Map.of(
-                "message", "Password reset token generated successfully",
-                "resetToken", resetToken
+                "message", "If an account with that email exists, password reset instructions have been processed."
         ));
     }
 
@@ -113,7 +112,7 @@ public class AuthenticationController {
      * Resets user password using password reset token.
      */
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordResource resource) {
+    public ResponseEntity<Map<String, String>> resetPassword(@jakarta.validation.Valid @RequestBody ResetPasswordResource resource) {
         ResetPasswordCommand command = new ResetPasswordCommand(
                 resource.resetToken(),
                 new Password(resource.newPassword())
@@ -123,11 +122,12 @@ public class AuthenticationController {
                 "message", "Password reset successfully"
         ));
     }
+
     /**
      * Authenticates a user using Google OAuth2 ID Token and returns signed platform JWT tokens.
      */
     @PostMapping("/google")
-    public ResponseEntity<AuthenticatedUserResource> googleSignIn(@RequestBody GoogleSignInResource resource) {
+    public ResponseEntity<AuthenticatedUserResource> googleSignIn(@jakarta.validation.Valid @RequestBody GoogleSignInResource resource) {
         GoogleSignInCommand command = new GoogleSignInCommand(resource.idToken());
         var authenticatedUser = userCommandService.handle(command);
         if (authenticatedUser.isEmpty()) {

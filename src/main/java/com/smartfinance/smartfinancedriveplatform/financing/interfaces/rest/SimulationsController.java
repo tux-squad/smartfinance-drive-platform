@@ -42,7 +42,7 @@ public class SimulationsController {
      * Creates and computes a new credit simulation plan strictly associated with the authenticated user.
      */
     @PostMapping
-    public ResponseEntity<SimulationResource> createSimulation(@RequestBody CreateSimulationResource resource) {
+    public ResponseEntity<SimulationResource> createSimulation(@jakarta.validation.Valid @RequestBody CreateSimulationResource resource) {
         String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateSimulationCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var simulationOpt = simulationCommandService.handle(command);

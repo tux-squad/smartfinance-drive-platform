@@ -46,7 +46,7 @@ public class ProfilesController {
      * @return The created profile resource.
      */
     @PostMapping
-    public ResponseEntity<ProfileResource> createProfile(@RequestBody CreateProfileResource resource) {
+    public ResponseEntity<ProfileResource> createProfile(@jakarta.validation.Valid @RequestBody CreateProfileResource resource) {
         String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateProfileCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var profileOpt = profileCommandService.handle(command);
@@ -104,7 +104,7 @@ public class ProfilesController {
     @PreAuthorize("@ownershipChecker.isProfileOwner(#profileId, authentication)")
     public ResponseEntity<ProfileResource> updateProfile(
             @PathVariable UUID profileId,
-            @RequestBody UpdateProfileResource resource) {
+            @jakarta.validation.Valid @RequestBody UpdateProfileResource resource) {
         var command = UpdateProfileCommandFromResourceAssembler.toCommandFromResource(profileId, resource);
         var profileOpt = profileCommandService.handle(command);
         return profileOpt

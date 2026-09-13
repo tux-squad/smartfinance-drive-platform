@@ -56,7 +56,7 @@ public class VehiclesController {
      * @return The response payload of the created vehicle.
      */
     @PostMapping
-    public ResponseEntity<VehicleResource> createVehicle(@RequestBody CreateVehicleResource resource) {
+    public ResponseEntity<VehicleResource> createVehicle(@jakarta.validation.Valid @RequestBody CreateVehicleResource resource) {
         String authUserId = SecurityUtils.getRequiredCurrentUserId();
         var command = CreateVehicleCommandFromResourceAssembler.toCommandFromResource(resource, authUserId);
         var vehicleOpt = vehicleCommandService.handle(command);
@@ -115,7 +115,7 @@ public class VehiclesController {
     @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<VehicleResource> updateVehicle(
             @PathVariable UUID vehicleId,
-            @RequestBody UpdateVehicleResource resource) {
+            @jakarta.validation.Valid @RequestBody UpdateVehicleResource resource) {
         var command = UpdateVehicleCommandFromResourceAssembler.toCommandFromResource(vehicleId, resource);
         var vehicleOpt = vehicleCommandService.handle(command);
         return vehicleOpt

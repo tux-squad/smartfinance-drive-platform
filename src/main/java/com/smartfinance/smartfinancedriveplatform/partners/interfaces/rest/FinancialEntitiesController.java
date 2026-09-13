@@ -50,7 +50,7 @@ public class FinancialEntitiesController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<FinancialEntityResource> createFinancialEntity(@RequestBody CreateFinancialEntityResource resource) {
+    public ResponseEntity<FinancialEntityResource> createFinancialEntity(@jakarta.validation.Valid @RequestBody CreateFinancialEntityResource resource) {
         var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -107,7 +107,7 @@ public class FinancialEntitiesController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FinancialEntityResource> addRateBenchmark(
             @PathVariable UUID id,
-            @RequestBody AddRateBenchmarkResource resource) {
+            @jakarta.validation.Valid @RequestBody AddRateBenchmarkResource resource) {
         var command = AddRateBenchmarkCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -130,7 +130,7 @@ public class FinancialEntitiesController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FinancialEntityResource> updateFinancialEntity(
             @PathVariable UUID id,
-            @RequestBody UpdateFinancialEntityResource resource) {
+            @jakarta.validation.Valid @RequestBody UpdateFinancialEntityResource resource) {
         var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
