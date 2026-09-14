@@ -44,7 +44,9 @@ public class UsersController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<UserResource>> getAllUsers(@PageableDefault(size = 20) Pageable pageable) {
-        var usersPage = userQueryService.handle(new GetAllUsersQuery(), pageable);
+        int cappedSize = Math.min(pageable.getPageSize(), 50);
+        Pageable cappedPageable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), cappedSize, pageable.getSort());
+        var usersPage = userQueryService.handle(new GetAllUsersQuery(), cappedPageable);
         var userResourcesPage = usersPage.map(UserResourceFromEntityAssembler::toResourceFromEntity);
         return ResponseEntity.ok(userResourcesPage);
     }
