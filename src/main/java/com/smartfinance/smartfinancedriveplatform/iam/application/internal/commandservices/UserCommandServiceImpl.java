@@ -176,7 +176,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     public String handle(ForgotPasswordCommand command) {
         User user = userRepository.findByUsername(command.username()).orElse(null);
         if (user == null) {
-            LOGGER.warn("Password reset requested for non-existing username: {}", command.username() != null ? command.username().username() : null);
+            LOGGER.warn("Password reset requested for non-existing username: {}", maskEmail(command.username() != null ? command.username().username() : null));
             return null;
         }
 
@@ -272,5 +272,18 @@ public class UserCommandServiceImpl implements UserCommandService {
         User updatedUser = userRepository.save(user);
 
         return Optional.of(updatedUser);
+    }
+
+    private static String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "***";
+        }
+        int atIndex = email.indexOf("@");
+        String name = email.substring(0, atIndex);
+        String domain = email.substring(atIndex);
+        if (name.length() <= 2) {
+            return name.charAt(0) + "***" + domain;
+        }
+        return name.charAt(0) + "***" + name.charAt(name.length() - 1) + domain;
     }
 }
