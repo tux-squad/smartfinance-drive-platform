@@ -9,12 +9,12 @@ import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persist
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.entities.VehiclePersistenceEntity;
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.repositories.SpringDataVehicleRepository;
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.specifications.VehicleSpecification;
-import com.smartfinance.smartfinancedriveplatform.catalog.domain.services.FuzzySearchUtils;
+import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.services.FuzzySearchUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -63,22 +63,37 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
             return primaryPage.map(VehiclePersistenceAssembler::toDomain);
         }
 
-        // Step 2: Fuzzy Search (Levenshtein distance + Trigram similarity for typo tolerance)
+        // Step 2: High-Performance Fuzzy Search (Levenshtein + Trigram on DISTINCT String Projections)
         boolean hasBrandQuery = query.brand() != null && !query.brand().isBlank();
         boolean hasModelQuery = query.model() != null && !query.model().isBlank();
 
         if (hasBrandQuery || hasModelQuery) {
-            List<VehiclePersistenceEntity> allEntities = springDataVehicleRepository.findAll();
-            List<VehiclePersistenceEntity> fuzzyMatches = allEntities.stream()
-                    .filter(e -> {
-                        boolean brandMatch = !hasBrandQuery || FuzzySearchUtils.isFuzzyMatch(query.brand(), e.getBrand());
-                        boolean modelMatch = !hasModelQuery || FuzzySearchUtils.isFuzzyMatch(query.model(), e.getModel());
-                        return brandMatch && modelMatch;
-                    })
-                    .collect(Collectors.toList());
+            List<String> candidateBrands = hasBrandQuery
+                    ? springDataVehicleRepository.findDistinctBrands().stream()
+                        .filter(b -> FuzzySearchUtils.isFuzzyMatch(query.brand(), b))
+                        .collect(Collectors.toList())
+                    : Collections.emptyList();
 
-            if (!fuzzyMatches.isEmpty()) {
-                return paginateEntitiesList(fuzzyMatches, pageable);
+            List<String> candidateModels = hasModelQuery
+                    ? springDataVehicleRepository.findDistinctModels().stream()
+                        .filter(m -> FuzzySearchUtils.isFuzzyMatch(query.model(), m))
+                        .collect(Collectors.toList())
+                    : Collections.emptyList();
+
+            if ((!hasBrandQuery || !candidateBrands.isEmpty()) && (!hasModelQuery || !candidateModels.isEmpty())) {
+                var fuzzyQuery = new GetAllVehiclesQuery(
+                        candidateBrands.isEmpty() ? query.brand() : candidateBrands.get(0),
+                        candidateModels.isEmpty() ? query.model() : candidateModels.get(0),
+                        query.minPrice(), query.maxPrice(),
+                        query.minYear(), query.maxYear(),
+                        query.condition()
+                );
+                var fuzzySpec = VehicleSpecification.withFilter(fuzzyQuery);
+                Page<VehiclePersistenceEntity> fuzzyPage = springDataVehicleRepository.findAll(fuzzySpec, pageable);
+
+                if (fuzzyPage.getTotalElements() > 0) {
+                    return fuzzyPage.map(VehiclePersistenceAssembler::toDomain);
+                }
             }
         }
 
@@ -94,21 +109,6 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
         }
 
         return Page.empty(pageable);
-    }
-
-    private Page<Vehicle> paginateEntitiesList(List<VehiclePersistenceEntity> entities, Pageable pageable) {
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), entities.size());
-
-        if (start > entities.size()) {
-            return Page.empty(pageable);
-        }
-
-        List<Vehicle> pageContent = entities.subList(start, end).stream()
-                .map(VehiclePersistenceAssembler::toDomain)
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(pageContent, pageable, entities.size());
     }
 
     @Override

@@ -1,10 +1,11 @@
-package com.smartfinance.smartfinancedriveplatform.catalog.domain.services;
+package com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.services;
 
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Utility service for string distance (Levenshtein) and trigram similarity calculations.
+ * Technical utility service for string distance (Levenshtein) and trigram similarity calculations.
+ * Located in infrastructure layer as a technical utility algorithm.
  */
 public class FuzzySearchUtils {
 

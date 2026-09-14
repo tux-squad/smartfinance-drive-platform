@@ -1,4 +1,4 @@
-package com.smartfinance.smartfinancedriveplatform.catalog.domain.services;
+package com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.services;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,11 +14,8 @@ class FuzzySearchUtilsTest {
 
     @Test
     void testLevenshteinDistanceTypos() {
-        // "toyta" vs "toyota" -> 1 deletion/insertion
         assertEquals(1, FuzzySearchUtils.calculateLevenshteinDistance("toyta", "toyota"));
-        // "crolla" vs "corolla" -> 1 insertion
         assertEquals(1, FuzzySearchUtils.calculateLevenshteinDistance("crolla", "corolla"));
-        // "honda" vs "hyundai" -> 4 edits
         assertTrue(FuzzySearchUtils.calculateLevenshteinDistance("honda", "hyundai") >= 3);
     }
 
