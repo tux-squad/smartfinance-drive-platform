@@ -27,5 +27,5 @@ USER appuser
 
 EXPOSE 8080
 
-# Configure JVM memory options and run application
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# Configure JVM container memory management and run application
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
