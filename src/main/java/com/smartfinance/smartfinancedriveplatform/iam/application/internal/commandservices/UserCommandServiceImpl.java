@@ -18,6 +18,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.
 import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.services.HashingService;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,8 @@ import java.util.UUID;
  */
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserCommandServiceImpl.class);
 
     private final UserRepository userRepository;
     private final HashingService hashingService;
@@ -156,8 +160,11 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional(readOnly = true)
     public String handle(ForgotPasswordCommand command) {
-        User user = userRepository.findByUsername(command.username())
-                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+        User user = userRepository.findByUsername(command.username()).orElse(null);
+        if (user == null) {
+            LOGGER.warn("Password reset requested for non-existing username: {}", command.username() != null ? command.username().username() : null);
+            return null;
+        }
 
         return tokenService.generatePasswordResetToken(user.getUsername().username());
     }

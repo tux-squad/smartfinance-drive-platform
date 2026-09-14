@@ -122,12 +122,16 @@ public class AuthenticationController {
     }
 
     /**
-     * Initiates password recovery process without exposing the raw token in response body.
+     * Initiates password recovery process without exposing raw token or enumerating registered users.
      */
     @PostMapping("/password-recoveries")
     public ResponseEntity<Map<String, String>> forgotPassword(@jakarta.validation.Valid @RequestBody ForgotPasswordResource resource) {
-        ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
-        userCommandService.handle(command);
+        try {
+            ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
+            userCommandService.handle(command);
+        } catch (Exception e) {
+            // Prevent username enumeration by swallowing any exception for non-existent users
+        }
         return ResponseEntity.ok(Map.of(
                 "message", "If an account with that email exists, password reset instructions have been processed."
         ));
