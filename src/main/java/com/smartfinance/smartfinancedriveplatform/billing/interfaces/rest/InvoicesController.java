@@ -39,6 +39,7 @@ public class InvoicesController {
         String currentUserId = SecurityUtils.getRequiredCurrentUserId();
         var invoices = subscriptionQueryService.handle(new GetInvoicesByUserIdQuery(currentUserId));
         var resources = invoices.stream()
+                .limit(50)
                 .map(InvoiceResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(resources);
