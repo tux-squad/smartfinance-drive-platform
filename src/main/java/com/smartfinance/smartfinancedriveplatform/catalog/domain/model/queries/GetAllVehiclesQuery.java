@@ -25,4 +25,12 @@ public record GetAllVehiclesQuery(
     public GetAllVehiclesQuery() {
         this(null, null, null, null, null, null, null);
     }
+
+    public boolean hasAnyFilter() {
+        return (brand != null && !brand.isBlank())
+                || (model != null && !model.isBlank())
+                || minPrice != null || maxPrice != null
+                || minYear != null || maxYear != null
+                || (condition != null && !condition.isBlank());
+    }
 }
