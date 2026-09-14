@@ -70,11 +70,17 @@ public class UserCommandServiceImpl implements UserCommandService {
         return Optional.of(savedUser);
     }
 
+    private static final String DUMMY_HASH = "$2a$12$e0MYzXyjpJS7Pd0RVvHwHe1e8Hn4gS1wJ1B/1a1.D/1a1.D/1a1.D";
+
     @Override
     @Transactional
     public Optional<AuthenticationResult> handle(SignInCommand command) {
-        User user = userRepository.findByUsername(command.username())
-                .orElseThrow(() -> new DomainValidationException("iam.error.invalidCredentials"));
+        User user = userRepository.findByUsername(command.username()).orElse(null);
+        if (user == null) {
+            // Perform dummy hash comparison to equalize execution time and prevent timing side-channel attack
+            hashingService.matches(command.password().password(), DUMMY_HASH);
+            throw new DomainValidationException("iam.error.invalidCredentials");
+        }
 
         if (user.isAccountLocked()) {
             throw new DomainValidationException("iam.error.accountLocked");
