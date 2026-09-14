@@ -74,4 +74,13 @@ class JwtTokenServiceTest {
         assertFalse(jwtTokenService.validateAccessToken(resetToken));
         assertFalse(jwtTokenService.validateRefreshToken(resetToken));
     }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when secret is null or shorter than 32 characters")
+    void shouldThrowExceptionWhenSecretIsInvalidOrTooShort() {
+        JwtTokenService service = new JwtTokenService();
+        ReflectionTestUtils.setField(service, "secret", "too-short");
+
+        assertThrows(IllegalStateException.class, service::validateSecret);
+    }
 }

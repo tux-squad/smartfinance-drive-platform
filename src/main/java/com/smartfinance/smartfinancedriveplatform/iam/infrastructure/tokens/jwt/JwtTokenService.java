@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Service
 public class JwtTokenService implements TokenService {
 
-    @Value("${authorization.jwt.secret:SmartFinanceDrivePlatformSecretKeyForJwtTokenGenerationAndValidation2026!}")
+    @Value("${authorization.jwt.secret}")
     private String secret;
 
     @Value("${authorization.jwt.expiration-ms:900000}") // 15 minutes default
@@ -29,10 +30,21 @@ public class JwtTokenService implements TokenService {
     @Value("${authorization.jwt.refresh-expiration-ms:604800000}") // 7 days default
     private long refreshExpirationMs;
 
+    @PostConstruct
+    public void validateSecret() {
+        if (secret == null || secret.isBlank() || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET environment variable is required and must be at least 32 bytes (256 bits) long.");
+        }
+    }
+
     private SecretKey getSigningKey() {
+        validateSecret();
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
+
+    private static final String ISSUER = "smartfinance-drive-platform";
+    private static final String AUDIENCE = "smartfinance-clients";
 
     @Override
     public String generateToken(String username, List<String> roles) {
@@ -46,6 +58,9 @@ public class JwtTokenService implements TokenService {
 
         var builder = Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("roles", roles)
                 .claim("type", "access");
@@ -68,6 +83,9 @@ public class JwtTokenService implements TokenService {
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("type", "refresh")
                 .issuedAt(now)
@@ -83,6 +101,9 @@ public class JwtTokenService implements TokenService {
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("type", "reset")
                 .issuedAt(now)
@@ -130,17 +151,22 @@ public class JwtTokenService implements TokenService {
         }
     }
 
-    @Override
-    public boolean validateToken(String token) {
+    public Date getExpirationFromToken(String token) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getExpiration();
+        } catch (Exception e) {
+            return null;
         }
+    }
+
+    @Override
+    public boolean validateToken(String token) {
+        return validateToken(token, "access");
     }
 
     @Override

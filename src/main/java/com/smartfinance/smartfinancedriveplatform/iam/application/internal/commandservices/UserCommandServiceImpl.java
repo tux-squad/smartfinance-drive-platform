@@ -18,6 +18,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.
 import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.services.HashingService;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,8 @@ import java.util.UUID;
  */
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserCommandServiceImpl.class);
 
     private final UserRepository userRepository;
     private final HashingService hashingService;
@@ -66,11 +70,17 @@ public class UserCommandServiceImpl implements UserCommandService {
         return Optional.of(savedUser);
     }
 
+    private static final String DUMMY_HASH = "$2a$12$e0MYzXyjpJS7Pd0RVvHwHe1e8Hn4gS1wJ1B/1a1.D/1a1.D/1a1.D";
+
     @Override
     @Transactional
     public Optional<AuthenticationResult> handle(SignInCommand command) {
-        User user = userRepository.findByUsername(command.username())
-                .orElseThrow(() -> new DomainValidationException("iam.error.invalidCredentials"));
+        User user = userRepository.findByUsername(command.username()).orElse(null);
+        if (user == null) {
+            // Perform dummy hash comparison to equalize execution time and prevent timing side-channel attack
+            hashingService.matches(command.password().password(), DUMMY_HASH);
+            throw new DomainValidationException("iam.error.invalidCredentials");
+        }
 
         if (user.isAccountLocked()) {
             throw new DomainValidationException("iam.error.accountLocked");
@@ -112,6 +122,10 @@ public class UserCommandServiceImpl implements UserCommandService {
         User user = userRepository.findByUsername(new Username(usernameStr))
                 .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
 
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
+
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();
@@ -143,6 +157,10 @@ public class UserCommandServiceImpl implements UserCommandService {
             return userRepository.save(newUser);
         });
 
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
+
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();
@@ -156,8 +174,11 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional(readOnly = true)
     public String handle(ForgotPasswordCommand command) {
-        User user = userRepository.findByUsername(command.username())
-                .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
+        User user = userRepository.findByUsername(command.username()).orElse(null);
+        if (user == null) {
+            LOGGER.warn("Password reset requested for non-existing username: {}", maskEmail(command.username() != null ? command.username().username() : null));
+            return null;
+        }
 
         return tokenService.generatePasswordResetToken(user.getUsername().username());
     }
@@ -165,7 +186,9 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional
     public boolean handle(ResetPasswordCommand command) {
-        if (command.resetToken() == null || !tokenService.validateResetToken(command.resetToken())) {
+        if (command.resetToken() == null ||
+            tokenBlacklistService.isBlacklisted(command.resetToken()) ||
+            !tokenService.validateResetToken(command.resetToken())) {
             throw new DomainValidationException("iam.error.invalidResetToken");
         }
 
@@ -176,6 +199,9 @@ public class UserCommandServiceImpl implements UserCommandService {
         String hashedNewPassword = hashingService.encode(command.newPassword().password());
         user.setPassword(new Password(hashedNewPassword));
         userRepository.save(user);
+
+        // Invalidate reset token after single use
+        tokenBlacklistService.blacklistToken(command.resetToken(), System.currentTimeMillis() + 900000L);
 
         return true;
     }
@@ -246,5 +272,18 @@ public class UserCommandServiceImpl implements UserCommandService {
         User updatedUser = userRepository.save(user);
 
         return Optional.of(updatedUser);
+    }
+
+    private static String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "***";
+        }
+        int atIndex = email.indexOf("@");
+        String name = email.substring(0, atIndex);
+        String domain = email.substring(atIndex);
+        if (name.length() <= 2) {
+            return name.charAt(0) + "***" + domain;
+        }
+        return name.charAt(0) + "***" + name.charAt(name.length() - 1) + domain;
     }
 }

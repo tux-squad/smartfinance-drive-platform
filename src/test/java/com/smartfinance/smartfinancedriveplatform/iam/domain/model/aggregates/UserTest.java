@@ -16,13 +16,13 @@ class UserTest {
     @DisplayName("Should create user successfully with valid username and password")
     void shouldCreateUserSuccessfully() {
         Username username = new Username("john.doe@example.com");
-        Password password = new Password("secretPassword123");
+        Password password = new Password("SecretPassword123!");
 
         User user = new User(username, password);
 
         assertNotNull(user);
         assertEquals("john.doe@example.com", user.getUsername().username());
-        assertEquals("secretPassword123", user.getPassword().password());
+        assertEquals("SecretPassword123!", user.getPassword().password());
         assertEquals(1, user.getRoles().size());
         assertTrue(user.getRoles().contains(Roles.ROLE_USER));
     }
@@ -45,7 +45,7 @@ class UserTest {
     @Test
     @DisplayName("Should allow adding and removing roles")
     void shouldAddAndRemoveRoles() {
-        User user = new User(new Username("admin@smartfinance.com"), new Password("SecretPassword123"));
+        User user = new User(new Username("admin@smartfinance.com"), new Password("SecretPassword123!"));
 
         user.addRole(Roles.ROLE_ADMIN);
         assertEquals(2, user.getRoles().size());
