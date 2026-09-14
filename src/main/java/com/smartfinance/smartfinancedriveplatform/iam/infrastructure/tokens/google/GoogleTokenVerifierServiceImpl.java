@@ -23,6 +23,7 @@ public class GoogleTokenVerifierServiceImpl implements GoogleTokenVerifierServic
 
     private final GoogleIdTokenVerifier verifier;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public GoogleTokenVerifierServiceImpl(@Value("${google.client-id}") String clientId) {
         this(new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(),

@@ -1,0 +1,14 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.agents
+target/
+*.log
+.env
+.env.local
+docs/
+reference-code/
+mvnw.cmd
+README.md

@@ -88,7 +88,7 @@ public class UsersController {
     /**
      * Requests automatic dealer role upgrade via SUNAT RUC verification. Restricted to self or ADMIN.
      */
-    @PostMapping("/{userId}/request-dealer-role")
+    @PostMapping("/{userId}/dealer-role-requests")
     @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelf(#userId, authentication)")
     public ResponseEntity<UserResource> requestDealerRole(
             @PathVariable Long userId,
@@ -103,7 +103,7 @@ public class UsersController {
     /**
      * Requests automatic financial institution role upgrade via SUNAT RUC verification. Restricted to self or ADMIN.
      */
-    @PostMapping("/{userId}/request-financial-institution-role")
+    @PostMapping("/{userId}/financial-institution-role-requests")
     @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelf(#userId, authentication)")
     public ResponseEntity<UserResource> requestFinancialInstitutionRole(
             @PathVariable Long userId,

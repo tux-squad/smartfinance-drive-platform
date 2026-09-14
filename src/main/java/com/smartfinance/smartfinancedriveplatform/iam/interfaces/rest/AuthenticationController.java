@@ -24,6 +24,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.transform.
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,7 +54,7 @@ public class AuthenticationController {
     /**
      * Registers a new user account.
      */
-    @PostMapping("/sign-up")
+    @PostMapping("/registrations")
     public ResponseEntity<UserResource> signUp(@jakarta.validation.Valid @RequestBody SignUpResource resource) {
         SignUpCommand command = SignUpCommandFromResourceAssembler.toCommandFromResource(resource);
         var user = userCommandService.handle(command);
@@ -67,7 +68,7 @@ public class AuthenticationController {
     /**
      * Authenticates a user and returns signed JWT access & refresh tokens.
      */
-    @PostMapping("/sign-in")
+    @PostMapping("/sessions")
     public ResponseEntity<AuthenticatedUserResource> signIn(@jakarta.validation.Valid @RequestBody SignInResource resource) {
         SignInCommand command = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
         var authenticatedUser = userCommandService.handle(command);
@@ -86,7 +87,7 @@ public class AuthenticationController {
     /**
      * Refreshes an expired JWT access token using a valid Refresh Token.
      */
-    @PostMapping("/refresh-token")
+    @PostMapping("/tokens")
     public ResponseEntity<AuthenticatedUserResource> refreshToken(@jakarta.validation.Valid @RequestBody RefreshTokenResource resource) {
         RefreshTokenCommand command = new RefreshTokenCommand(resource.refreshToken());
         var authenticatedUser = userCommandService.handle(command);
@@ -105,7 +106,7 @@ public class AuthenticationController {
     /**
      * Revokes current JWT bearer token and logs out the user.
      */
-    @PostMapping("/sign-out")
+    @DeleteMapping("/sessions/current")
     public ResponseEntity<Map<String, String>> signOut(jakarta.servlet.http.HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
         if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
@@ -123,7 +124,7 @@ public class AuthenticationController {
     /**
      * Initiates password recovery process without exposing the raw token in response body.
      */
-    @PostMapping("/forgot-password")
+    @PostMapping("/password-recoveries")
     public ResponseEntity<Map<String, String>> forgotPassword(@jakarta.validation.Valid @RequestBody ForgotPasswordResource resource) {
         ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
         userCommandService.handle(command);
@@ -135,7 +136,7 @@ public class AuthenticationController {
     /**
      * Resets user password using password reset token.
      */
-    @PostMapping("/reset-password")
+    @PostMapping("/password-resets")
     public ResponseEntity<Map<String, String>> resetPassword(@jakarta.validation.Valid @RequestBody ResetPasswordResource resource) {
         ResetPasswordCommand command = new ResetPasswordCommand(
                 resource.resetToken(),

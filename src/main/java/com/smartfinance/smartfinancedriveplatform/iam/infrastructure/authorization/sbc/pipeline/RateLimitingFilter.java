@@ -72,9 +72,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private boolean isRateLimitedPath(String path) {
-        return path.startsWith("/api/v1/auth/sign-in") ||
-               path.startsWith("/api/v1/auth/forgot-password") ||
-               path.startsWith("/api/v1/auth/sign-up") ||
+        return path.startsWith("/api/v1/auth/sessions") ||
+               path.startsWith("/api/v1/auth/password-recoveries") ||
+               path.startsWith("/api/v1/auth/registrations") ||
                path.startsWith("/api/v1/partners/sunat") ||
                (path.startsWith("/api/v1/billing") && !path.startsWith("/api/v1/billing/webhooks"));
     }

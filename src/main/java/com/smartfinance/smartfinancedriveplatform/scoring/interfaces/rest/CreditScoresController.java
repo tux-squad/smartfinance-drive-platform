@@ -43,10 +43,10 @@ public class CreditScoresController {
     }
 
     /**
-     * POST /api/v1/credit-scores/evaluate
+     * POST /api/v1/credit-scores
      * Evaluates credit risk and creates a new credit score evaluation.
      */
-    @PostMapping("/evaluate")
+    @PostMapping
     public ResponseEntity<CreditScoreResource> evaluateCreditScore(@jakarta.validation.Valid @RequestBody EvaluateCreditScoreResource resource) {
         var command = EvaluateCreditScoreCommandFromResourceAssembler.toCommandFromResource(resource);
         var scoreOpt = creditScoreCommandService.handle(command);
