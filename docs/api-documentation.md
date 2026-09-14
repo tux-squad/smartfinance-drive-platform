@@ -1,23 +1,20 @@
-# 📚 Documentación de la API REST - SmartFinance Drive Platform
+# 📚 Guía Completa de la API REST - SmartFinance Drive Platform
 
-Bienvenido a la documentación técnica de la API REST de **SmartFinance Drive Platform**. Esta API está construida bajo una arquitectura orientada a la **Domain-Driven Design (DDD)** y el patrón **CQRS**, expuesta a través de servicios RESTful seguros e interactivos.
+Documentación técnica y exhaustiva de todos los endpoints de **SmartFinance Drive Platform**. La plataforma está construida bajo una arquitectura orientada a **Domain-Driven Design (DDD)** y **CQRS**.
 
 ---
 
 ## 🌐 Información General
 
 * **Servidor en Producción (Render)**: `https://smartfinance-drive-platform.onrender.com`
-* **Swagger UI (Documentación Interactiva)**: [https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html](https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html)
+* **Swagger UI**: [https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html](https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html)
 * **OpenAPI Specs (JSON)**: `https://smartfinance-drive-platform.onrender.com/v3/api-docs`
 
 ---
 
 ## 🔑 Autenticación y Seguridad
 
-La API utiliza autenticación **JWT (JSON Web Token)** sin estado.
-
-### Envió del Token de Autenticación
-Para los endpoints protegidos, se debe incluir la cabecera HTTP `Authorization`:
+Para endpoints protegidos, incluye la cabecera HTTP:
 
 ```http
 Authorization: Bearer <tu_access_token_jwt>
@@ -27,39 +24,34 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ## 🗺️ Índice de Bounded Contexts
 
-1. [IAM - Autenticación y Usuarios](#1-iam---autenticación-y-usuarios)
-2. [Profiles - Perfiles de Cliente](#2-profiles---perfiles-de-cliente)
-3. [Catalog - Catálogo de Vehículos y Búsqueda Inteligente](#3-catalog---catálogo-de-vehículos-y-búsqueda-inteligente)
-4. [Partners - Entidades Financieras y Validación SUNAT RUC](#4-partners---entidades-financieras-y-validación-sunat-ruc)
-5. [Financing - Simulaciones de Crédito Vehicular](#5-financing---simulaciones-de-crédito-vehicular)
-6. [Scoring - Evaluación de Score Crediticio](#6-scoring---evaluación-de-score-crediticio)
-7. [Projections - Proyecciones de Depreciación](#7-projections---proyecciones-de-depreciación)
-8. [Billing - Suscripciones, Planes y Pagos con Stripe](#8-billing---suscripciones-planes-y-pagos-con-stripe)
+1. [IAM - Autenticación y Usuarios (12 Endpoints)](#1-iam---autenticación-y-usuarios)
+2. [Profiles - Perfiles de Cliente (5 Endpoints)](#2-profiles---perfiles-de-cliente)
+3. [Catalog - Catálogo de Vehículos (7 Endpoints)](#3-catalog---catálogo-de-vehículos)
+4. [Partners - Entidades Financieras y SUNAT (7 Endpoints)](#4-partners---entidades-financieras-y-sunat)
+5. [Financing - Simulaciones de Crédito (4 Endpoints)](#5-financing---simulaciones-de-crédito)
+6. [Scoring - Evaluación Crediticia (5 Endpoints)](#6-scoring---evaluación-crediticia)
+7. [Projections - Depreciación de Vehículos (5 Endpoints)](#7-projections---depreciación-de-vehículos)
+8. [Billing - Planes, Suscripciones, Facturas y Stripe (10 Endpoints)](#8-billing---planes-suscripciones-facturas-y-stripe)
 
 ---
 
 ## 1. IAM - Autenticación y Usuarios
 
 ### 1.1 Registrar Nuevo Usuario
-Crea una cuenta en la plataforma asignando roles de acceso (`ROLE_USER`, `ROLE_DEALER`, `ROLE_ADMIN`).
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/registrations` | **Acceso**: Público
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/auth/registrations`
-* **Acceso**: Público
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "username": "juan.perez@example.com",
   "password": "Password123!",
   "roles": ["ROLE_USER"]
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 201 Created):
 ```json
+// Response (HTTP 201 Created)
 {
-  "id": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "id": 101,
   "username": "juan.perez@example.com",
   "roles": ["ROLE_USER"]
 }
@@ -68,24 +60,19 @@ Crea una cuenta en la plataforma asignando roles de acceso (`ROLE_USER`, `ROLE_D
 ---
 
 ### 1.2 Iniciar Sesión (Obtener JWT)
-Autentica credenciales y emite tokens `token` (access token) y `refreshToken`.
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/sessions` | **Acceso**: Público
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/auth/sessions`
-* **Acceso**: Público
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "username": "juan.perez@example.com",
   "password": "Password123!"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
-  "id": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "id": 101,
   "username": "juan.perez@example.com",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "d7b8c9a0-1234-5678-9abc-def012345678"
@@ -94,24 +81,19 @@ Autentica credenciales y emite tokens `token` (access token) y `refreshToken`.
 
 ---
 
-### 1.3 Renovar Token (Refresh Token)
-Obtiene un nuevo `access_token` cuando el actual haya expirado.
+### 1.3 Renovar Token Access (Refresh Token)
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/tokens` | **Acceso**: Público
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/auth/tokens`
-* **Acceso**: Público
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "refreshToken": "d7b8c9a0-1234-5678-9abc-def012345678"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
-  "id": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "id": 101,
   "username": "juan.perez@example.com",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "d7b8c9a0-1234-5678-9abc-def012345678"
@@ -121,14 +103,10 @@ Obtiene un nuevo `access_token` cuando el actual haya expirado.
 ---
 
 ### 1.4 Cerrar Sesión (Revocar Token)
-Invalida el token JWT activo agregándolo a la lista negra (Blacklist).
+* **Método**: `DELETE` | **Ruta**: `/api/v1/auth/sessions/current` | **Acceso**: Autenticado
 
-* **Método**: `DELETE`
-* **Ruta**: `/api/v1/auth/sessions/current`
-* **Acceso**: Autenticado (Bearer Token)
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
   "message": "User signed out successfully"
 }
@@ -136,24 +114,56 @@ Invalida el token JWT activo agregándolo a la lista negra (Blacklist).
 
 ---
 
-### 1.5 Autenticación con Google OAuth2
-Inicia sesión verificando un ID Token de Google.
+### 1.5 Solicitar Recuperación de Contraseña
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/password-recoveries` | **Acceso**: Público
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/auth/google`
-* **Acceso**: Público
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
+{
+  "username": "juan.perez@example.com"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "message": "If an account with that email exists, password reset instructions have been processed."
+}
+```
+
+---
+
+### 1.6 Restablecer Contraseña con Token
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/password-resets` | **Acceso**: Público
+
+```json
+// Input Body
+{
+  "resetToken": "rst_1234567890abcdef",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "message": "Password reset successfully"
+}
+```
+
+---
+
+### 1.7 Autenticación con Google OAuth2
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/google` | **Acceso**: Público
+
+```json
+// Input Body
 {
   "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
-  "id": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "id": 101,
   "username": "juan.perez@gmail.com",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "d7b8c9a0-1234-5678-9abc-def012345678"
@@ -162,17 +172,103 @@ Inicia sesión verificando un ID Token de Google.
 
 ---
 
+### 1.8 Listar Todos los Usuarios (Paginado)
+* **Método**: `GET` | **Ruta**: `/api/v1/users?page=0&size=20` | **Acceso**: `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+{
+  "content": [
+    { "id": 101, "username": "juan.perez@example.com", "roles": ["ROLE_USER"] }
+  ],
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+---
+
+### 1.9 Obtener Usuario por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/users/{userId}` | **Acceso**: `ROLE_ADMIN` o Mismo usuario
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": 101,
+  "username": "juan.perez@example.com",
+  "roles": ["ROLE_USER"]
+}
+```
+
+---
+
+### 1.10 Actualizar Rol de Usuario
+* **Método**: `PUT` | **Ruta**: `/api/v1/users/{userId}/roles` | **Acceso**: `ROLE_ADMIN`
+
+```json
+// Input Body
+{
+  "role": "ROLE_DEALER"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "id": 101,
+  "username": "juan.perez@example.com",
+  "roles": ["ROLE_DEALER"]
+}
+```
+
+---
+
+### 1.11 Solicitar Rol de Concesionario (DEALER) via RUC
+* **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/dealer-role-requests` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
+
+```json
+// Input Body
+{
+  "ruc": "20601234567"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "id": 101,
+  "username": "juan.perez@example.com",
+  "roles": ["ROLE_USER", "ROLE_DEALER"]
+}
+```
+
+---
+
+### 1.12 Solicitar Rol de Entidad Financiera (FINANCIAL_INSTITUTION) via RUC
+* **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/financial-institution-role-requests` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
+
+```json
+// Input Body
+{
+  "ruc": "20100047218"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "id": 101,
+  "username": "bcp@example.com",
+  "roles": ["ROLE_USER", "ROLE_FINANCIAL_INSTITUTION"]
+}
+```
+
+---
+
 ## 2. Profiles - Perfiles de Cliente
 
 ### 2.1 Crear Perfil de Cliente
-Registra los datos personales y de contacto del usuario autenticado.
+* **Método**: `POST` | **Ruta**: `/api/v1/profiles` | **Acceso**: Autenticado
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/profiles`
-* **Acceso**: Autenticado (`ROLE_USER`, `ROLE_ADMIN`)
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "firstName": "Juan",
   "lastName": "Pérez",
@@ -183,12 +279,11 @@ Registra los datos personales y de contacto del usuario autenticado.
   "currency": "PEN"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 201 Created):
 ```json
+// Response (HTTP 201 Created)
 {
   "id": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
-  "userId": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "userId": "101",
   "firstName": "Juan",
   "lastName": "Pérez",
   "email": "juan.perez@example.com",
@@ -201,59 +296,110 @@ Registra los datos personales y de contacto del usuario autenticado.
 
 ---
 
-## 3. Catalog - Catálogo de Vehículos y Búsqueda Inteligente
+### 2.2 Obtener Perfil por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-### 3.1 Listar y Buscar Vehículos (Con Búsqueda Difusa y Paginación)
-Consulta la flota general de vehículos con soporte para:
-* **Filtros**: `brand`, `model`, `minPrice`, `maxPrice`, `minYear`, `maxYear`, `condition` (`NEW` / `USED`).
-* **Paginación**: `page`, `size`, `sort`.
-* **Motor Fuzzy (Levenshtein + Trigram)**: Tolerancia automática a errores tipográficos (ej. `"toyta"` ➡️ `"Toyota"`).
-
-* **Método**: `GET`
-* **Ruta**: `/api/v1/vehicles`
-* **Acceso**: Público
-
-#### Ejemplo Request (URL con Query Params):
-`GET /api/v1/vehicles?brand=toyta&minPrice=15000&maxPrice=35000&page=0&size=10`
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
+{
+  "id": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
+  "userId": "101",
+  "firstName": "Juan",
+  "lastName": "Pérez",
+  "email": "juan.perez@example.com",
+  "dni": "72819203",
+  "monthlyIncomeAmount": 4500.00,
+  "currency": "PEN"
+}
+```
+
+---
+
+### 2.3 Obtener Perfil por User ID
+* **Método**: `GET` | **Ruta**: `/api/v1/profiles/users/{userId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
+  "userId": "101",
+  "firstName": "Juan",
+  "lastName": "Pérez"
+}
+```
+
+---
+
+### 2.4 Actualizar Perfil
+* **Método**: `PUT` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Input Body
+{
+  "firstName": "Juan Carlos",
+  "lastName": "Pérez Prado",
+  "email": "juan.perez@example.com",
+  "dni": "72819203",
+  "phoneNumber": "+51999888777",
+  "monthlyIncomeAmount": 5500.00,
+  "currency": "PEN"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
+  "firstName": "Juan Carlos",
+  "monthlyIncomeAmount": 5500.00
+}
+```
+
+---
+
+### 2.5 Eliminar Perfil
+* **Método**: `DELETE` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```http
+Response: HTTP 204 No Content
+```
+
+---
+
+## 3. Catalog - Catálogo de Vehículos
+
+### 3.1 Listar y Buscar Vehículos (Búsqueda Inteligente & Paginación)
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles` | **Acceso**: Público
+* **Query Params**: `brand`, `model`, `minPrice`, `maxPrice`, `minYear`, `maxYear`, `condition`, `page`, `size`, `sort`.
+
+```json
+// Response (HTTP 200 OK)
 {
   "content": [
     {
       "id": "f8c9b0a1-2345-6789-abcd-ef0123456789",
-      "userId": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+      "userId": "101",
       "financialEntityId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
       "brand": "Toyota",
-      "model": "Corolla Cross",
+      "model": "Corolla",
       "manufactureYear": 2024,
       "condition": "NEW",
-      "priceAmount": 28500.00,
+      "priceAmount": 22500.00,
       "currency": "USD",
       "imagePath": "https://res.cloudinary.com/dtczrhrm/image/upload/v1/smartfinance/vehicles/corolla.jpg"
     }
   ],
-  "pageable": {
-    "pageNumber": 0,
-    "pageSize": 10
-  },
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 
 ---
 
 ### 3.2 Registrar Vehículo
-Registra un nuevo vehículo en el catálogo.
+* **Método**: `POST` | **Ruta**: `/api/v1/vehicles` | **Acceso**: `ROLE_ADMIN` o `ROLE_DEALER`
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/vehicles`
-* **Acceso**: Autenticado (`ROLE_ADMIN`, `ROLE_DEALER`)
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "financialEntityId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
   "brand": "Toyota",
@@ -264,90 +410,231 @@ Registra un nuevo vehículo en el catálogo.
   "currency": "USD"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 201 Created):
 ```json
+// Response (HTTP 201 Created)
 {
   "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
-  "userId": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "brand": "Toyota",
+  "model": "RAV4",
+  "priceAmount": 34900.00
+}
+```
+
+---
+
+### 3.3 Obtener Vehículo por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
+  "brand": "Toyota",
+  "model": "RAV4",
+  "priceAmount": 34900.00
+}
+```
+
+---
+
+### 3.4 Vehículos de un Usuario
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/users/{userId}` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+[
+  {
+    "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
+    "brand": "Toyota",
+    "model": "RAV4"
+  }
+]
+```
+
+---
+
+### 3.5 Actualizar Vehículo
+* **Método**: `PUT` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
+
+```json
+// Input Body
+{
   "financialEntityId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
   "brand": "Toyota",
-  "model": "RAV4",
+  "model": "RAV4 Hybrid",
   "manufactureYear": 2024,
   "condition": "NEW",
-  "priceAmount": 34900.00,
-  "currency": "USD",
-  "imagePath": null
+  "priceAmount": 37900.00,
+  "currency": "USD"
 }
 ```
-
----
-
-### 3.3 Subir Imagen de Vehículo
-Carga una imagen del vehículo a Cloudinary.
-
-* **Método**: `POST`
-* **Ruta**: `/api/v1/vehicles/{vehicleId}/image`
-* **Content-Type**: `multipart/form-data`
-* **Acceso**: Autenticado (Propietario del vehículo)
-
-#### Entrada (Form Data):
-* `file`: Archivo binario de imagen (`.jpg`, `.png`).
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
   "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
-  "brand": "Toyota",
-  "model": "RAV4",
-  "imagePath": "https://res.cloudinary.com/dtczrhrm/image/upload/v1726300000/smartfinance/vehicles/rav4.jpg"
+  "model": "RAV4 Hybrid",
+  "priceAmount": 37900.00
 }
 ```
 
 ---
 
-## 4. Partners - Entidades Financieras y Validación SUNAT RUC
+### 3.6 Eliminar Vehículo
+* **Método**: `DELETE` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
 
-### 4.1 Consulta de RUC en SUNAT
-Valida el RUC peruano de una empresa contra los padrones oficiales de SUNAT.
+```http
+Response: HTTP 204 No Content
+```
 
-* **Método**: `GET`
-* **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}`
-* **Acceso**: Autenticado
+---
 
-#### Ejemplo Request:
-`GET /api/v1/partners/sunat/ruc/20601234567`
+### 3.7 Cargar Imagen de Vehículo
+* **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/image` | **Acceso**: Propietario del vehículo
+* **Content-Type**: `multipart/form-data` | Form Param: `file`
 
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
-  "ruc": "20601234567",
+  "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
+  "imagePath": "https://res.cloudinary.com/dtczrhrm/image/upload/v1/smartfinance/vehicles/rav4.jpg"
+}
+```
+
+---
+
+## 4. Partners - Entidades Financieras y SUNAT
+
+### 4.1 Crear Entidad Financiera
+* **Método**: `POST` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+
+```json
+// Input Body
+{
+  "name": "Banco de Crédito del Perú (BCP)",
+  "ruc": "20100047218"
+}
+```
+```json
+// Response (HTTP 201 Created)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "name": "Banco de Crédito del Perú (BCP)",
+  "ruc": "20100047218",
+  "rateBenchmarks": []
+}
+```
+
+---
+
+### 4.2 Listar Entidades Financieras
+* **Método**: `GET` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+[
+  {
+    "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+    "name": "Banco de Crédito del Perú (BCP)",
+    "rateBenchmarks": [
+      { "loanTermMonths": 36, "annualEffectiveRate": 9.50 }
+    ]
+  }
+]
+```
+
+---
+
+### 4.3 Obtener Entidad Financiera por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "name": "Banco de Crédito del Perú (BCP)"
+}
+```
+
+---
+
+### 4.4 Agregar Benchmark de Tasa a Entidad
+* **Método**: `POST` | **Ruta**: `/api/v1/financial-entities/{id}/rate-benchmarks` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+
+```json
+// Input Body
+{
+  "loanTermMonths": 36,
+  "annualEffectiveRate": 9.50,
+  "monthlyCreditLifeInsuranceRate": 0.05
+}
+```
+```json
+// Response (HTTP 201 Created)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "name": "Banco de Crédito del Perú (BCP)",
+  "rateBenchmarks": [
+    { "loanTermMonths": 36, "annualEffectiveRate": 9.50 }
+  ]
+}
+```
+
+---
+
+### 4.5 Actualizar Entidad Financiera
+* **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+
+```json
+// Input Body
+{
+  "name": "BCP Banco de Crédito",
+  "ruc": "20100047218"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "name": "BCP Banco de Crédito"
+}
+```
+
+---
+
+### 4.6 Eliminar Entidad Financiera
+* **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
+
+```http
+Response: HTTP 204 No Content
+```
+
+---
+
+### 4.7 Consulta SUNAT RUC
+* **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{
+  "ruc": "20100047218",
   "businessName": "BANCO DE CREDITO DEL PERU",
   "status": "ACTIVO",
-  "condition": "HABIDO",
-  "address": "AV. CENTENARIO NRO. 156 LA MOLINA",
-  "department": "LIMA",
-  "province": "LIMA",
-  "district": "LA MOLINA"
+  "condition": "HABIDO"
 }
 ```
 
 ---
 
-## 5. Financing - Simulaciones de Crédito Vehicular
+## 5. Financing - Simulaciones de Crédito
 
-### 5.1 Generar Simulación de Crédito Vehicular
-Calcula el plan de pagos completo (Francés/Alemán), TEA, TCEA, seguro desgravamen y periodos de gracia.
+### 5.1 Crear Simulación de Crédito Vehicular
+* **Método**: `POST` | **Ruta**: `/api/v1/simulations` | **Acceso**: Autenticado
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/simulations`
-* **Acceso**: Autenticado
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
-  "title": "Simulación Toyota RAV4 2024",
-  "userId": "e4a3b2c1-8f9e-4d5c-b6a7-123456789abc",
+  "title": "Simulación RAV4",
+  "userId": "101",
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "financialEntityId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
   "vehiclePriceAmount": 34900.00,
@@ -366,142 +653,343 @@ Calcula el plan de pagos completo (Francés/Alemán), TEA, TCEA, seguro desgrava
   "startDate": "2026-10-01"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 201 Created):
 ```json
+// Response (HTTP 201 Created)
 {
   "id": "d1e2f3a4-5678-90ab-cdef-1234567890ab",
-  "title": "Simulación Toyota RAV4 2024",
+  "title": "Simulación RAV4",
   "loanAmount": 27920.00,
-  "currency": "USD",
   "monthlyPaymentAmount": 895.42,
   "tcea": 11.25,
-  "van": 1420.50,
-  "tir": 0.88,
-  "schedule": [
-    {
-      "periodNumber": 1,
-      "dueDate": "2026-11-01",
-      "initialBalance": 27920.00,
-      "principal": 674.20,
-      "interest": 221.03,
-      "creditLifeInsurance": 13.96,
-      "vehicleInsurance": 80.00,
-      "totalInstallment": 989.19,
-      "finalBalance": 27245.80
-    }
-  ]
+  "schedule": []
 }
 ```
 
 ---
 
-## 6. Scoring - Evaluación de Score Crediticio
+### 5.2 Listar Simulaciones (Paginado)
+* **Método**: `GET` | **Ruta**: `/api/v1/simulations` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{
+  "content": [
+    { "id": "d1e2f3a4-5678-90ab-cdef-1234567890ab", "title": "Simulación RAV4" }
+  ],
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+---
+
+### 5.3 Obtener Simulación por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "d1e2f3a4-5678-90ab-cdef-1234567890ab",
+  "title": "Simulación RAV4",
+  "schedule": []
+}
+```
+
+---
+
+### 5.4 Eliminar Simulación
+* **Método**: `DELETE` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Autenticado
+
+```http
+Response: HTTP 204 No Content
+```
+
+---
+
+## 6. Scoring - Evaluación Crediticia
 
 ### 6.1 Evaluar Score Crediticio
-Evalúa la capacidad de pago y riesgo crediticio del cliente (Scoring 300 - 850).
+* **Método**: `POST` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Autenticado
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/credit-scores/evaluate`
-* **Acceso**: Autenticado
-
-#### Entrada (Ejemplo Body):
 ```json
+// Input Body
 {
   "profileId": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566"
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 201 Created)
 {
   "id": "e9f8e7d6-5432-1098-7654-9876543210fe",
   "profileId": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
   "score": 750,
   "riskTier": "LOW_RISK",
   "maxRecommendedLoanAmount": 45000.00,
-  "currency": "USD",
-  "evaluatedAt": "2026-09-14T09:15:00Z"
+  "currency": "USD"
 }
 ```
 
 ---
 
-## 7. Projections - Proyecciones de Depreciación
+### 6.2 Listar Todos los Scores Crediticios (Paginado)
+* **Método**: `GET` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Autenticado
 
-### 7.1 Calcular Proyección de Depreciación de Vehículo
-Calcula la curva de desvalorización del vehículo a lo largo de los años.
-
-* **Método**: `POST`
-* **Ruta**: `/api/v1/depreciation-projections/calculate`
-* **Acceso**: Autenticado
-
-#### Entrada (Ejemplo Body):
 ```json
+// Response (HTTP 200 OK)
+{
+  "content": [
+    { "id": "e9f8e7d6-5432-1098-7654-9876543210fe", "score": 750 }
+  ],
+  "totalElements": 1
+}
+```
+
+---
+
+### 6.3 Obtener Score Crediticio por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/credit-scores/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": "e9f8e7d6-5432-1098-7654-9876543210fe",
+  "score": 750,
+  "riskTier": "LOW_RISK"
+}
+```
+
+---
+
+### 6.4 Obtener Scores Crediticios por Profile ID
+* **Método**: `GET` | **Ruta**: `/api/v1/credit-scores/profile/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+[
+  { "id": "e9f8e7d6-5432-1098-7654-9876543210fe", "score": 750 }
+]
+```
+
+---
+
+### 6.5 Eliminar Score Crediticio
+* **Método**: `DELETE` | **Ruta**: `/api/v1/credit-scores/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```http
+Response: HTTP 204 No Content
+```
+
+---
+
+## 7. Projections - Depreciación de Vehículos
+
+### 7.1 Calcular Proyección de Depreciación
+* **Método**: `POST` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Autenticado
+
+```json
+// Input Body
 {
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "years": 5
 }
 ```
-
-#### Salida (Ejemplo Response - HTTP 201 Created):
 ```json
+// Response (HTTP 201 Created)
 {
   "id": "11223344-5566-7788-9900-aabbccddeeff",
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "initialValue": 34900.00,
   "projectedValues": [
-    { "year": 1, "value": 27920.00, "depreciationPercentage": 20.0 },
-    { "year": 2, "value": 23732.00, "depreciationPercentage": 32.0 },
-    { "year": 3, "value": 20172.20, "depreciationPercentage": 42.2 },
-    { "year": 4, "value": 17146.37, "depreciationPercentage": 50.8 },
-    { "year": 5, "value": 14574.41, "depreciationPercentage": 58.2 }
+    { "year": 1, "value": 27920.00 }
   ]
 }
 ```
 
 ---
 
-## 8. Billing - Suscripciones, Planes y Pagos con Stripe
+### 7.2 Listar Proyecciones (Paginado)
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Autenticado
 
-### 8.1 Crear Sesión de Checkout en Stripe
-Inicia una transacción segura en Stripe para adquirir un plan de suscripción.
-
-* **Método**: `POST`
-* **Ruta**: `/api/v1/billing/subscriptions/checkout`
-* **Acceso**: Autenticado
-
-#### Entrada (Ejemplo Body):
 ```json
+// Response (HTTP 200 OK)
 {
-  "planId": "PLAN_PRO_MONTHLY",
-  "successUrl": "https://smartfinance-drive-platform.onrender.com/billing/success",
-  "cancelUrl": "https://smartfinance-drive-platform.onrender.com/billing/cancel"
-}
-```
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
-```json
-{
-  "sessionId": "cs_test_a1b2c3d4e5f6g7h8i9j0",
-  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_a1b2c3d4e5f6g7h8i9j0"
+  "content": [
+    { "id": "11223344-5566-7788-9900-aabbccddeeff" }
+  ]
 }
 ```
 
 ---
 
-### 8.2 Webhook de Stripe
-Endpoint receptor de eventos en tiempo real de Stripe (`checkout.session.completed`, `invoice.payment_succeeded`).
+### 7.3 Obtener Proyección por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-* **Método**: `POST`
-* **Ruta**: `/api/v1/billing/stripe/webhook`
-* **Headers**: `Stripe-Signature: t=...,v1=...`
-* **Acceso**: Público (Validado por firma criptográfica de Stripe)
-
-#### Salida (Ejemplo Response - HTTP 200 OK):
 ```json
+// Response (HTTP 200 OK)
 {
-  "status": "success",
-  "event": "checkout.session.completed"
+  "id": "11223344-5566-7788-9900-aabbccddeeff",
+  "initialValue": 34900.00
 }
+```
+
+---
+
+### 7.4 Obtener Proyecciones por Vehicle ID
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/vehicle/{vehicleId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+[
+  { "id": "11223344-5566-7788-9900-aabbccddeeff" }
+]
+```
+
+---
+
+### 7.5 Eliminar Proyección
+* **Método**: `DELETE` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+```http
+Response: HTTP 204 No Content
+```
+
+---
+
+## 8. Billing - Planes, Suscripciones, Facturas y Stripe
+
+### 8.1 Listar Planes Activos
+* **Método**: `GET` | **Ruta**: `/api/v1/billing/plans` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+[
+  { "id": 1, "name": "Plan Pro Dealer", "price": 49.99, "currency": "USD" }
+]
+```
+
+---
+
+### 8.2 Obtener Plan por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/billing/plans/{planId}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{ "id": 1, "name": "Plan Pro Dealer", "price": 49.99 }
+```
+
+---
+
+### 8.3 Crear Nuevo Plan
+* **Método**: `POST` | **Ruta**: `/api/v1/billing/plans` | **Acceso**: `ROLE_ADMIN`
+
+```json
+// Input Body
+{
+  "name": "Enterprise Dealer Plan",
+  "description": "Acceso ilimitado a publicaciones",
+  "price": 99.99,
+  "currency": "USD",
+  "billingCycle": "MONTHLY",
+  "maxVehicleListings": 100,
+  "maxSimulationsPerMonth": 500,
+  "stripePriceId": "price_1P..."
+}
+```
+```json
+// Response (HTTP 201 Created)
+{ "id": 2, "name": "Enterprise Dealer Plan", "price": 99.99 }
+```
+
+---
+
+### 8.4 Obtener Suscripción Actual del Usuario
+* **Método**: `GET` | **Ruta**: `/api/v1/billing/subscriptions/me` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{
+  "id": 5,
+  "planId": 1,
+  "status": "ACTIVE",
+  "autoRenew": true
+}
+```
+
+---
+
+### 8.5 Crear Suscripción Directa
+* **Método**: `POST` | **Ruta**: `/api/v1/billing/subscriptions` | **Acceso**: Autenticado
+
+```json
+// Input Body
+{
+  "planId": 1,
+  "autoRenew": true
+}
+```
+```json
+// Response (HTTP 201 Created)
+{ "id": 5, "planId": 1, "status": "ACTIVE" }
+```
+
+---
+
+### 8.6 Cancelar Suscripción Activa
+* **Método**: `DELETE` | **Ruta**: `/api/v1/billing/subscriptions/{subscriptionId}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{ "id": 5, "status": "CANCELLED" }
+```
+
+---
+
+### 8.7 Crear Sesión de Stripe Checkout
+* **Método**: `POST` | **Ruta**: `/api/v1/billing/subscriptions/checkout-session` | **Acceso**: Autenticado
+
+```json
+// Input Body
+{
+  "stripePriceId": "price_1P...",
+  "successUrl": "https://smartfinance-drive-platform.onrender.com/billing/success",
+  "cancelUrl": "https://smartfinance-drive-platform.onrender.com/billing/cancel"
+}
+```
+```json
+// Response (HTTP 200 OK)
+{
+  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_a1b2c3d4..."
+}
+```
+
+---
+
+### 8.8 Facturas del Usuario Actual
+* **Método**: `GET` | **Ruta**: `/api/v1/billing/invoices/me` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+[
+  { "id": 10, "amount": 49.99, "status": "PAID" }
+]
+```
+
+---
+
+### 8.9 Pagar / Reconciliar Factura
+* **Método**: `PATCH` | **Ruta**: `/api/v1/billing/invoices/{invoiceId}` | **Acceso**: Autenticado
+
+```json
+// Response (HTTP 200 OK)
+{ "id": 10, "status": "PAID" }
+```
+
+---
+
+### 8.10 Webhook Receptor de Eventos Stripe
+* **Método**: `POST` | **Ruta**: `/api/v1/billing/webhooks/stripe` | **Acceso**: Público (Verificado por Header `Stripe-Signature`)
+
+```json
+// Response (HTTP 200 OK)
+"Event received"
 ```
