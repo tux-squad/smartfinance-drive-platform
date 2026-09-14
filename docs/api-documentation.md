@@ -1,10 +1,10 @@
-# 📚 Guía Completa de la API REST - SmartFinance Drive Platform
+# Guía Completa de la API REST - SmartFinance Drive Platform
 
 Documentación técnica y exhaustiva de todos los endpoints de **SmartFinance Drive Platform**. La plataforma está construida bajo una arquitectura orientada a **Domain-Driven Design (DDD)** y **CQRS**.
 
 ---
 
-## 🌐 Información General
+## Información General
 
 * **Servidor en Producción (Render)**: `https://smartfinance-drive-platform.onrender.com`
 * **Swagger UI**: [https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html](https://smartfinance-drive-platform.onrender.com/swagger-ui/index.html)
@@ -12,7 +12,7 @@ Documentación técnica y exhaustiva de todos los endpoints de **SmartFinance Dr
 
 ---
 
-## 🔑 Autenticación y Seguridad
+## Autenticación y Seguridad
 
 Para endpoints protegidos, incluye la cabecera HTTP:
 
@@ -22,7 +22,7 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ---
 
-## 🗺️ Índice de Bounded Contexts
+## Índice de Bounded Contexts
 
 1. [IAM - Autenticación y Usuarios (12 Endpoints)](#1-iam---autenticación-y-usuarios)
 2. [Profiles - Perfiles de Cliente (5 Endpoints)](#2-profiles---perfiles-de-cliente)
@@ -40,7 +40,7 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 1.1 Registrar Nuevo Usuario
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/registrations` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Crea y registra una nueva cuenta de usuario en el sistema IAM asignando su correo electrónico, contraseña con encriptación BCrypt y los roles de seguridad requeridos (`ROLE_USER`, `ROLE_DEALER`, `ROLE_ADMIN`).
 
 ```json
@@ -65,7 +65,7 @@ Crea y registra una nueva cuenta de usuario en el sistema IAM asignando su corre
 ### 1.2 Iniciar Sesión (Obtener JWT)
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/sessions` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Autentica las credenciales del usuario (usuario y contraseña) y emite un par de tokens JWT firmados: un `token` de acceso de corta duración y un `refreshToken` para renovación.
 
 ```json
@@ -90,7 +90,7 @@ Autentica las credenciales del usuario (usuario y contraseña) y emite un par de
 ### 1.3 Renovar Token Access (Refresh Token)
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/tokens` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Permite obtener un nuevo token de acceso JWT válido utilizando un token de refresco (`refreshToken`) previamente emitido, evitando que el usuario deba reingresar sus credenciales.
 
 ```json
@@ -114,7 +114,7 @@ Permite obtener un nuevo token de acceso JWT válido utilizando un token de refr
 ### 1.4 Cerrar Sesión (Revocar Token)
 * **Método**: `DELETE` | **Ruta**: `/api/v1/auth/sessions/current` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Revoca e invalida el token JWT activo del usuario actual añadiendo su identificador único (JTI) a la lista negra en memoria del servidor (Token Blacklist).
 
 ```json
@@ -129,7 +129,7 @@ Revoca e invalida el token JWT activo del usuario actual añadiendo su identific
 ### 1.5 Solicitar Recuperación de Contraseña
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/password-recoveries` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Inicia el flujo de recuperación de contraseña para un usuario. Genera de forma segura un token de restablecimiento de contraseña temporal sin enumerar ni exponer datos de cuentas registradas.
 
 ```json
@@ -150,7 +150,7 @@ Inicia el flujo de recuperación de contraseña para un usuario. Genera de forma
 ### 1.6 Restablecer Contraseña con Token
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/password-resets` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Permite al usuario establecer una nueva contraseña de acceso utilizando el token de recuperación recibido en su correo electrónico.
 
 ```json
@@ -172,7 +172,7 @@ Permite al usuario establecer una nueva contraseña de acceso utilizando el toke
 ### 1.7 Autenticación con Google OAuth2
 * **Método**: `POST` | **Ruta**: `/api/v1/auth/google` | **Acceso**: Público
 
-#### 📝 Descripción
+#### Descripción
 Verifica un token de identidad (`idToken`) de Google OAuth2 emitido desde el cliente web o móvil, crea la cuenta del usuario si es su primer ingreso y genera los tokens JWT de la plataforma.
 
 ```json
@@ -196,7 +196,7 @@ Verifica un token de identidad (`idToken`) de Google OAuth2 emitido desde el cli
 ### 1.8 Listar Todos los Usuarios (Paginado)
 * **Método**: `GET` | **Ruta**: `/api/v1/users?page=0&size=20` | **Acceso**: `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Obtiene un listado paginado de todas las cuentas de usuario registradas en el sistema IAM. Exclusivo para administradores.
 
 ```json
@@ -215,7 +215,7 @@ Obtiene un listado paginado de todas las cuentas de usuario registradas en el si
 ### 1.9 Obtener Usuario por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/users/{userId}` | **Acceso**: `ROLE_ADMIN` o Mismo usuario
 
-#### 📝 Descripción
+#### Descripción
 Retorna la información detallada de una cuenta de usuario específica mediante su identificador numérico.
 
 ```json
@@ -232,7 +232,7 @@ Retorna la información detallada de una cuenta de usuario específica mediante 
 ### 1.10 Actualizar Rol de Usuario
 * **Método**: `PUT` | **Ruta**: `/api/v1/users/{userId}/roles` | **Acceso**: `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Permite a un administrador del sistema cambiar o asignar un nuevo rol de seguridad (`ROLE_USER`, `ROLE_DEALER`, `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`) a un usuario.
 
 ```json
@@ -255,7 +255,7 @@ Permite a un administrador del sistema cambiar o asignar un nuevo rol de segurid
 ### 1.11 Solicitar Rol de Concesionario (DEALER) via RUC
 * **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/dealer-role-requests` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Procesa la solicitud de actualización del rol del usuario a Concesionario (`ROLE_DEALER`), verificando en línea la validez de su número de RUC con los padrones oficiales de SUNAT.
 
 ```json
@@ -278,7 +278,7 @@ Procesa la solicitud de actualización del rol del usuario a Concesionario (`ROL
 ### 1.12 Solicitar Rol de Entidad Financiera (FINANCIAL_INSTITUTION) via RUC
 * **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/financial-institution-role-requests` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Valida el RUC institucional con la base de datos de SUNAT y actualiza el rol de la cuenta a Entidad Financiera (`ROLE_FINANCIAL_INSTITUTION`).
 
 ```json
@@ -303,7 +303,7 @@ Valida el RUC institucional con la base de datos de SUNAT y actualiza el rol de 
 ### 2.1 Crear Perfil de Cliente
 * **Método**: `POST` | **Ruta**: `/api/v1/profiles` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Crea y asocia un perfil de cliente comercial con los datos personales, documento de identidad (DNI/RUC), teléfono de contacto e ingresos mensuales del usuario autenticado.
 
 ```json
@@ -338,7 +338,7 @@ Crea y asocia un perfil de cliente comercial con los datos personales, documento
 ### 2.2 Obtener Perfil por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Obtiene los detalles completos del perfil de un cliente consultando mediante su identificador UUID.
 
 ```json
@@ -360,7 +360,7 @@ Obtiene los detalles completos del perfil de un cliente consultando mediante su 
 ### 2.3 Obtener Perfil por User ID
 * **Método**: `GET` | **Ruta**: `/api/v1/profiles/users/{userId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Permite encontrar el perfil de cliente asociado a una cuenta de usuario específica mediante su identificador de usuario (`userId`).
 
 ```json
@@ -378,7 +378,7 @@ Permite encontrar el perfil de cliente asociado a una cuenta de usuario específ
 ### 2.4 Actualizar Perfil
 * **Método**: `PUT` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Actualiza los datos personales, número telefónico e ingresos mensuales declarados en el perfil de cliente.
 
 ```json
@@ -407,7 +407,7 @@ Actualiza los datos personales, número telefónico e ingresos mensuales declara
 ### 2.5 Eliminar Perfil
 * **Método**: `DELETE` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Elimina permanentemente del sistema el perfil de cliente correspondiente al UUID especificado.
 
 ```http
@@ -422,7 +422,7 @@ Response: HTTP 204 No Content
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles` | **Acceso**: Público
 * **Query Params**: `brand`, `model`, `minPrice`, `maxPrice`, `minYear`, `maxYear`, `condition`, `page`, `size`, `sort`.
 
-#### 📝 Descripción
+#### Descripción
 Endpoint principal del catálogo de la plataforma. Realiza búsquedas paginadas y filtradas de vehículos. Incluye un motor de **búsqueda difusa de 3 capas (Levenshtein + Trigram)** que corrige automáticamente errores ortográficos en marca/modelo y relaja filtros si no hay resultados directos.
 
 ```json
@@ -452,7 +452,7 @@ Endpoint principal del catálogo de la plataforma. Realiza búsquedas paginadas 
 ### 3.2 Registrar Vehículo
 * **Método**: `POST` | **Ruta**: `/api/v1/vehicles` | **Acceso**: `ROLE_ADMIN` o `ROLE_DEALER`
 
-#### 📝 Descripción
+#### Descripción
 Registra una nueva unidad vehicular en el catálogo público asociándola a la entidad financiera conveniente y asignándole el ID del usuario autenticado.
 
 ```json
@@ -482,7 +482,7 @@ Registra una nueva unidad vehicular en el catálogo público asociándola a la e
 ### 3.3 Obtener Vehículo por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Retorna los datos y especificaciones técnicas completas de un vehículo registrado mediante su UUID.
 
 ```json
@@ -500,7 +500,7 @@ Retorna los datos y especificaciones técnicas completas de un vehículo registr
 ### 3.4 Vehículos de un Usuario
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles/users/{userId}` | **Acceso**: Mismo usuario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Lista todas las unidades vehiculares registradas en el catálogo por un usuario o concesionario específico.
 
 ```json
@@ -519,7 +519,7 @@ Lista todas las unidades vehiculares registradas en el catálogo por un usuario 
 ### 3.5 Actualizar Vehículo
 * **Método**: `PUT` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
 
-#### 📝 Descripción
+#### Descripción
 Actualiza las especificaciones, modelo, precio o condición de una publicación de vehículo existente.
 
 ```json
@@ -548,7 +548,7 @@ Actualiza las especificaciones, modelo, precio o condición de una publicación 
 ### 3.6 Eliminar Vehículo
 * **Método**: `DELETE` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
 
-#### 📝 Descripción
+#### Descripción
 Remueve permanentemente del catálogo la publicación de la unidad vehicular especificada.
 
 ```http
@@ -561,7 +561,7 @@ Response: HTTP 204 No Content
 * **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/image` | **Acceso**: Propietario del vehículo
 * **Content-Type**: `multipart/form-data` | Form Param: `file`
 
-#### 📝 Descripción
+#### Descripción
 Recibe un archivo de imagen (`.jpg`, `.png`), lo procesa y almacena en Cloudinary, y actualiza la URL (`imagePath`) en la ficha del vehículo en la base de datos.
 
 ```json
@@ -579,7 +579,7 @@ Recibe un archivo de imagen (`.jpg`, `.png`), lo procesa y almacena en Cloudinar
 ### 4.1 Crear Entidad Financiera
 * **Método**: `POST` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
 
-#### 📝 Descripción
+#### Descripción
 Registra un nuevo banco o entidad financiera aliada para ofertar planes de financiamiento vehicular.
 
 ```json
@@ -604,7 +604,7 @@ Registra un nuevo banco o entidad financiera aliada para ofertar planes de finan
 ### 4.2 Listar Entidades Financieras
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Devuelve el listado completo de entidades financieras y bancos registrados en la plataforma junto con sus tasas de referencia.
 
 ```json
@@ -625,7 +625,7 @@ Devuelve el listado completo de entidades financieras y bancos registrados en la
 ### 4.3 Obtener Entidad Financiera por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Obtiene la información detallada de una entidad financiera mediante su UUID.
 
 ```json
@@ -641,7 +641,7 @@ Obtiene la información detallada de una entidad financiera mediante su UUID.
 ### 4.4 Agregar Benchmark de Tasa a Entidad
 * **Método**: `POST` | **Ruta**: `/api/v1/financial-entities/{id}/rate-benchmarks` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
 
-#### 📝 Descripción
+#### Descripción
 Agrega una nueva estructura de referencia de tasa de interés efectiva anual (TEA) y seguro de desgravamen según plazo a una entidad financiera.
 
 ```json
@@ -668,7 +668,7 @@ Agrega una nueva estructura de referencia de tasa de interés efectiva anual (TE
 ### 4.5 Actualizar Entidad Financiera
 * **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
 
-#### 📝 Descripción
+#### Descripción
 Modifica la razón social o RUC de una entidad financiera registrada.
 
 ```json
@@ -691,7 +691,7 @@ Modifica la razón social o RUC de una entidad financiera registrada.
 ### 4.6 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Elimina la entidad financiera seleccionada. Exclusivo para administradores.
 
 ```http
@@ -703,7 +703,7 @@ Response: HTTP 204 No Content
 ### 4.7 Consulta SUNAT RUC
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Consulta de forma síncrona los datos de contribuyente de un RUC (razón social, estado de contribuyente "ACTIVO", condición "HABIDO") contra los servicios de validación tributaria peruana SUNAT.
 
 ```json
@@ -723,7 +723,7 @@ Consulta de forma síncrona los datos de contribuyente de un RUC (razón social,
 ### 5.1 Crear Simulación de Crédito Vehicular
 * **Método**: `POST` | **Ruta**: `/api/v1/simulations` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Genera una simulación completa de crédito vehicular. Calcula la cuota inicial, saldo a financiar, cronograma detallado de cuotas (método francés/alemán), seguro desgravamen, seguro vehicular, VAN, TIR, TEA y TCEA efectiva.
 
 ```json
@@ -766,7 +766,7 @@ Genera una simulación completa de crédito vehicular. Calcula la cuota inicial,
 ### 5.2 Listar Simulaciones (Paginado)
 * **Método**: `GET` | **Ruta**: `/api/v1/simulations` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Obtiene una lista paginada de todas las simulaciones de crédito realizadas por el usuario autenticado.
 
 ```json
@@ -785,7 +785,7 @@ Obtiene una lista paginada de todas las simulaciones de crédito realizadas por 
 ### 5.3 Obtener Simulación por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Devuelve el desglose completo de una simulación guardada, incluyendo el cronograma mes a mes con intereses, amortizaciones y seguros.
 
 ```json
@@ -802,7 +802,7 @@ Devuelve el desglose completo de una simulación guardada, incluyendo el cronogr
 ### 5.4 Eliminar Simulación
 * **Método**: `DELETE` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Elimina del registro la simulación de crédito seleccionada.
 
 ```http
@@ -816,7 +816,7 @@ Response: HTTP 204 No Content
 ### 6.1 Evaluar Score Crediticio
 * **Método**: `POST` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Ejecuta el motor de scoring crediticio sobre el perfil de un cliente, calculando su puntaje de riesgo (300 a 850), categoría de riesgo (`LOW_RISK`, `MEDIUM_RISK`, `HIGH_RISK`) y monto máximo de crédito recomendado.
 
 ```json
@@ -842,7 +842,7 @@ Ejecuta el motor de scoring crediticio sobre el perfil de un cliente, calculando
 ### 6.2 Listar Todos los Scores Crediticios (Paginado)
 * **Método**: `GET` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Listado paginado de todas las evaluaciones crediticias pertenecientes al cliente o administradas.
 
 ```json
@@ -860,7 +860,7 @@ Listado paginado de todas las evaluaciones crediticias pertenecientes al cliente
 ### 6.3 Obtener Score Crediticio por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/credit-scores/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Obtiene el informe detallado de un resultado de evaluación crediticia por su identificador UUID.
 
 ```json
@@ -877,7 +877,7 @@ Obtiene el informe detallado de un resultado de evaluación crediticia por su id
 ### 6.4 Obtener Scores Crediticios por Profile ID
 * **Método**: `GET` | **Ruta**: `/api/v1/credit-scores/profile/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Devuelve el historial de evaluaciones crediticias asociadas a un perfil de cliente específico.
 
 ```json
@@ -892,7 +892,7 @@ Devuelve el historial de evaluaciones crediticias asociadas a un perfil de clien
 ### 6.5 Eliminar Score Crediticio
 * **Método**: `DELETE` | **Ruta**: `/api/v1/credit-scores/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Borra un registro de informe crediticio.
 
 ```http
@@ -906,7 +906,7 @@ Response: HTTP 204 No Content
 ### 7.1 Calcular Proyección de Depreciación
 * **Método**: `POST` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Calcula la tabla de depreciación técnica y desvalorización estimada de un vehículo a lo largo de un horizonte de años especificado.
 
 ```json
@@ -933,7 +933,7 @@ Calcula la tabla de depreciación técnica y desvalorización estimada de un veh
 ### 7.2 Listar Proyecciones (Paginado)
 * **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Obtiene las proyecciones de desvalorización vehiculares guardadas de forma paginada.
 
 ```json
@@ -950,7 +950,7 @@ Obtiene las proyecciones de desvalorización vehiculares guardadas de forma pagi
 ### 7.3 Obtener Proyección por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Devuelve el desglose año a año del valor proyectado de reventa de un vehículo por ID de proyección.
 
 ```json
@@ -966,7 +966,7 @@ Devuelve el desglose año a año del valor proyectado de reventa de un vehículo
 ### 7.4 Obtener Proyecciones por Vehicle ID
 * **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/vehicle/{vehicleId}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Consulta las proyecciones de depreciación calculadas previamente para un vehículo específico.
 
 ```json
@@ -981,7 +981,7 @@ Consulta las proyecciones de depreciación calculadas previamente para un vehíc
 ### 7.5 Eliminar Proyección
 * **Método**: `DELETE` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Elimina una proyección de depreciación del sistema.
 
 ```http
@@ -995,7 +995,7 @@ Response: HTTP 204 No Content
 ### 8.1 Listar Planes Activos
 * **Método**: `GET` | **Ruta**: `/api/v1/billing/plans` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Obtiene los planes de suscripción comercial SaaS disponibles (Free, Pro Dealer, Enterprise).
 
 ```json
@@ -1010,7 +1010,7 @@ Obtiene los planes de suscripción comercial SaaS disponibles (Free, Pro Dealer,
 ### 8.2 Obtener Plan por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/billing/plans/{planId}` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Consulta los límites y características de un plan comercial específico por su ID.
 
 ```json
@@ -1023,7 +1023,7 @@ Consulta los límites y características de un plan comercial específico por su
 ### 8.3 Crear Nuevo Plan
 * **Método**: `POST` | **Ruta**: `/api/v1/billing/plans` | **Acceso**: `ROLE_ADMIN`
 
-#### 📝 Descripción
+#### Descripción
 Registra un nuevo plan comercial asignando límites de publicaciones y simulaciones por mes. Exclusivo para administradores.
 
 ```json
@@ -1049,7 +1049,7 @@ Registra un nuevo plan comercial asignando límites de publicaciones y simulacio
 ### 8.4 Obtener Suscripción Actual del Usuario
 * **Método**: `GET` | **Ruta**: `/api/v1/billing/subscriptions/me` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Devuelve el estado de la suscripción activa del usuario actualmente autenticado.
 
 ```json
@@ -1067,7 +1067,7 @@ Devuelve el estado de la suscripción activa del usuario actualmente autenticado
 ### 8.5 Crear Suscripción Directa
 * **Método**: `POST` | **Ruta**: `/api/v1/billing/subscriptions` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Suscribe directamente al usuario a un plan en el módulo billing interno.
 
 ```json
@@ -1087,7 +1087,7 @@ Suscribe directamente al usuario a un plan en el módulo billing interno.
 ### 8.6 Cancelar Suscripción Activa
 * **Método**: `DELETE` | **Ruta**: `/api/v1/billing/subscriptions/{subscriptionId}` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Cancela la suscripción activa del usuario para impedir la renovación automática.
 
 ```json
@@ -1100,7 +1100,7 @@ Cancela la suscripción activa del usuario para impedir la renovación automáti
 ### 8.7 Crear Sesión de Stripe Checkout
 * **Método**: `POST` | **Ruta**: `/api/v1/billing/subscriptions/checkout-session` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Genera una URL cifrada de Stripe Checkout pasarela de pagos web segura para abonar la suscripción mediante tarjeta de crédito o débito.
 
 ```json
@@ -1123,7 +1123,7 @@ Genera una URL cifrada de Stripe Checkout pasarela de pagos web segura para abon
 ### 8.8 Facturas del Usuario Actual
 * **Método**: `GET` | **Ruta**: `/api/v1/billing/invoices/me` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Lista el historial de facturas y comprobantes emitidos a nombre del usuario autenticado.
 
 ```json
@@ -1138,7 +1138,7 @@ Lista el historial de facturas y comprobantes emitidos a nombre del usuario aute
 ### 8.9 Pagar / Reconciliar Factura
 * **Método**: `PATCH` | **Ruta**: `/api/v1/billing/invoices/{invoiceId}` | **Acceso**: Autenticado
 
-#### 📝 Descripción
+#### Descripción
 Actualiza el estado de una factura pendiente marcándola como pagada (`PAID`) en el sistema de facturación.
 
 ```json
@@ -1151,7 +1151,7 @@ Actualiza el estado de una factura pendiente marcándola como pagada (`PAID`) en
 ### 8.10 Webhook Receptor de Eventos Stripe
 * **Método**: `POST` | **Ruta**: `/api/v1/billing/webhooks/stripe` | **Acceso**: Público (Verificado por Header `Stripe-Signature`)
 
-#### 📝 Descripción
+#### Descripción
 Receptor asíncrono en tiempo real de notificaciones de eventos emitidos por Stripe (`checkout.session.completed`, `customer.subscription.deleted`, `invoice.payment_failed`).
 
 ```json
