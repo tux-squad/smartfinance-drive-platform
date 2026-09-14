@@ -35,6 +35,7 @@ public class StripePaymentGatewayServiceImpl implements StripePaymentGatewayServ
         this(apiKey, defaultSuccessUrl, defaultCancelUrl, "http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:8080,http://success,http://cancel");
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public StripePaymentGatewayServiceImpl(
             @Value("${stripe.api-key:}") String apiKey,
             @Value("${stripe.success-url:http://localhost:5173/billing/success?session_id={CHECKOUT_SESSION_ID}}") String defaultSuccessUrl,
