@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:26-jdk AS build
 WORKDIR /app
 
 # Copy Maven wrapper and POM dependencies first for layer caching
@@ -12,7 +12,7 @@ COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
 # Stage 2: Runtime stage
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:26-jdk AS runtime
 WORKDIR /app
 
 # Create non-root system user for security
