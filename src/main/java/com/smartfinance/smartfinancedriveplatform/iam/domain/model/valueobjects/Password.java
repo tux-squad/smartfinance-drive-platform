@@ -25,6 +25,9 @@ public record Password(String password) {
             if (!password.matches(".*[0-9].*")) {
                 throw new DomainValidationException("iam.error.password.missingDigit");
             }
+            if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+                throw new DomainValidationException("iam.error.password.missingSpecialChar");
+            }
         }
     }
 }
