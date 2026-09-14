@@ -166,15 +166,7 @@ public class JwtTokenService implements TokenService {
 
     @Override
     public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+        return validateToken(token, "access");
     }
 
     @Override
