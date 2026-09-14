@@ -180,7 +180,9 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     @Transactional
     public boolean handle(ResetPasswordCommand command) {
-        if (command.resetToken() == null || !tokenService.validateResetToken(command.resetToken())) {
+        if (command.resetToken() == null ||
+            tokenBlacklistService.isBlacklisted(command.resetToken()) ||
+            !tokenService.validateResetToken(command.resetToken())) {
             throw new DomainValidationException("iam.error.invalidResetToken");
         }
 
@@ -191,6 +193,9 @@ public class UserCommandServiceImpl implements UserCommandService {
         String hashedNewPassword = hashingService.encode(command.newPassword().password());
         user.setPassword(new Password(hashedNewPassword));
         userRepository.save(user);
+
+        // Invalidate reset token after single use
+        tokenBlacklistService.blacklistToken(command.resetToken(), System.currentTimeMillis() + 900000L);
 
         return true;
     }
