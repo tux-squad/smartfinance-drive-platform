@@ -22,11 +22,13 @@ public class VehicleSpecification {
             }
 
             if (query.brand() != null && !query.brand().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("brand")), "%" + query.brand().trim().toLowerCase() + "%"));
+                String safeBrand = escapeLikePattern(query.brand());
+                predicates.add(cb.like(cb.lower(root.get("brand")), "%" + safeBrand + "%", '\\'));
             }
 
             if (query.model() != null && !query.model().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("model")), "%" + query.model().trim().toLowerCase() + "%"));
+                String safeModel = escapeLikePattern(query.model());
+                predicates.add(cb.like(cb.lower(root.get("model")), "%" + safeModel + "%", '\\'));
             }
 
             if (query.minPrice() != null) {
@@ -51,5 +53,16 @@ public class VehicleSpecification {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static String escapeLikePattern(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.trim()
+                .toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

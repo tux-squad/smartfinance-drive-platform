@@ -80,6 +80,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/v1/auth/**").permitAll();
+                    auth.requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/vehicles", "/api/v1/vehicles/**").permitAll();
                     if (swaggerEnabled) {
                         auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                     } else {

@@ -79,6 +79,13 @@ public class VehiclesController {
             @RequestParam(required = false) String condition,
             @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
 
+        if (condition != null && !condition.isBlank()) {
+            String normalizedCondition = condition.trim().toUpperCase();
+            if (!normalizedCondition.equals("NEW") && !normalizedCondition.equals("USED")) {
+                throw new IllegalArgumentException("Invalid condition filter: '" + condition + "'. Allowed values are: NEW, USED.");
+            }
+        }
+
         Pageable cappedPageable = pageable;
         if (pageable.isPaged() && pageable.getPageSize() > 50) {
             cappedPageable = PageRequest.of(pageable.getPageNumber(), 50, pageable.getSort());
