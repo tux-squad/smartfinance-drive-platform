@@ -43,10 +43,10 @@ public class DepreciationProjectionsController {
     }
 
     /**
-     * POST /api/v1/depreciation-projections/calculate
+     * POST /api/v1/depreciation-projections
      * Calculates and saves a new vehicle depreciation projection.
      */
-    @PostMapping("/calculate")
+    @PostMapping
     public ResponseEntity<DepreciationProjectionResource> calculateProjection(@jakarta.validation.Valid @RequestBody CalculateDepreciationProjectionResource resource) {
         var command = CalculateDepreciationProjectionCommandFromResourceAssembler.toCommandFromResource(resource);
         var projectionOpt = commandService.handle(command);

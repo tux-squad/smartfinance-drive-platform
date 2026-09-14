@@ -25,6 +25,7 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
 
     private final RestClient restClient;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ChequeaRucVerifierServiceImpl(
             @Value("${chequea.base-url}") String baseUrl,
             @Value("${chequea.api-key}") String apiKey) {
