@@ -43,6 +43,9 @@ public class JwtTokenService implements TokenService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    private static final String ISSUER = "smartfinance-drive-platform";
+    private static final String AUDIENCE = "smartfinance-clients";
+
     @Override
     public String generateToken(String username, List<String> roles) {
         return generateToken(null, username, roles);
@@ -55,6 +58,9 @@ public class JwtTokenService implements TokenService {
 
         var builder = Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("roles", roles)
                 .claim("type", "access");
@@ -77,6 +83,9 @@ public class JwtTokenService implements TokenService {
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("type", "refresh")
                 .issuedAt(now)
@@ -92,6 +101,9 @@ public class JwtTokenService implements TokenService {
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
+                .audience().add(AUDIENCE).and()
+                .notBefore(now)
                 .subject(username)
                 .claim("type", "reset")
                 .issuedAt(now)
