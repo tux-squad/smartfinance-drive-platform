@@ -72,4 +72,31 @@ class RateLimitingFilterTest {
 
         assertEquals(429, blockedResponse.getStatus());
     }
+
+    @Test
+    @DisplayName("Should prevent rate limit bypass via X-Forwarded-For spoofing from public IP")
+    void shouldPreventXForwardedForSpoofingFromPublicRemoteIP() throws ServletException, IOException {
+        String path = "/api/v1/auth/sessions";
+        String publicAttackerIp = "203.0.113.42";
+
+        for (int i = 1; i <= 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+            request.setRemoteAddr(publicAttackerIp);
+            request.addHeader("X-Forwarded-For", "1.2.3." + i); // Fake spoofed IPs
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            rateLimitingFilter.doFilterInternal(request, response, filterChain);
+            assertEquals(200, response.getStatus());
+        }
+
+        // 11th request with spoofed header must still be blocked because remoteAddr is publicAttackerIp
+        MockHttpServletRequest blockedRequest = new MockHttpServletRequest("POST", path);
+        blockedRequest.setRemoteAddr(publicAttackerIp);
+        blockedRequest.addHeader("X-Forwarded-For", "9.9.9.9");
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+
+        rateLimitingFilter.doFilterInternal(blockedRequest, blockedResponse, filterChain);
+
+        assertEquals(429, blockedResponse.getStatus());
+    }
 }

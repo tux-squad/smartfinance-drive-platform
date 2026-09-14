@@ -83,10 +83,26 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIP(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null || xfHeader.isEmpty()) {
-            return request.getRemoteAddr();
+        String remoteAddr = request.getRemoteAddr();
+        if (remoteAddr == null || remoteAddr.isBlank()) {
+            remoteAddr = "unknown";
         }
-        return xfHeader.split(",")[0].trim();
+        // Only evaluate X-Forwarded-For if request originates from a local or private proxy IP
+        if (isLocalOrTrustedProxy(remoteAddr)) {
+            String xfHeader = request.getHeader("X-Forwarded-For");
+            if (xfHeader != null && !xfHeader.isBlank()) {
+                String[] ips = xfHeader.split(",");
+                String clientIp = ips[0].trim();
+                if (!clientIp.isEmpty()) {
+                    return clientIp;
+                }
+            }
+        }
+        return remoteAddr;
+    }
+
+    private boolean isLocalOrTrustedProxy(String ip) {
+        return "127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)
+                || ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.");
     }
 }
