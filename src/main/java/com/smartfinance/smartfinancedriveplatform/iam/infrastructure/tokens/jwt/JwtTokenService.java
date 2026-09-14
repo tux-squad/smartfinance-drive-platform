@@ -139,6 +139,19 @@ public class JwtTokenService implements TokenService {
         }
     }
 
+    public Date getExpirationFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getExpiration();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public boolean validateToken(String token) {
         try {
