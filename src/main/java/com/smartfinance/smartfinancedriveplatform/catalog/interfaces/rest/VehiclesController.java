@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.catalog.application.outboundse
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.DeleteVehicleCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.UpdateVehicleCommand;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetAllVehiclesQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.UserId;
@@ -16,6 +17,10 @@ import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transf
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.UpdateVehicleCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.VehicleResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +28,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -46,6 +52,49 @@ public class VehiclesController {
         this.vehicleCommandService = vehicleCommandService;
         this.vehicleQueryService = vehicleQueryService;
         this.vehicleImageStorageService = vehicleImageStorageService;
+    }
+
+    /**
+     * GET /api/v1/vehicles
+     * Retrieves all vehicles in the catalog matching optional search/filtering parameters with pagination.
+     *
+     * @param brand     Brand substring filter (optional).
+     * @param model     Model substring filter (optional).
+     * @param minPrice  Minimum price filter (optional).
+     * @param maxPrice  Maximum price filter (optional).
+     * @param minYear   Minimum manufacture year filter (optional).
+     * @param maxYear   Maximum manufacture year filter (optional).
+     * @param condition Condition filter ("NEW" or "USED") (optional).
+     * @param pageable  Pagination parameters.
+     * @return Page of vehicle resource payloads.
+     */
+    @GetMapping
+    public ResponseEntity<Page<VehicleResource>> getAllVehicles(
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Integer minYear,
+            @RequestParam(required = false) Integer maxYear,
+            @RequestParam(required = false) String condition,
+            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+
+        if (condition != null && !condition.isBlank()) {
+            String normalizedCondition = condition.trim().toUpperCase();
+            if (!normalizedCondition.equals("NEW") && !normalizedCondition.equals("USED")) {
+                throw new IllegalArgumentException("Invalid condition filter: '" + condition + "'. Allowed values are: NEW, USED.");
+            }
+        }
+
+        Pageable cappedPageable = pageable;
+        if (pageable.isPaged() && pageable.getPageSize() > 50) {
+            cappedPageable = PageRequest.of(pageable.getPageNumber(), 50, pageable.getSort());
+        }
+
+        var query = new GetAllVehiclesQuery(brand, model, minPrice, maxPrice, minYear, maxYear, condition);
+        var vehiclesPage = vehicleQueryService.handle(query, cappedPageable);
+        var resourcePage = vehiclesPage.map(VehicleResourceFromEntityAssembler::toResourceFromEntity);
+        return ResponseEntity.ok(resourcePage);
     }
 
     /**

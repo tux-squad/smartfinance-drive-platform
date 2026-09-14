@@ -172,4 +172,58 @@ class VehiclesControllerTest {
         // Verify that deleteVehicleImage was explicitly called for the old image URL
         verify(vehicleImageStorageService, times(1)).deleteVehicleImage(oldImageUrl);
     }
+
+    @Test
+    void testGetAllVehiclesSuccess() {
+        Vehicle vehicle = new Vehicle(
+            new UserId(UUID.randomUUID()), new FinancialEntityId(UUID.randomUUID()), "Toyota", "Corolla", 2023, "NEW", Money.of(15000, "USD"), null
+        );
+        org.springframework.data.domain.Page<Vehicle> page = new org.springframework.data.domain.PageImpl<>(List.of(vehicle));
+
+        when(vehicleQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetAllVehiclesQuery.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        ResponseEntity<org.springframework.data.domain.Page<VehicleResource>> response = vehiclesController.getAllVehicles(
+                "Toyota", "Corolla", BigDecimal.valueOf(10000), BigDecimal.valueOf(20000), 2020, 2024, "NEW", org.springframework.data.domain.PageRequest.of(0, 10)
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotalElements());
+        assertEquals("Toyota", response.getBody().getContent().get(0).brand());
+    }
+
+    @Test
+    void testGetAllVehiclesEmptyFilters() {
+        org.springframework.data.domain.Page<Vehicle> emptyPage = org.springframework.data.domain.Page.empty();
+        when(vehicleQueryService.handle(any(), any())).thenReturn(emptyPage);
+
+        ResponseEntity<org.springframework.data.domain.Page<VehicleResource>> response = vehiclesController.getAllVehicles(
+                null, null, null, null, null, null, null, org.springframework.data.domain.PageRequest.of(0, 10)
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().isEmpty());
+    }
+
+    @Test
+    void testGetAllVehiclesPageSizeCappedTo50() {
+        org.springframework.data.domain.Page<Vehicle> emptyPage = org.springframework.data.domain.Page.empty();
+        when(vehicleQueryService.handle(any(), any())).thenReturn(emptyPage);
+
+        ResponseEntity<org.springframework.data.domain.Page<VehicleResource>> response = vehiclesController.getAllVehicles(
+                null, null, null, null, null, null, null, org.springframework.data.domain.PageRequest.of(0, 100)
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(vehicleQueryService).handle(any(), argThat(pageable -> pageable.getPageSize() == 50));
+    }
+
+    @Test
+    void testGetAllVehiclesInvalidConditionThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            vehiclesController.getAllVehicles(null, null, null, null, null, null, "INVALID_COND", org.springframework.data.domain.PageRequest.of(0, 10))
+        );
+    }
 }

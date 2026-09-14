@@ -2,9 +2,12 @@ package com.smartfinance.smartfinancedriveplatform.catalog.application.internal.
 
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.aggregates.Vehicle;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetAllVehiclesQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.repositories.VehicleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,5 +37,11 @@ public class VehicleQueryServiceImpl implements VehicleQueryService {
     @Transactional(readOnly = true)
     public List<Vehicle> handle(GetVehiclesByUserIdQuery query) {
         return vehicleRepository.findAllByUserId(query.userId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Vehicle> handle(GetAllVehiclesQuery query, Pageable pageable) {
+        return vehicleRepository.findAll(query, pageable);
     }
 }
