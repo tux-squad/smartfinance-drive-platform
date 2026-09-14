@@ -2,13 +2,14 @@ package com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persis
 
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.entities.VehiclePersistenceEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Spring Data JPA repository interface for Vehicle persistence operations.
  */
-public interface SpringDataVehicleRepository extends JpaRepository<VehiclePersistenceEntity, UUID> {
+public interface SpringDataVehicleRepository extends JpaRepository<VehiclePersistenceEntity, UUID>, JpaSpecificationExecutor<VehiclePersistenceEntity> {
     
     /**
      * Finds all vehicle entities registered by a user.

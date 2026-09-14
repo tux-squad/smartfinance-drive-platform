@@ -1,12 +1,16 @@
 package com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.adapters;
 
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.aggregates.Vehicle;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetAllVehiclesQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.UserId;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.VehicleId;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.repositories.VehicleRepository;
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.assemblers.VehiclePersistenceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.entities.VehiclePersistenceEntity;
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.repositories.SpringDataVehicleRepository;
+import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.specifications.VehicleSpecification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -45,6 +49,13 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
         return springDataVehicleRepository.findAllByUserId(userId.value()).stream()
                 .map(VehiclePersistenceAssembler::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<Vehicle> findAll(GetAllVehiclesQuery query, Pageable pageable) {
+        var spec = VehicleSpecification.withFilter(query);
+        return springDataVehicleRepository.findAll(spec, pageable)
+                .map(VehiclePersistenceAssembler::toDomain);
     }
 
     @Override
