@@ -668,7 +668,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 5.2 Listar Simulaciones (Paginado)
-* **Método**: `GET` | **Ruta**: `/api/v1/simulations` | **Acceso**: Autenticado
+* **Método**: `GET` | **Ruta**: `/api/v1/simulations` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -684,7 +684,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 5.3 Obtener Simulación por ID
-* **Método**: `GET` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Autenticado
+* **Método**: `GET` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -698,7 +698,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 5.4 Eliminar Simulación
-* **Método**: `DELETE` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Autenticado
+* **Método**: `DELETE` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Propietario de la simulación o `ROLE_ADMIN`
 
 ```http
 Response: HTTP 204 No Content
@@ -732,7 +732,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 6.2 Listar Todos los Scores Crediticios (Paginado)
-* **Método**: `GET` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Autenticado
+* **Método**: `GET` | **Ruta**: `/api/v1/credit-scores` | **Acceso**: Propietario o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -808,7 +808,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 7.2 Listar Proyecciones (Paginado)
-* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Autenticado
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -822,7 +822,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 7.3 Obtener Proyección por ID
-* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -835,7 +835,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 7.4 Obtener Proyecciones por Vehicle ID
-* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/vehicle/{vehicleId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+* **Método**: `GET` | **Ruta**: `/api/v1/depreciation-projections/vehicle/{vehicleId}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
 ```json
 // Response (HTTP 200 OK)
@@ -847,7 +847,7 @@ Response: HTTP 204 No Content
 ---
 
 ### 7.5 Eliminar Proyección
-* **Método**: `DELETE` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario o `ROLE_ADMIN`
+* **Método**: `DELETE` | **Ruta**: `/api/v1/depreciation-projections/{id}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
 ```http
 Response: HTTP 204 No Content
