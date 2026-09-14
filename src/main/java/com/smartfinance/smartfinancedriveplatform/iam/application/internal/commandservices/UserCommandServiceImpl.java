@@ -116,6 +116,10 @@ public class UserCommandServiceImpl implements UserCommandService {
         User user = userRepository.findByUsername(new Username(usernameStr))
                 .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
 
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
+
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();
@@ -146,6 +150,10 @@ public class UserCommandServiceImpl implements UserCommandService {
             User newUser = new User(username, new Password(hashedPassword), List.of(Roles.ROLE_USER));
             return userRepository.save(newUser);
         });
+
+        if (user.isAccountLocked()) {
+            throw new DomainValidationException("iam.error.accountLocked");
+        }
 
         var roleNames = user.getRoles().stream()
                 .map(Enum::name)
