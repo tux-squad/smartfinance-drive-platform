@@ -16,7 +16,7 @@ FROM eclipse-temurin:26-jdk AS runtime
 WORKDIR /app
 
 # Create non-root system user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
 # Copy compiled JAR from build stage
 COPY --from=build /app/target/smartfinance-drive-platform-*.jar app.jar
