@@ -69,7 +69,7 @@ public class SubscriptionsController {
     /**
      * Cancels an active subscription.
      */
-    @PostMapping("/{subscriptionId}/cancel")
+    @DeleteMapping("/{subscriptionId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SubscriptionResource> cancelSubscription(@PathVariable Long subscriptionId) {
         String currentUserId = SecurityUtils.getRequiredCurrentUserId();

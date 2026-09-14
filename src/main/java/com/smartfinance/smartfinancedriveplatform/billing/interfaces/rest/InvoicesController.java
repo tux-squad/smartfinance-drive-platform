@@ -52,7 +52,7 @@ public class InvoicesController {
      * and handle completion via webhooks.
      * </p>
      */
-    @PostMapping("/{invoiceId}/pay")
+    @PatchMapping("/{invoiceId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<InvoiceResource> payInvoice(@PathVariable Long invoiceId) {
         String currentUserId = SecurityUtils.getRequiredCurrentUserId();
