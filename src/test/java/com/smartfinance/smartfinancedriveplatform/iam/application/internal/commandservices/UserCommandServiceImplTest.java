@@ -99,4 +99,14 @@ class UserCommandServiceImplTest {
         assertThrows(DomainValidationException.class, () ->
                 userCommandService.handle(new RequestFinancialInstitutionRoleCommand(1L, "20100128056")));
     }
+
+    @Test
+    @DisplayName("Should return null safely when handling ForgotPasswordCommand for non-existing username")
+    void shouldReturnNullSafelyWhenUserNotFoundInForgotPassword() {
+        when(userRepository.findByUsername(any(Username.class))).thenReturn(Optional.empty());
+
+        String resetToken = userCommandService.handle(new com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand(new Username("nonexistent@example.com")));
+
+        assertNull(resetToken);
+    }
 }

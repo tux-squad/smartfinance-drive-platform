@@ -49,7 +49,8 @@ public class OwnershipChecker {
      * Checks if the target userId matches the authenticated user.
      */
     public boolean isUserSelf(Long userId, Authentication authentication) {
-        if (isAdmin(authentication) || userId == null) return true;
+        if (isAdmin(authentication)) return true;
+        if (userId == null) return false;
         String currentUserId = getUserIdFromAuthentication(authentication);
         if (currentUserId != null) {
             return Objects.equals(currentUserId, userId.toString());
@@ -61,7 +62,8 @@ public class OwnershipChecker {
      * Checks if the target userId string matches the authenticated user.
      */
     public boolean isUserSelfStr(String userIdStr, Authentication authentication) {
-        if (isAdmin(authentication) || userIdStr == null || userIdStr.isBlank()) return true;
+        if (isAdmin(authentication)) return true;
+        if (userIdStr == null || userIdStr.isBlank()) return false;
         String currentUserId = getUserIdFromAuthentication(authentication);
         if (currentUserId != null) {
             return Objects.equals(currentUserId, userIdStr);

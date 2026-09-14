@@ -111,23 +111,30 @@ public class AuthenticationController {
         String headerAuth = request.getHeader("Authorization");
         if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
             String token = headerAuth.substring(7);
-            String jti = jwtTokenService.getJtiFromToken(token);
-            long expiry = System.currentTimeMillis() + 86400000;
-            if (jti != null) {
-                tokenBlacklistService.blacklistToken(jti, expiry);
+            if (jwtTokenService.validateToken(token)) {
+                String jti = jwtTokenService.getJtiFromToken(token);
+                java.util.Date expiration = jwtTokenService.getExpirationFromToken(token);
+                long expiryTimeMs = (expiration != null) ? expiration.getTime() : System.currentTimeMillis() + 86400000;
+                if (jti != null) {
+                    tokenBlacklistService.blacklistToken(jti, expiryTimeMs);
+                }
+                tokenBlacklistService.blacklistToken(token, expiryTimeMs);
             }
-            tokenBlacklistService.blacklistToken(token, expiry);
         }
         return ResponseEntity.ok(Map.of("message", "User signed out successfully"));
     }
 
     /**
-     * Initiates password recovery process without exposing the raw token in response body.
+     * Initiates password recovery process without exposing raw token or enumerating registered users.
      */
     @PostMapping("/password-recoveries")
     public ResponseEntity<Map<String, String>> forgotPassword(@jakarta.validation.Valid @RequestBody ForgotPasswordResource resource) {
-        ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
-        userCommandService.handle(command);
+        try {
+            ForgotPasswordCommand command = new ForgotPasswordCommand(new Username(resource.username()));
+            userCommandService.handle(command);
+        } catch (Exception e) {
+            // Prevent username enumeration by swallowing any exception for non-existent users
+        }
         return ResponseEntity.ok(Map.of(
                 "message", "If an account with that email exists, password reset instructions have been processed."
         ));
