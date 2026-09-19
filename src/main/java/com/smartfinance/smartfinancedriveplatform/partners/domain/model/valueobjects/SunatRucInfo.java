@@ -19,7 +19,8 @@ public record SunatRucInfo(
 
     public boolean isAutomotiveCiiu() {
         if (ciiu == null || ciiu.isBlank()) {
-            return false;
+            // Fallback: If SUNAT API does not publish CIIU, accept RUC if verified as active & habido
+            return true;
         }
         // CIIU 451 / 4510 / 45100 represents sale of motor vehicles
         return ciiu.startsWith("451");
@@ -27,7 +28,8 @@ public record SunatRucInfo(
 
     public boolean isFinancialInstitutionCiiu() {
         if (ciiu == null || ciiu.isBlank()) {
-            return false;
+            // Fallback: If SUNAT API does not publish CIIU, accept RUC if verified as active & habido
+            return true;
         }
         // CIIU 64xx and 66xx represent financial intermediation & auxiliary financial activities
         return ciiu.startsWith("64") || ciiu.startsWith("66");
