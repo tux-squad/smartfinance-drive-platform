@@ -34,7 +34,7 @@ Authorization: Bearer <tu_access_token_jwt>
 8. [Billing - Planes, Suscripciones, Facturas PDF, Stripe y Métricas ROI (12 Endpoints)](#8-billing---planes-suscripciones-facturas-pdf-stripe-y-métricas-roi)
 9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints + STOMP)](#9-messaging---mensajería-y-chat-en-tiempo-real)
 10. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#10-consultations---asesor-financiero-ia)
-11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (10 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
+11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
 
 ---
 
@@ -583,7 +583,7 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ---
 
-## 11. CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo
+## 11. CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)
 
 ### 11.1 Crear Prospecto CRM
 * **Método**: `POST` | **Rutas**: `/api/v1/dealers/me/prospects` o `/api/v1/prospects` | **Acceso**: Autenticado
@@ -629,7 +629,7 @@ Authorization: Bearer <tu_access_token_jwt>
 {
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "dealershipId": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
-  "scheduledDateTime": "2026-10-15T10:00:00Z",
+  "scheduledDateTime": "2026-10-15T10:00:00",
   "notes": "Prueba de manejo turno mañana"
 }
 ```
