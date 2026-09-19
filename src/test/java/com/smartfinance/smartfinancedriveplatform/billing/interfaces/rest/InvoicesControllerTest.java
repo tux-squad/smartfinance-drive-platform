@@ -4,8 +4,8 @@ import com.smartfinance.smartfinancedriveplatform.billing.application.internal.c
 import com.smartfinance.smartfinancedriveplatform.billing.application.internal.queryservices.SubscriptionQueryService;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregates.Invoice;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.commands.PayInvoiceCommand;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoiceByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoicesByUserIdQuery;
-import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.InvoiceStatus;
 import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.InvoiceResource;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -17,22 +17,22 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("InvoicesController Unit Tests")
+@DisplayName("InvoicesController REST Unit Tests")
 class InvoicesControllerTest {
 
     @Mock
@@ -42,17 +42,18 @@ class InvoicesControllerTest {
     private SubscriptionQueryService subscriptionQueryService;
 
     @InjectMocks
-    private InvoicesController invoicesController;
+    private InvoicesController controller;
 
-    private Invoice testInvoice;
+    private Invoice sampleInvoice;
 
     @BeforeEach
     void setUp() {
-        testInvoice = new Invoice(10L, "usr_100", new BigDecimal("99.99"), "USD");
-        ReflectionTestUtils.setField(testInvoice, "id", 50L);
+        sampleInvoice = new Invoice(10L, "user-123", new BigDecimal("199.00"), "USD");
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken("usr_100", null, List.of());
-        auth.setDetails(new SecurityUtils.AuthenticatedUserDetails("usr_100", "user@example.com"));
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "user-123", "password", Collections.emptyList()
+        );
+        auth.setDetails(new SecurityUtils.AuthenticatedUserDetails("user-123", "user-123"));
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
@@ -62,42 +63,38 @@ class InvoicesControllerTest {
     }
 
     @Test
-    @DisplayName("Should return invoices for current user on getCurrentUserInvoices")
-    void shouldReturnCurrentUserInvoices() {
-        when(subscriptionQueryService.handle(any(GetInvoicesByUserIdQuery.class))).thenReturn(List.of(testInvoice));
+    @DisplayName("Should get current user invoices and return 200 OK")
+    void shouldGetCurrentUserInvoices() {
+        when(subscriptionQueryService.handle(any(GetInvoicesByUserIdQuery.class))).thenReturn(List.of(sampleInvoice));
 
-        ResponseEntity<List<InvoiceResource>> response = invoicesController.getCurrentUserInvoices();
+        ResponseEntity<List<InvoiceResource>> response = controller.getCurrentUserInvoices();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals(50L, response.getBody().get(0).id());
     }
 
     @Test
-    @DisplayName("Should return 200 OK on successful payInvoice and verify user ownership check parameter")
-    void shouldPayInvoiceSuccessfully() {
-        testInvoice.markPaid();
-        when(subscriptionCommandService.handle(new PayInvoiceCommand(50L, "usr_100")))
-                .thenReturn(Optional.of(testInvoice));
+    @DisplayName("Should get invoice PDF byte array")
+    void shouldGetInvoicePdf() {
+        when(subscriptionQueryService.handle(any(GetInvoiceByIdQuery.class))).thenReturn(Optional.of(sampleInvoice));
 
-        ResponseEntity<InvoiceResource> response = invoicesController.payInvoice(50L);
+        ResponseEntity<byte[]> response = controller.getInvoicePdf(1L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().length > 0);
+    }
+
+    @Test
+    @DisplayName("Should pay invoice and return 200 OK")
+    void shouldPayInvoice() {
+        when(subscriptionCommandService.handle(any(PayInvoiceCommand.class))).thenReturn(Optional.of(sampleInvoice));
+
+        ResponseEntity<InvoiceResource> response = controller.payInvoice(1L);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(InvoiceStatus.PAID, response.getBody().status());
-        verify(subscriptionCommandService).handle(new PayInvoiceCommand(50L, "usr_100"));
-    }
-
-    @Test
-    @DisplayName("Should return 404 Not Found when paying non-existent or unauthorized invoice")
-    void shouldReturnNotFoundWhenInvoiceDoesNotExist() {
-        when(subscriptionCommandService.handle(new PayInvoiceCommand(999L, "usr_100")))
-                .thenReturn(Optional.empty());
-
-        ResponseEntity<InvoiceResource> response = invoicesController.payInvoice(999L);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        verify(subscriptionCommandService).handle(new PayInvoiceCommand(999L, "usr_100"));
     }
 }

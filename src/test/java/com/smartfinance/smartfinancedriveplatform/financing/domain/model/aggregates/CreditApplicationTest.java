@@ -1,5 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggregates;
 
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,49 +8,76 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("CreditApplication Aggregate Root Unit Tests")
+@DisplayName("CreditApplication Aggregate Unit Tests")
 class CreditApplicationTest {
 
-    @Test
-    @DisplayName("Should create credit application with PENDING status")
-    void shouldCreateCreditApplication() {
-        CreditApplication app = new CreditApplication(
-                "user-1",
+    private CreditApplication createSampleApplication() {
+        return new CreditApplication(
+                "user-123",
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                null,
-                new Money(new BigDecimal("25000"), "USD"),
-                new Money(new BigDecimal("5000"), "USD"),
+                UUID.randomUUID(),
+                new Money(new BigDecimal("20000.00"), "USD"),
+                new Money(new BigDecimal("4000.00"), "USD"),
                 36,
-                new Money(new BigDecimal("3500"), "USD"),
+                new Money(new BigDecimal("5000.00"), "USD"),
                 "EMPLOYED"
         );
-
-        assertThat(app.getId()).isNotNull();
-        assertThat(app.getStatus()).isEqualTo("PENDING");
-        assertThat(app.getTermMonths()).isEqualTo(36);
     }
 
     @Test
-    @DisplayName("Should update status to PRE_APPROVED with notes")
-    void shouldUpdateStatus() {
-        CreditApplication app = new CreditApplication(
-                "user-1",
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                null,
-                new Money(new BigDecimal("25000"), "USD"),
-                new Money(new BigDecimal("5000"), "USD"),
-                36,
-                new Money(new BigDecimal("3500"), "USD"),
-                "EMPLOYED"
+    @DisplayName("Should create application with PENDING status")
+    void shouldCreateApplicationWithPendingStatus() {
+        CreditApplication app = createSampleApplication();
+
+        assertNotNull(app.getId());
+        assertEquals("user-123", app.getApplicantUserId());
+        assertEquals("PENDING", app.getStatus());
+        assertEquals(36, app.getTermMonths());
+    }
+
+    @Test
+    @DisplayName("Should update status from PENDING to IN_REVIEW")
+    void shouldUpdateStatusToInReview() {
+        CreditApplication app = createSampleApplication();
+        app.updateStatus("IN_REVIEW", "Reviewing documentation");
+
+        assertEquals("IN_REVIEW", app.getStatus());
+        assertEquals("Reviewing documentation", app.getNotes());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when attempting to change terminal status DISBURSED")
+    void shouldPreventChangingTerminalDisbursedState() {
+        CreditApplication app = createSampleApplication();
+        app.updateStatus("PRE_APPROVED", "Pre approved");
+        app.updateStatus("DISBURSED", "Disbursed funds");
+
+        assertThrows(DomainValidationException.class, () -> 
+            app.updateStatus("REJECTED", "Cannot alter terminal state")
         );
+    }
 
-        app.updateStatus("PRE_APPROVED", "Aprobado preliminarmente por BCP");
+    @Test
+    @DisplayName("Should throw exception when reverting to PENDING from IN_REVIEW")
+    void shouldPreventRevertingToPending() {
+        CreditApplication app = createSampleApplication();
+        app.updateStatus("IN_REVIEW", "Under review");
 
-        assertThat(app.getStatus()).isEqualTo("PRE_APPROVED");
-        assertThat(app.getNotes()).isEqualTo("Aprobado preliminarmente por BCP");
+        assertThrows(DomainValidationException.class, () -> 
+            app.updateStatus("PENDING", "Reverting back")
+        );
+    }
+
+    @Test
+    @DisplayName("Should throw exception when trying to DISBURSE without prior approval")
+    void shouldRequireApprovalBeforeDisbursing() {
+        CreditApplication app = createSampleApplication();
+
+        assertThrows(DomainValidationException.class, () -> 
+            app.updateStatus("DISBURSED", "Direct disbursement attempt")
+        );
     }
 }
