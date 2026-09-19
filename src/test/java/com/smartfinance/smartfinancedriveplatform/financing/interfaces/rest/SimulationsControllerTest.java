@@ -1,5 +1,6 @@
 package com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest;
 
+import com.smartfinance.smartfinancedriveplatform.financing.application.commandservices.CreditApplicationCommandService;
 import com.smartfinance.smartfinancedriveplatform.financing.application.commandservices.SimulationCommandService;
 import com.smartfinance.smartfinancedriveplatform.financing.application.queryservices.SimulationQueryService;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggregates.Simulation;
@@ -47,6 +48,9 @@ class SimulationsControllerTest {
     @Mock
     private SimulationQueryService simulationQueryService;
 
+    @Mock
+    private CreditApplicationCommandService creditApplicationCommandService;
+
     @InjectMocks
     private SimulationsController simulationsController;
 
@@ -57,8 +61,8 @@ class SimulationsControllerTest {
         sampleSimulation = new Simulation(
                 "RAV4 BCP 2026",
                 "usr-1",
-                "veh-1",
-                "bank-1",
+                UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 Money.of(25000.0, "USD"),
                 Percent.of(20.0),
                 Percent.of(0.0),
@@ -92,8 +96,8 @@ class SimulationsControllerTest {
         CreateSimulationResource resource = new CreateSimulationResource(
                 "RAV4 BCP 2026",
                 "usr-1",
-                "veh-1",
-                "bank-1",
+                UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 new BigDecimal("25000.00"),
                 "USD",
                 new BigDecimal("20.00"),
