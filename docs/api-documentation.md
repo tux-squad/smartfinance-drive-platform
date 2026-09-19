@@ -521,7 +521,7 @@ Authorization: Bearer <tu_access_token_jwt>
 ```json
 // Input Body
 {
-  "recipientUserId": "dealer-user-777",
+  "dealerUserId": "dealer-user-777",
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "initialMessage": "Hola, estoy interesado en este vehículo."
 }
