@@ -8,6 +8,8 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.model.aggregates
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 
 import lombok.Getter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -26,13 +28,20 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
     private String condition; // "NEW" or "USED"
     private Money price;
     private String imagePath;
+    private String status; // "ACTIVE", "SOLD", "RESERVED"
+    private Integer mileage;
+    private String transmission;
+    private String engine;
+    private String traction;
+    private List<String> images = new ArrayList<>();
 
     /**
      * Constructor for reconstituting the aggregate from persistence.
      */
     public Vehicle(VehicleId id, UserId userId, FinancialEntityId financialEntityId, 
                    String brand, String model, int manufactureYear, String condition, 
-                   Money price, String imagePath) {
+                   Money price, String imagePath, String status, Integer mileage,
+                   String transmission, String engine, String traction, List<String> images) {
         this.id = id;
         this.userId = userId;
         this.financialEntityId = financialEntityId;
@@ -42,6 +51,25 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
         this.condition = condition;
         this.price = price;
         this.imagePath = imagePath;
+        setStatus(status);
+        setMileage(mileage);
+        setTransmission(transmission);
+        setEngine(engine);
+        setTraction(traction);
+        setImages(images);
+    }
+
+    public Vehicle(VehicleId id, UserId userId, FinancialEntityId financialEntityId, 
+                   String brand, String model, int manufactureYear, String condition, 
+                   Money price, String imagePath, String status, Integer mileage,
+                   String transmission, String engine, String traction) {
+        this(id, userId, financialEntityId, brand, model, manufactureYear, condition, price, imagePath, status, mileage, transmission, engine, traction, new ArrayList<>());
+    }
+
+    public Vehicle(VehicleId id, UserId userId, FinancialEntityId financialEntityId, 
+                   String brand, String model, int manufactureYear, String condition, 
+                   Money price, String imagePath) {
+        this(id, userId, financialEntityId, brand, model, manufactureYear, condition, price, imagePath, "ACTIVE", 0, null, null, null, new ArrayList<>());
     }
 
     /**
@@ -49,7 +77,8 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
      */
     public Vehicle(UserId userId, FinancialEntityId financialEntityId, String brand, 
                    String model, int manufactureYear, String condition, Money price, 
-                   String imagePath) {
+                   String imagePath, String status, Integer mileage, String transmission,
+                   String engine, String traction, List<String> images) {
         this.id = new VehicleId(UUID.randomUUID());
         setUserId(userId);
         setFinancialEntityId(financialEntityId);
@@ -59,6 +88,25 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
         setCondition(condition);
         setPrice(price);
         setImagePath(imagePath);
+        setStatus(status);
+        setMileage(mileage);
+        setTransmission(transmission);
+        setEngine(engine);
+        setTraction(traction);
+        setImages(images);
+    }
+
+    public Vehicle(UserId userId, FinancialEntityId financialEntityId, String brand, 
+                   String model, int manufactureYear, String condition, Money price, 
+                   String imagePath, String status, Integer mileage, String transmission,
+                   String engine, String traction) {
+        this(userId, financialEntityId, brand, model, manufactureYear, condition, price, imagePath, status, mileage, transmission, engine, traction, new ArrayList<>());
+    }
+
+    public Vehicle(UserId userId, FinancialEntityId financialEntityId, String brand, 
+                   String model, int manufactureYear, String condition, Money price, 
+                   String imagePath) {
+        this(userId, financialEntityId, brand, model, manufactureYear, condition, price, imagePath, "ACTIVE", 0, null, null, null, new ArrayList<>());
     }
 
     public void setUserId(UserId userId) {
@@ -118,11 +166,63 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
         this.imagePath = imagePath != null ? imagePath.trim() : null;
     }
 
+    public void setStatus(String status) {
+        if (status == null || status.isBlank()) {
+            this.status = "ACTIVE";
+            return;
+        }
+        String normalized = status.trim().toUpperCase();
+        if (!normalized.equals("ACTIVE") && !normalized.equals("SOLD") && !normalized.equals("RESERVED")) {
+            throw new DomainValidationException("catalog.error.vehicle.status.invalid");
+        }
+        this.status = normalized;
+    }
+
+    public void setMileage(Integer mileage) {
+        if (mileage != null && mileage < 0) {
+            throw new DomainValidationException("catalog.error.vehicle.mileage.invalid");
+        }
+        this.mileage = mileage;
+    }
+
+    public void setTransmission(String transmission) {
+        this.transmission = transmission != null ? transmission.trim() : null;
+    }
+
+    public void setEngine(String engine) {
+        this.engine = engine != null ? engine.trim() : null;
+    }
+
+    public void setTraction(String traction) {
+        this.traction = traction != null ? traction.trim() : null;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images != null ? new ArrayList<>(images) : new ArrayList<>();
+    }
+
+    public void addImage(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            if (this.images == null) {
+                this.images = new ArrayList<>();
+            }
+            if (!this.images.contains(imageUrl.trim())) {
+                this.images.add(imageUrl.trim());
+            }
+        }
+    }
+
+    public void updateStatus(String status) {
+        setStatus(status);
+    }
+
     /**
      * Updates details of the vehicle.
      */
     public void updateDetails(FinancialEntityId financialEntityId, String brand, String model, 
-                              int manufactureYear, String condition, Money price, String imagePath) {
+                               int manufactureYear, String condition, Money price, String imagePath,
+                               String status, Integer mileage, String transmission, String engine,
+                               String traction, List<String> images) {
         setFinancialEntityId(financialEntityId);
         setBrand(brand);
         setModel(model);
@@ -130,5 +230,19 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
         setCondition(condition);
         setPrice(price);
         setImagePath(imagePath);
+        setStatus(status);
+        setMileage(mileage);
+        setTransmission(transmission);
+        setEngine(engine);
+        setTraction(traction);
+        if (images != null) {
+            setImages(images);
+        }
+    }
+
+    public void updateDetails(FinancialEntityId financialEntityId, String brand, String model, 
+                               int manufactureYear, String condition, Money price, String imagePath) {
+        updateDetails(financialEntityId, brand, model, manufactureYear, condition, price, imagePath, this.status, this.mileage, this.transmission, this.engine, this.traction, this.images);
     }
 }
+

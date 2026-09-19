@@ -1,17 +1,15 @@
 package com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.entities;
 
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-
-import jakarta.persistence.Index;
 
 /**
  * JPA entity representing the 'vehicles' table in the database.
@@ -51,4 +49,25 @@ public class VehiclePersistenceEntity extends AuditableAbstractPersistenceEntity
 
     @Column(name = "image_path")
     private String imagePath;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "ACTIVE";
+
+    @Column(name = "mileage")
+    private Integer mileage;
+
+    @Column(name = "transmission", length = 50)
+    private String transmission;
+
+    @Column(name = "engine", length = 50)
+    private String engine;
+
+    @Column(name = "traction", length = 50)
+    private String traction;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "vehicle_images", joinColumns = @JoinColumn(name = "vehicle_id"))
+    @Column(name = "image_url")
+    private List<String> images = new ArrayList<>();
 }
+

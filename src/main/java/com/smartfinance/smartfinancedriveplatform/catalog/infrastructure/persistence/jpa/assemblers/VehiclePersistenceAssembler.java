@@ -7,6 +7,8 @@ import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobje
 import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.entities.VehiclePersistenceEntity;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 
+import java.util.ArrayList;
+
 /**
  * Assembler class to convert between the Vehicle domain model and the JPA persistence entity.
  */
@@ -35,6 +37,12 @@ public final class VehiclePersistenceAssembler {
         entity.setCurrency(domain.getPrice().currency());
         entity.setPrice(domain.getPrice().amount());
         entity.setImagePath(domain.getImagePath());
+        entity.setStatus(domain.getStatus());
+        entity.setMileage(domain.getMileage());
+        entity.setTransmission(domain.getTransmission());
+        entity.setEngine(domain.getEngine());
+        entity.setTraction(domain.getTraction());
+        entity.setImages(domain.getImages() != null ? new ArrayList<>(domain.getImages()) : new ArrayList<>());
         return entity;
     }
 
@@ -54,7 +62,14 @@ public final class VehiclePersistenceAssembler {
             entity.getManufactureYear(),
             entity.getCondition(),
             new Money(entity.getPrice(), entity.getCurrency()),
-            entity.getImagePath()
+            entity.getImagePath(),
+            entity.getStatus(),
+            entity.getMileage(),
+            entity.getTransmission(),
+            entity.getEngine(),
+            entity.getTraction(),
+            entity.getImages()
         );
     }
 }
+

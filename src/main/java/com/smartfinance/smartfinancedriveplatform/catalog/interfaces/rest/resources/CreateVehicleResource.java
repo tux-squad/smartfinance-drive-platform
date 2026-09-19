@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resou
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -38,5 +39,24 @@ public record CreateVehicleResource(
     @Size(min = 3, max = 3, message = "Currency must be a 3-letter code (e.g., USD, PEN)")
     String currency,
 
-    String imagePath
-) {}
+    String imagePath,
+
+    String status,
+
+    @Min(value = 0, message = "Mileage must be zero or positive")
+    Integer mileage,
+
+    String transmission,
+
+    String engine,
+
+    String traction,
+
+    List<String> images
+) {
+    public CreateVehicleResource(String userId, UUID financialEntityId, String brand, String model, int manufactureYear, String condition, BigDecimal priceAmount, String currency, String imagePath) {
+        this(userId, financialEntityId, brand, model, manufactureYear, condition, priceAmount, currency, imagePath, "ACTIVE", 0, null, null, null, null);
+    }
+}
+
+
