@@ -276,7 +276,7 @@ Authorization: Bearer <tu_access_token_jwt>
 * **Método**: `POST` | **Ruta**: `/api/v1/vehicles` | **Acceso**: `ROLE_ADMIN` o `ROLE_DEALER`
 
 ### 3.5 Obtener Vehículo por ID
-* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Público
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
 
 ### 3.6 Actualizar Vehículo
 * **Método**: `PUT` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
@@ -364,15 +364,7 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 5.5 Convertir Simulación Directamente en Solicitud de Crédito
 * **Método**: `POST` | **Ruta**: `/api/v1/simulations/{id}/apply` | **Acceso**: Autenticado
-
-```json
-// Input Body (Opcional - sobrescribe ingresos o notas)
-{
-  "monthlyIncome": 4500.00,
-  "employmentStatus": "EMPLOYED",
-  "notes": "Solicitud generada directamente desde el simulador"
-}
-```
+* **Cuerpo de Solicitud**: N/A (Sin cuerpo; promueve automáticamente la simulación guardada a una solicitud de crédito formal)
 
 ### 5.6 Enviar Solicitud de Crédito Formal a Banco
 * **Método**: `POST` | **Ruta**: `/api/v1/credit-applications` | **Acceso**: Autenticado
@@ -558,8 +550,12 @@ Authorization: Bearer <tu_access_token_jwt>
 
 > **Soporte Dual Path**: Los endpoints del módulo de asesoría IA están mapeados de forma nativa tanto en `/api/v1/consultations` como en su alias `/api/v1/ai/consultations`.
 
-### 10.1 Generar Consejos y Recomendaciones Financieras IA
-* **Método**: `POST` | **Rutas**: `/api/v1/consultations/recommendations` o `/api/v1/ai/consultations/recommendations` | **Acceso**: Autenticado
+### 10.1 Obtener Recomendaciones de Vehículos Sugeridos por IA
+* **Método**: `GET` | **Rutas**: `/api/v1/consultations/recommendations` o `/api/v1/ai/consultations/recommendations` | **Acceso**: Autenticado
+* **Cuerpo de Solicitud**: N/A
+
+### 10.2 Enviar Consulta Interactiva al Asesor IA
+* **Método**: `POST` | **Rutas**: `/api/v1/consultations`, `/api/v1/consultations/chat` (y sus alias `/api/v1/ai/consultations`, `/api/v1/ai/consultations/chat`) | **Acceso**: Autenticado
 
 ```json
 // Input Body
@@ -570,16 +566,17 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 ```json
-// Response (HTTP 200 OK)
+// Response (HTTP 201 Created)
 {
-  "recommendationText": "Basado en un ingreso mensual de 4500 PEN, la regla financiera recomendada limita tu cuota mensual máxima a 1350.00. Te sugerimos vehículos en la categoría 'SUV Crossover / Sedan Ejecutivo'.",
-  "recommendedVehicleCategory": "SUV Crossover / Sedan Ejecutivo",
-  "estimatedMaxMonthlyFee": 1350.00
+  "id": "a1b2c3d4-e5f6-7a8b-9c0d-112233445566",
+  "userId": "user-123",
+  "prompt": "¿Qué categoría de vehículo me conviene según mis ingresos?",
+  "recommendationText": "Basado en un ingreso mensual de 4500 PEN...",
+  "recommendedCategory": "SUV Crossover / Sedan Ejecutivo",
+  "estimatedMaxMonthlyFee": 1350.00,
+  "createdAt": "2026-09-19T14:00:00Z"
 }
 ```
-
-### 10.2 Enviar Consulta Interactiva al Chat del Asesor IA
-* **Método**: `POST` | **Rutas**: `/api/v1/consultations/chat` o `/api/v1/ai/consultations/chat` | **Acceso**: Autenticado
 
 ### 10.3 Historial de Consultas IA del Usuario
 * **Método**: `GET` | **Rutas**: `/api/v1/consultations/history` o `/api/v1/ai/consultations/history` | **Acceso**: Autenticado
@@ -643,7 +640,7 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 11.9 Obtener Detalle de Prueba de Manejo por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
 
-### 11.10 Actualizar Estado de Prueba de Manejo (SCHEDULED, CONFIRMED, COMPLETED, CANCELLED)
+### 11.10 Actualizar Estado de Prueba de Manejo (SCHEDULED, COMPLETED, CANCELLED)
 * **Método**: `PATCH` | **Ruta**: `/api/v1/test-drives/{id}/status` | **Acceso**: Autenticado
 
 ```json
