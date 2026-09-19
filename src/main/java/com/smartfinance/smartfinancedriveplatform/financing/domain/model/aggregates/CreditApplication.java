@@ -114,15 +114,35 @@ public class CreditApplication extends AbstractDomainAggregateRoot<CreditApplica
         }
         String normalized = status.trim().toUpperCase();
         if (!normalized.equals("PENDING") && !normalized.equals("IN_REVIEW") && 
-            !normalized.equals("PRE_APPROVED") && !normalized.equals("REJECTED") && 
-            !normalized.equals("DISBURSED")) {
+            !normalized.equals("PRE_APPROVED") && !normalized.equals("APPROVED") &&
+            !normalized.equals("REJECTED") && !normalized.equals("DISBURSED")) {
             throw new DomainValidationException("financing.error.creditApplication.status.invalid");
         }
         this.status = normalized;
     }
 
     public void updateStatus(String status, String notes) {
-        setStatus(status);
+        if (status == null || status.isBlank()) {
+            throw new DomainValidationException("financing.error.creditApplication.status.invalid");
+        }
+        String target = status.trim().toUpperCase();
+
+        // Terminal state guard: cannot alter DISBURSED or REJECTED
+        if ("DISBURSED".equals(this.status) || "REJECTED".equals(this.status)) {
+            throw new DomainValidationException("financing.error.creditApplication.status.terminalStateCannotBeChanged");
+        }
+
+        // Guard: cannot revert back to PENDING
+        if ("PENDING".equals(target) && !"PENDING".equals(this.status)) {
+            throw new DomainValidationException("financing.error.creditApplication.status.cannotRevertToPending");
+        }
+
+        // Guard: DISBURSED requires prior approval/pre-approval
+        if ("DISBURSED".equals(target) && !"PRE_APPROVED".equals(this.status) && !"APPROVED".equals(this.status)) {
+            throw new DomainValidationException("financing.error.creditApplication.status.disbursementRequiresApproval");
+        }
+
+        setStatus(target);
         if (notes != null) {
             this.notes = notes.trim();
         }
