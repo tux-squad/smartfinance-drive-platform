@@ -26,6 +26,8 @@ public final class VehiclePersistenceAssembler {
     public static VehiclePersistenceEntity toEntity(Vehicle domain, VehiclePersistenceEntity entity) {
         if (entity == null) {
             entity = new VehiclePersistenceEntity();
+            entity.setCreatedAt(java.time.Instant.now());
+            entity.setUpdatedAt(java.time.Instant.now());
         }
         entity.setId(domain.getId().value());
         entity.setUserId(domain.getUserId().value());
