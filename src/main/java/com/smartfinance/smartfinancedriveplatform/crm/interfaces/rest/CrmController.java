@@ -2,12 +2,13 @@ package com.smartfinance.smartfinancedriveplatform.crm.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.crm.application.commandservices.CrmCommandService;
 import com.smartfinance.smartfinancedriveplatform.crm.application.queryservices.CrmQueryService;
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.commands.AddProspectNoteCommand;
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.commands.ScheduleTestDriveCommand;
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.commands.UpdateProspectStatusCommand;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.commands.*;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetProspectByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetProspectsForDealerQuery;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetTestDriveByIdQuery;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetTestDrivesForUserQuery;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.valueobjects.ProspectId;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.valueobjects.TestDriveId;
 import com.smartfinance.smartfinancedriveplatform.crm.interfaces.rest.resources.*;
 import com.smartfinance.smartfinancedriveplatform.crm.interfaces.rest.transform.ProspectResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.crm.interfaces.rest.transform.TestDriveResourceFromEntityAssembler;
@@ -34,6 +35,30 @@ public class CrmController {
     public CrmController(CrmCommandService commandService, CrmQueryService queryService) {
         this.commandService = commandService;
         this.queryService = queryService;
+    }
+
+    /**
+     * POST /api/v1/dealers/me/prospects or /api/v1/prospects
+     * Creates a new prospect.
+     */
+    @PostMapping({"/api/v1/dealers/me/prospects", "/api/v1/prospects"})
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProspectResource> createProspect(
+            @jakarta.validation.Valid @RequestBody CreateProspectResource resource) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var command = new CreateProspectCommand(
+                authUserId,
+                null,
+                resource.fullName(),
+                resource.email(),
+                resource.phone(),
+                resource.interestedVehicleId(),
+                resource.salesAgentId()
+        );
+        var prospectOpt = commandService.handle(command);
+        return prospectOpt
+                .map(p -> new ResponseEntity<>(ProspectResourceFromEntityAssembler.toResourceFromEntity(p), HttpStatus.CREATED))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 
     /**
@@ -142,4 +167,63 @@ public class CrmController {
                 .map(td -> new ResponseEntity<>(TestDriveResourceFromEntityAssembler.toResourceFromEntity(td), HttpStatus.CREATED))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
+
+    /**
+     * GET /api/v1/test-drives/me
+     * Lists test drives requested by or assigned to the authenticated user.
+     */
+    @GetMapping("/api/v1/test-drives/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TestDriveResource>> getMyTestDrives() {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var query = new GetTestDrivesForUserQuery(authUserId);
+        var testDrives = queryService.handle(query);
+        var resources = testDrives.stream()
+                .map(TestDriveResourceFromEntityAssembler::toResourceFromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(resources);
+    }
+
+    /**
+     * GET /api/v1/test-drives/{id}
+     * Retrieves detail of a test drive by ID.
+     */
+    @GetMapping("/api/v1/test-drives/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TestDriveResource> getTestDriveById(@PathVariable UUID id) {
+        var query = new GetTestDriveByIdQuery(new TestDriveId(id));
+        var testDriveOpt = queryService.handle(query);
+        return testDriveOpt
+                .map(td -> ResponseEntity.ok(TestDriveResourceFromEntityAssembler.toResourceFromEntity(td)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * PATCH /api/v1/test-drives/{id}/status
+     * Updates test drive status.
+     */
+    @PatchMapping("/api/v1/test-drives/{id}/status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TestDriveResource> updateTestDriveStatus(
+            @PathVariable UUID id,
+            @jakarta.validation.Valid @RequestBody UpdateTestDriveStatusResource resource) {
+        var command = new UpdateTestDriveStatusCommand(new TestDriveId(id), resource.status());
+        var updatedOpt = commandService.handle(command);
+        return updatedOpt
+                .map(td -> ResponseEntity.ok(TestDriveResourceFromEntityAssembler.toResourceFromEntity(td)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * DELETE /api/v1/test-drives/{id}
+     * Cancels / deletes a test drive appointment.
+     */
+    @DeleteMapping("/api/v1/test-drives/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> cancelTestDrive(@PathVariable UUID id) {
+        var command = new CancelTestDriveCommand(new TestDriveId(id));
+        commandService.handle(command);
+        return ResponseEntity.noContent().build();
+    }
 }
+

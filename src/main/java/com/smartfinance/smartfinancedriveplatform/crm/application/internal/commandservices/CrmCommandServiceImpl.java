@@ -79,4 +79,28 @@ public class CrmCommandServiceImpl implements CrmCommandService {
         TestDrive saved = testDriveRepository.save(testDrive);
         return Optional.of(saved);
     }
+
+    @Override
+    @Transactional
+    public Optional<TestDrive> handle(UpdateTestDriveStatusCommand command) {
+        var testDriveOpt = testDriveRepository.findById(command.testDriveId());
+        if (testDriveOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        var testDrive = testDriveOpt.get();
+        testDrive.setStatus(command.status());
+        TestDrive saved = testDriveRepository.save(testDrive);
+        return Optional.of(saved);
+    }
+
+    @Override
+    @Transactional
+    public void handle(CancelTestDriveCommand command) {
+        var testDriveOpt = testDriveRepository.findById(command.testDriveId());
+        if (testDriveOpt.isPresent()) {
+            var testDrive = testDriveOpt.get();
+            testDrive.setStatus("CANCELLED");
+            testDriveRepository.save(testDrive);
+        }
+    }
 }

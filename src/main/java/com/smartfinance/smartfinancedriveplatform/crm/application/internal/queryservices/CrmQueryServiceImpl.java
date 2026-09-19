@@ -2,9 +2,10 @@ package com.smartfinance.smartfinancedriveplatform.crm.application.internal.quer
 
 import com.smartfinance.smartfinancedriveplatform.crm.application.queryservices.CrmQueryService;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.aggregates.Prospect;
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetProspectByIdQuery;
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.GetProspectsForDealerQuery;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.aggregates.TestDrive;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.model.queries.*;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.repositories.ProspectRepository;
+import com.smartfinance.smartfinancedriveplatform.crm.domain.repositories.TestDriveRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,11 @@ import java.util.Optional;
 public class CrmQueryServiceImpl implements CrmQueryService {
 
     private final ProspectRepository prospectRepository;
+    private final TestDriveRepository testDriveRepository;
 
-    public CrmQueryServiceImpl(ProspectRepository prospectRepository) {
+    public CrmQueryServiceImpl(ProspectRepository prospectRepository, TestDriveRepository testDriveRepository) {
         this.prospectRepository = prospectRepository;
+        this.testDriveRepository = testDriveRepository;
     }
 
     @Override
@@ -30,5 +33,17 @@ public class CrmQueryServiceImpl implements CrmQueryService {
     @Transactional(readOnly = true)
     public Optional<Prospect> handle(GetProspectByIdQuery query) {
         return prospectRepository.findById(query.prospectId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<TestDrive> handle(GetTestDriveByIdQuery query) {
+        return testDriveRepository.findById(query.testDriveId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TestDrive> handle(GetTestDrivesForUserQuery query) {
+        return testDriveRepository.findAllByBuyerUserId(query.userId());
     }
 }

@@ -16,4 +16,8 @@ public interface CrmCommandService {
     Optional<Prospect> handle(UpdateProspectStatusCommand command);
 
     Optional<TestDrive> handle(ScheduleTestDriveCommand command);
+
+    Optional<TestDrive> handle(UpdateTestDriveStatusCommand command);
+
+    void handle(CancelTestDriveCommand command);
 }
