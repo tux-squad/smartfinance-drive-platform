@@ -1,8 +1,8 @@
 package com.smartfinance.smartfinancedriveplatform.crm.domain.model.aggregates;
 
-import com.smartfinance.smartfinancedriveplatform.crm.domain.model.valueobjects.TestDriveId;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.junit.jupiter.api.Test;
+
 
 import java.time.LocalDateTime;
 import java.util.UUID;
