@@ -28,13 +28,13 @@ Authorization: Bearer <tu_access_token_jwt>
 2. [Profiles - Perfiles de Cliente (5 Endpoints)](#2-profiles---perfiles-de-cliente)
 3. [Catalog - Catálogo de Vehículos, Especificaciones y Marcas (11 Endpoints)](#3-catalog---catálogo-de-vehículos-especificaciones-y-marcas)
 4. [Partners - Entidades Financieras, Directorio B2B y SUNAT (13 Endpoints)](#4-partners---entidades-financieras-directorio-b2b-y-sunat)
-5. [Financing - Simulaciones de Crédito y Solicitudes Bancarias (8 Endpoints)](#5-financing---simulaciones-de-crédito-y-solicitudes-bancarias)
+5. [Financing - Simulaciones de Crédito y Solicitudes Bancarias (9 Endpoints)](#5-financing---simulaciones-de-crédito-y-solicitudes-bancarias)
 6. [Scoring - Evaluación Crediticia (5 Endpoints)](#6-scoring---evaluación-crediticia)
 7. [Projections - Depreciación de Vehículos (5 Endpoints)](#7-projections---depreciación-de-vehículos)
 8. [Billing - Planes, Suscripciones, Facturas PDF, Stripe y Métricas ROI (12 Endpoints)](#8-billing---planes-suscripciones-facturas-pdf-stripe-y-métricas-roi)
-9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints)](#9-messaging---mensajería-y-chat-en-tiempo-real)
-10. [Consultations - Asesor Financiero IA (3 Endpoints)](#10-consultations---asesor-financiero-ia)
-11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (6 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
+9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints + STOMP)](#9-messaging---mensajería-y-chat-en-tiempo-real)
+10. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#10-consultations---asesor-financiero-ia)
+11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (10 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
 
 ---
 
@@ -239,8 +239,35 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 3.1 Listar y Buscar Vehículos (Fuzzy Search & Paginación)
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles` | **Acceso**: Público
 
+```json
+// Response Payload Sample
+{
+  "content": [
+    {
+      "id": "c9d8e7f6-5432-1098-7654-3210fe210987",
+      "userId": "dealer-user-123",
+      "financialEntityId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+      "brand": "Toyota",
+      "model": "RAV4 Hybrid",
+      "manufactureYear": 2026,
+      "condition": "NEW",
+      "priceAmount": 34900.00,
+      "currency": "USD",
+      "imagePath": "https://res.cloudinary.com/smartfinance/image/upload/v12345/rav4.jpg",
+      "status": "ACTIVE",
+      "mileage": 0,
+      "transmission": "AUTOMATIC",
+      "engine": "2.5L Hybrid",
+      "traction": "AWD",
+      "images": ["https://res.cloudinary.com/.../gallery1.jpg"],
+      "createdAt": "2026-09-19T12:00:00Z"
+    }
+  ]
+}
+```
+
 ### 3.2 Listar Mis Vehículos Publicados
-* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/my-listings` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/users/{userId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
 ### 3.3 Listar Marcas Disponibles
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles/brands` | **Acceso**: Público
@@ -254,7 +281,7 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 3.6 Actualizar Vehículo
 * **Método**: `PUT` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
 
-### 3.7 Actualizar Estado del Vehículo (AVAILABLE, RESERVED, SOLD)
+### 3.7 Actualizar Estado del Vehículo (ACTIVE, RESERVED, SOLD)
 * **Método**: `PATCH` | **Ruta**: `/api/v1/vehicles/{vehicleId}/status` | **Acceso**: Propietario del vehículo
 
 ```json
@@ -267,14 +294,14 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 3.8 Eliminar Vehículo
 * **Método**: `DELETE` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
 
-### 3.9 Cargar Imagen Principal de Vehículo
-* **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/image` | **Acceso**: Propietario del vehículo
+### 3.9 Cargar Imagen Principal / Cover de Vehículo
+* **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/image` | **Acceso**: Propietario del vehículo (Multipart)
 
-### 3.10 Cargar Múltiples Imágenes de Galería
-* **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/images/multiple` | **Acceso**: Propietario del vehículo
+### 3.10 Cargar Imagen Adicional a Galería
+* **Método**: `POST` | **Ruta**: `/api/v1/vehicles/{vehicleId}/images` | **Acceso**: Propietario del vehículo (Multipart)
 
-### 3.11 Eliminar Imagen de Galería
-* **Método**: `DELETE` | **Ruta**: `/api/v1/vehicles/{vehicleId}/images` | **Acceso**: Propietario del vehículo
+### 3.11 Eliminar Imagen Específica de Galería por Índice
+* **Método**: `DELETE` | **Ruta**: `/api/v1/vehicles/{vehicleId}/images/{imageIndex}` | **Acceso**: Propietario del vehículo
 
 ---
 
@@ -335,7 +362,19 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 5.4 Eliminar Simulación
 * **Método**: `DELETE` | **Ruta**: `/api/v1/simulations/{id}` | **Acceso**: Autenticado
 
-### 5.5 Enviar Solicitud de Crédito Formal a Banco
+### 5.5 Convertir Simulación Directamente en Solicitud de Crédito
+* **Método**: `POST` | **Ruta**: `/api/v1/simulations/{id}/apply` | **Acceso**: Autenticado
+
+```json
+// Input Body (Opcional - sobrescribe ingresos o notas)
+{
+  "monthlyIncome": 4500.00,
+  "employmentStatus": "EMPLOYED",
+  "notes": "Solicitud generada directamente desde el simulador"
+}
+```
+
+### 5.6 Enviar Solicitud de Crédito Formal a Banco
 * **Método**: `POST` | **Ruta**: `/api/v1/credit-applications` | **Acceso**: Autenticado
 
 ```json
@@ -346,18 +385,25 @@ Authorization: Bearer <tu_access_token_jwt>
   "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
   "requestedAmount": 27920.00,
   "currency": "USD",
+  "monthlyIncome": 4500.00,
+  "employmentStatus": "EMPLOYED",
   "notes": "Adjunto sustento de ingresos"
 }
 ```
 
-### 5.6 Listar Mis Solicitudes de Crédito
+### 5.7 Listar Mis Solicitudes de Crédito
 * **Método**: `GET` | **Ruta**: `/api/v1/credit-applications/me` | **Acceso**: Autenticado
 
-### 5.7 Obtener Solicitud de Crédito por ID
+### 5.8 Obtener Solicitud de Crédito por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/credit-applications/{id}` | **Acceso**: Autenticado
 
-### 5.8 Actualizar Estado de Solicitud de Crédito (SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, DISBURSED)
+### 5.9 Actualizar Estado de Solicitud (PENDING, IN_REVIEW, PRE_APPROVED, APPROVED, REJECTED, DISBURSED)
 * **Método**: `PATCH` | **Ruta**: `/api/v1/credit-applications/{id}/status` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+
+> **Reglas de Transición de Estado**:
+> - Los estados terminales `DISBURSED` y `REJECTED` son inmutables.
+> - `DISBURSED` requiere pre-aprobación o aprobación previa (`PRE_APPROVED` / `APPROVED`).
+> - No se permite revertir una solicitud al estado inicial `PENDING`.
 
 ---
 
@@ -456,6 +502,24 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 9.1 Listar Conversaciones Activas del Usuario
 * **Método**: `GET` | **Ruta**: `/api/v1/conversations` | **Acceso**: Autenticado
 
+```json
+// Response Payload Sample
+[
+  {
+    "id": "e1f2a3b4-5678-90ab-cdef-1234567890ab",
+    "buyerUserId": "buyer-user-123",
+    "dealerUserId": "dealer-user-777",
+    "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
+    "lastMessageContent": "Hola, ¿el vehículo está disponible para prueba de manejo?",
+    "lastMessageTimestamp": "2026-09-19T14:00:00Z",
+    "unreadBuyerCount": 0,
+    "unreadDealerCount": 1,
+    "active": true,
+    "createdAt": "2026-09-19T12:00:00Z"
+  }
+]
+```
+
 ### 9.2 Historial de Mensajes de una Conversación
 * **Método**: `GET` | **Ruta**: `/api/v1/conversations/{id}/messages` | **Acceso**: Autenticado
 
@@ -474,63 +538,83 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 9.4 Enviar Mensaje en Conversación Existente (REST Fallback)
 * **Método**: `POST` | **Ruta**: `/api/v1/conversations/{id}/messages` | **Acceso**: Autenticado
 
-### 9.5 Suscripción WebSocket STOMP para Chat en Tiempo Real
-* **Protocolo**: `STOMP via WebSocket` | **Endpoint Handshake**: `/ws/chat`
-* **Topic Suscripción**: `/topic/conversations/{conversationId}`
-* **Destination Envío**: `/app/chat.sendMessage`
+### 9.5 WebSocket STOMP - Chat en Tiempo Real Dual
+* **Endpoint Handshake WebSocket**: `/ws/chat` (Soporta SockJS fallback)
+* **Destination Envío Mensaje**: `/app/chat.sendMessage`
+* **Topic Suscripción Broadcast**: `/topic/conversations/{conversationId}`
+
+```json
+// Payload enviado a /app/chat.sendMessage
+{
+  "conversationId": "e1f2a3b4-5678-90ab-cdef-1234567890ab",
+  "senderUserId": "buyer-user-123",
+  "content": "Hola, confirmo mi asistencia para la prueba de manejo."
+}
+```
 
 ---
 
 ## 10. Consultations - Asesor Financiero IA
 
-### 10.1 Enviar Consulta Interactiva al Asesor Financiero IA
-* **Método**: `POST` | **Ruta**: `/api/v1/consultations/chat` | **Acceso**: Autenticado
+> **Soporte Dual Path**: Los endpoints del módulo de asesoría IA están mapeados de forma nativa tanto en `/api/v1/consultations` como en su alias `/api/v1/ai/consultations`.
+
+### 10.1 Generar Consejos y Recomendaciones Financieras IA
+* **Método**: `POST` | **Rutas**: `/api/v1/consultations/recommendations` o `/api/v1/ai/consultations/recommendations` | **Acceso**: Autenticado
 
 ```json
 // Input Body
 {
-  "message": "Que auto me conviene con un ingreso de S/ 4500 al mes?"
+  "prompt": "¿Qué categoría de vehículo me conviene según mis ingresos?",
+  "monthlyIncome": 4500.00,
+  "currency": "PEN"
 }
 ```
 ```json
 // Response (HTTP 200 OK)
 {
-  "sessionId": "s-12345",
-  "reply": "Con tu ingreso mensual de S/ 4500, te sugiero evaluar cuotas no mayores a S/ 1350...",
-  "recommendedVehicleIds": ["c9d8e7f6-5432-1098-7654-3210fe210987"]
+  "recommendationText": "Basado en un ingreso mensual de 4500 PEN, la regla financiera recomendada limita tu cuota mensual máxima a 1350.00. Te sugerimos vehículos en la categoría 'SUV Crossover / Sedan Ejecutivo'.",
+  "recommendedVehicleCategory": "SUV Crossover / Sedan Ejecutivo",
+  "estimatedMaxMonthlyFee": 1350.00
 }
 ```
 
-### 10.2 Historial de Consultas IA del Usuario
-* **Método**: `GET` | **Ruta**: `/api/v1/consultations/history` | **Acceso**: Autenticado
+### 10.2 Enviar Consulta Interactiva al Chat del Asesor IA
+* **Método**: `POST` | **Rutas**: `/api/v1/consultations/chat` o `/api/v1/ai/consultations/chat` | **Acceso**: Autenticado
 
-### 10.3 Obtener Recomendaciones de Vehículos IA
-* **Método**: `GET` | **Ruta**: `/api/v1/consultations/recommendations` | **Acceso**: Autenticado
+### 10.3 Historial de Consultas IA del Usuario
+* **Método**: `GET` | **Rutas**: `/api/v1/consultations/history` o `/api/v1/ai/consultations/history` | **Acceso**: Autenticado
 
 ---
 
 ## 11. CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo
 
-### 11.1 Listar Prospectos del Concesionario
-* **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
-
-### 11.2 Obtener Prospecto por ID
-* **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects/{id}` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
-
-### 11.3 Agregar Nota al Timeline de un Prospecto
-* **Método**: `POST` | **Ruta**: `/api/v1/prospects/{id}/notes` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+### 11.1 Crear Prospecto CRM
+* **Método**: `POST` | **Rutas**: `/api/v1/dealers/me/prospects` o `/api/v1/prospects` | **Acceso**: Autenticado
 
 ```json
 // Input Body
 {
-  "noteText": "Cliente solicitó evaluación para financiamiento a 48 meses."
+  "fullName": "Juan Perez",
+  "email": "juan.perez@example.com",
+  "phone": "+51999888777",
+  "interestedVehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
+  "salesAgentId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566"
 }
 ```
 
-### 11.4 Obtener Timeline de Notas de un Prospecto
+### 11.2 Listar Prospectos del Concesionario
+* **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+
+### 11.3 Obtener Detalle de Prospecto por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects/{id}` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+
+### 11.4 Agregar Nota al Timeline del Prospecto
+* **Método**: `POST` | **Ruta**: `/api/v1/prospects/{id}/notes` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+
+### 11.5 Obtener Timeline de Notas del Prospecto
 * **Método**: `GET` | **Ruta**: `/api/v1/prospects/{id}/timeline` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
-### 11.5 Actualizar Estado CRM del Prospecto
+### 11.6 Actualizar Estado CRM del Prospecto
 * **Método**: `PATCH` | **Ruta**: `/api/v1/prospects/{id}/status` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -540,7 +624,7 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 11.6 Programar Prueba de Manejo (Test Drive)
+### 11.7 Programar Cita de Prueba de Manejo (Test Drive)
 * **Método**: `POST` | **Ruta**: `/api/v1/test-drives` | **Acceso**: Autenticado
 
 ```json
@@ -552,3 +636,22 @@ Authorization: Bearer <tu_access_token_jwt>
   "notes": "Prueba de manejo turno mañana"
 }
 ```
+
+### 11.8 Listar Mis Pruebas de Manejo
+* **Método**: `GET` | **Ruta**: `/api/v1/test-drives/me` | **Acceso**: Autenticado
+
+### 11.9 Obtener Detalle de Prueba de Manejo por ID
+* **Método**: `GET` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
+
+### 11.10 Actualizar Estado de Prueba de Manejo (SCHEDULED, CONFIRMED, COMPLETED, CANCELLED)
+* **Método**: `PATCH` | **Ruta**: `/api/v1/test-drives/{id}/status` | **Acceso**: Autenticado
+
+```json
+// Input Body
+{
+  "status": "COMPLETED"
+}
+```
+
+### 11.11 Cancelar Cita de Prueba de Manejo
+* **Método**: `DELETE` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
