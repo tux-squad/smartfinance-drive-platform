@@ -134,13 +134,12 @@ public class VehiclesController {
 
     /**
      * GET /api/v1/vehicles/{vehicleId}
-     * Retrieves vehicle details by identifier if owned by caller or ADMIN.
+     * Retrieves vehicle details by identifier. Publicly accessible for all clients.
      *
      * @param vehicleId The vehicle UUID.
      * @return The vehicle resource payload.
      */
     @GetMapping("/{vehicleId}")
-    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
     public ResponseEntity<VehicleResource> getVehicleById(@PathVariable UUID vehicleId) {
         var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
         var vehicleOpt = vehicleQueryService.handle(query);

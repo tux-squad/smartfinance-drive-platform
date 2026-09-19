@@ -276,7 +276,7 @@ Authorization: Bearer <tu_access_token_jwt>
 * **Método**: `POST` | **Ruta**: `/api/v1/vehicles` | **Acceso**: `ROLE_ADMIN` o `ROLE_DEALER`
 
 ### 3.5 Obtener Vehículo por ID
-* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo o `ROLE_ADMIN`
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Público
 
 ### 3.6 Actualizar Vehículo
 * **Método**: `PUT` | **Ruta**: `/api/v1/vehicles/{vehicleId}` | **Acceso**: Propietario del vehículo
