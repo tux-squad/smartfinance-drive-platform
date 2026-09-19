@@ -3,10 +3,14 @@ package com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest;
 import com.smartfinance.smartfinancedriveplatform.billing.application.internal.commandservices.SubscriptionCommandService;
 import com.smartfinance.smartfinancedriveplatform.billing.application.internal.queryservices.SubscriptionQueryService;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.commands.PayInvoiceCommand;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoiceByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoicesByUserIdQuery;
+import com.smartfinance.smartfinancedriveplatform.billing.infrastructure.pdf.PdfInvoiceGenerator;
 import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.resources.InvoiceResource;
 import com.smartfinance.smartfinancedriveplatform.billing.interfaces.rest.transform.InvoiceResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +47,27 @@ public class InvoicesController {
                 .map(InvoiceResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(resources);
+    }
+
+    /**
+     * Downloads PDF invoice document.
+     */
+    @GetMapping(value = "/{invoiceId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> getInvoicePdf(@PathVariable Long invoiceId) {
+        var invoiceOpt = subscriptionQueryService.handle(new GetInvoiceByIdQuery(invoiceId));
+        if (invoiceOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        var invoice = invoiceOpt.get();
+        byte[] pdfBytes = PdfInvoiceGenerator.generatePdf(invoice);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("inline", "invoice-" + invoiceId + ".pdf");
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
     /**

@@ -2,7 +2,6 @@ package com.smartfinance.smartfinancedriveplatform.partners.infrastructure.token
 
 import com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.SunatRucInfo;
-import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

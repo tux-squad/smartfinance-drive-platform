@@ -27,7 +27,14 @@ public final class VehicleResourceFromEntityAssembler {
             vehicle.getCondition(),
             vehicle.getPrice().amount(),
             vehicle.getPrice().currency(),
-            vehicle.getImagePath()
+            vehicle.getImagePath(),
+            vehicle.getStatus(),
+            vehicle.getMileage(),
+            vehicle.getTransmission(),
+            vehicle.getEngine(),
+            vehicle.getTraction(),
+            vehicle.getImages()
         );
     }
 }
+

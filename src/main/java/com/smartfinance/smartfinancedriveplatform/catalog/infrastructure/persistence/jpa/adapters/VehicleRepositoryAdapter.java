@@ -120,4 +120,10 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     public void deleteById(VehicleId id) {
         springDataVehicleRepository.deleteById(id.value());
     }
+
+    @Override
+    public List<String> findDistinctBrands() {
+        return springDataVehicleRepository.findDistinctBrands();
+    }
 }
+

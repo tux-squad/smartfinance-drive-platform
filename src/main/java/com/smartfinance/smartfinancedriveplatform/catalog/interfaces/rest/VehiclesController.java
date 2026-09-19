@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.catalog.application.outboundse
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.DeleteVehicleCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.UpdateVehicleCommand;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.commands.UpdateVehicleStatusCommand;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetAllVehiclesQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehicleByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
@@ -12,6 +13,7 @@ import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobje
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.VehicleId;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resources.CreateVehicleResource;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resources.UpdateVehicleResource;
+import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resources.UpdateVehicleStatusResource;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.resources.VehicleResource;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.CreateVehicleCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.catalog.interfaces.rest.transform.UpdateVehicleCommandFromResourceAssembler;
@@ -52,6 +54,18 @@ public class VehiclesController {
         this.vehicleCommandService = vehicleCommandService;
         this.vehicleQueryService = vehicleQueryService;
         this.vehicleImageStorageService = vehicleImageStorageService;
+    }
+
+    /**
+     * GET /api/v1/vehicles/brands
+     * Retrieves distinct vehicle brands currently registered in the catalog.
+     *
+     * @return List of brand names.
+     */
+    @GetMapping("/brands")
+    public ResponseEntity<List<String>> getDistinctBrands() {
+        List<String> brands = vehicleQueryService.getDistinctBrands();
+        return ResponseEntity.ok(brands);
     }
 
     /**
@@ -174,6 +188,26 @@ public class VehiclesController {
     }
 
     /**
+     * PATCH /api/v1/vehicles/{vehicleId}/status
+     * Updates the status of a vehicle (ACTIVE, SOLD, RESERVED) if owned by current user.
+     *
+     * @param vehicleId The vehicle UUID.
+     * @param resource  The status resource.
+     * @return The updated vehicle resource.
+     */
+    @PatchMapping("/{vehicleId}/status")
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
+    public ResponseEntity<VehicleResource> updateVehicleStatus(
+            @PathVariable UUID vehicleId,
+            @jakarta.validation.Valid @RequestBody UpdateVehicleStatusResource resource) {
+        var command = new UpdateVehicleStatusCommand(new VehicleId(vehicleId), resource.status());
+        var vehicleOpt = vehicleCommandService.handle(command);
+        return vehicleOpt
+                .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
      * DELETE /api/v1/vehicles/{vehicleId}
      * Deletes a vehicle from the catalog if owned by current user.
      *
@@ -190,7 +224,7 @@ public class VehiclesController {
 
     /**
      * POST /api/v1/vehicles/{vehicleId}/image
-     * Uploads an image for an existing vehicle to Cloudinary and updates its imagePath.
+     * Uploads a cover image for an existing vehicle to Cloudinary and updates its imagePath.
      *
      * @param vehicleId The vehicle UUID.
      * @param file      The multipart image file.
@@ -221,7 +255,95 @@ public class VehiclesController {
                 vehicle.getManufactureYear(),
                 vehicle.getCondition(),
                 vehicle.getPrice(),
-                imageUrl
+                imageUrl,
+                vehicle.getStatus(),
+                vehicle.getMileage(),
+                vehicle.getTransmission(),
+                vehicle.getEngine(),
+                vehicle.getTraction(),
+                vehicle.getImages()
+        );
+
+        var updatedOpt = vehicleCommandService.handle(updateCommand);
+        return updatedOpt
+                .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * POST /api/v1/vehicles/{vehicleId}/images
+     * Uploads an additional image to the vehicle's photo gallery.
+     *
+     * @param vehicleId The vehicle UUID.
+     * @param file      The multipart image file to append to gallery.
+     * @return The updated vehicle resource.
+     */
+    @PostMapping(value = "/{vehicleId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
+    public ResponseEntity<VehicleResource> uploadVehicleGalleryImage(
+            @PathVariable UUID vehicleId,
+            @RequestParam("file") MultipartFile file) {
+        var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
+        var vehicleOpt = vehicleQueryService.handle(query);
+        if (vehicleOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String imageUrl = vehicleImageStorageService.uploadVehicleImage(file);
+        var updatedOpt = vehicleCommandService.addGalleryImage(new VehicleId(vehicleId), imageUrl);
+        return updatedOpt
+                .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * DELETE /api/v1/vehicles/{vehicleId}/images/{imageIndex}
+     * Deletes a specific image from the vehicle's photo gallery by index.
+     *
+     * @param vehicleId  The vehicle UUID.
+     * @param imageIndex The index of the image in gallery to delete.
+     * @return The updated vehicle resource.
+     */
+    @DeleteMapping("/{vehicleId}/images/{imageIndex}")
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
+    public ResponseEntity<VehicleResource> deleteVehicleGalleryImage(
+            @PathVariable UUID vehicleId,
+            @PathVariable int imageIndex) {
+        var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
+        var vehicleOpt = vehicleQueryService.handle(query);
+        if (vehicleOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var vehicle = vehicleOpt.get();
+        List<String> currentImages = vehicle.getImages();
+        if (currentImages == null || imageIndex < 0 || imageIndex >= currentImages.size()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String imageToRemove = currentImages.get(imageIndex);
+        if (imageToRemove != null && !imageToRemove.isBlank()) {
+            vehicleImageStorageService.deleteVehicleImage(imageToRemove);
+        }
+
+        List<String> updatedImages = new java.util.ArrayList<>(currentImages);
+        updatedImages.remove(imageIndex);
+
+        var updateCommand = new UpdateVehicleCommand(
+                vehicle.getId(),
+                vehicle.getFinancialEntityId(),
+                vehicle.getBrand(),
+                vehicle.getModel(),
+                vehicle.getManufactureYear(),
+                vehicle.getCondition(),
+                vehicle.getPrice(),
+                vehicle.getImagePath(),
+                vehicle.getStatus(),
+                vehicle.getMileage(),
+                vehicle.getTransmission(),
+                vehicle.getEngine(),
+                vehicle.getTraction(),
+                updatedImages
         );
 
         var updatedOpt = vehicleCommandService.handle(updateCommand);
@@ -230,3 +352,5 @@ public class VehiclesController {
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 }
+
+
