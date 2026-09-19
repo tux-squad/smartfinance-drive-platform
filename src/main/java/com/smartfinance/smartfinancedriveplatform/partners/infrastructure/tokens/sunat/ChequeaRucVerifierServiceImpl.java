@@ -37,6 +37,8 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
                 .requestFactory(requestFactory)
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .defaultHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .defaultHeader(HttpHeaders.ACCEPT, "application/json")
                 .build();
     }
 
@@ -81,7 +83,7 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
             return Optional.empty();
         } catch (Exception e) {
             LOGGER.error("External SUNAT API service failure for RUC {}: {}", ruc, e.getMessage());
-            throw new DomainValidationException("partners.error.sunatServiceUnavailable");
+            return Optional.empty();
         }
     }
 
