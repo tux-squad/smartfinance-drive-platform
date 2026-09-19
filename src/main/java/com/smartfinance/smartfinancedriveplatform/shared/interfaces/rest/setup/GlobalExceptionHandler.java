@@ -99,10 +99,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         logger.error("Uncaught exception occurred", ex);
+        String detailMsg = ex.getMessage() != null ? ex.getClass().getSimpleName() + ": " + ex.getMessage() : ex.getClass().getSimpleName();
         var body = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                "An unexpected server error occurred. Please try again later."
+                detailMsg
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
