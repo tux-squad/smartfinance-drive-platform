@@ -69,6 +69,24 @@ public class VehiclesController {
     }
 
     /**
+     * GET /api/v1/vehicles/my-listings
+     * Retrieves all vehicles belonging to the currently authenticated user/dealer.
+     *
+     * @return List of vehicle resource payloads.
+     */
+    @GetMapping("/my-listings")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<VehicleResource>> getMyVehicles() {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var query = new GetVehiclesByUserIdQuery(new UserId(authUserId));
+        var vehicles = vehicleQueryService.handle(query);
+        var resources = vehicles.stream()
+                .map(VehicleResourceFromEntityAssembler::toResourceFromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(resources);
+    }
+
+    /**
      * GET /api/v1/vehicles
      * Retrieves all vehicles in the catalog matching optional search/filtering parameters with pagination.
      *

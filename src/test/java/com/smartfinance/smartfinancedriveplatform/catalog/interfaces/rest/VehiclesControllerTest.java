@@ -119,6 +119,30 @@ class VehiclesControllerTest {
     }
 
     @Test
+    void testGetMyVehicles() {
+        String authUserId = UUID.randomUUID().toString();
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "dealer@example.com", "password", Collections.emptyList()
+        );
+        auth.setDetails(new SecurityUtils.AuthenticatedUserDetails(authUserId, "dealer@example.com"));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Vehicle vehicle = new Vehicle(
+            new UserId(authUserId), new FinancialEntityId(UUID.randomUUID()), "Toyota", "RAV4", 2024, "NEW", Money.of(35000, "USD"), null
+        );
+
+        when(vehicleQueryService.handle(argThat((GetVehiclesByUserIdQuery q) -> q.userId().value().equals(authUserId))))
+                .thenReturn(List.of(vehicle));
+
+        ResponseEntity<List<VehicleResource>> response = vehiclesController.getMyVehicles();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals("RAV4", response.getBody().get(0).model());
+    }
+
+    @Test
     void testUploadVehicleImageSuccess() {
         UUID vehicleId = UUID.randomUUID();
         Vehicle vehicle = new Vehicle(

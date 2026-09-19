@@ -266,10 +266,13 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 3.2 Listar Mis Vehículos Publicados
+### 3.2 Listar Mis Vehículos (Concesionaria Autenticada)
+* **Método**: `GET` | **Ruta**: `/api/v1/vehicles/my-listings` | **Acceso**: Autenticado (`ROLE_DEALER` o `ROLE_ADMIN`)
+
+### 3.3 Listar Vehículos por ID de Usuario
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles/users/{userId}` | **Acceso**: Propietario o `ROLE_ADMIN`
 
-### 3.3 Listar Marcas Disponibles
+### 3.4 Listar Marcas Disponibles
 * **Método**: `GET` | **Ruta**: `/api/v1/vehicles/brands` | **Acceso**: Público
 
 ### 3.4 Registrar Vehículo
