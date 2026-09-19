@@ -48,7 +48,7 @@ public class ChequeaRucVerifierServiceImpl implements SunatRucVerifierService {
     }
 
     @Override
-    @Cacheable(value = "sunatRucCache", key = "#ruc", unless = "#result == null || !#result.isPresent()")
+    @Cacheable(value = "sunatRucCache", key = "#ruc", unless = "#result == null")
     public Optional<SunatRucInfo> verifyRuc(String ruc) {
         if (ruc == null || !ruc.matches("\\d{11}")) {
             LOGGER.warn("Invalid RUC format supplied: {}", ruc);
