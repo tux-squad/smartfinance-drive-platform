@@ -295,5 +295,62 @@ public class VehiclesController {
                 .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
+
+    /**
+     * DELETE /api/v1/vehicles/{vehicleId}/images/{imageIndex}
+     * Deletes a specific image from the vehicle's photo gallery by index.
+     *
+     * @param vehicleId  The vehicle UUID.
+     * @param imageIndex The index of the image in gallery to delete.
+     * @return The updated vehicle resource.
+     */
+    @DeleteMapping("/{vehicleId}/images/{imageIndex}")
+    @PreAuthorize("@ownershipChecker.isVehicleOwner(#vehicleId, authentication)")
+    public ResponseEntity<VehicleResource> deleteVehicleGalleryImage(
+            @PathVariable UUID vehicleId,
+            @PathVariable int imageIndex) {
+        var query = new GetVehicleByIdQuery(new VehicleId(vehicleId));
+        var vehicleOpt = vehicleQueryService.handle(query);
+        if (vehicleOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var vehicle = vehicleOpt.get();
+        List<String> currentImages = vehicle.getImages();
+        if (currentImages == null || imageIndex < 0 || imageIndex >= currentImages.size()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String imageToRemove = currentImages.get(imageIndex);
+        if (imageToRemove != null && !imageToRemove.isBlank()) {
+            vehicleImageStorageService.deleteVehicleImage(imageToRemove);
+        }
+
+        List<String> updatedImages = new java.util.ArrayList<>(currentImages);
+        updatedImages.remove(imageIndex);
+
+        var updateCommand = new UpdateVehicleCommand(
+                vehicle.getId(),
+                vehicle.getFinancialEntityId(),
+                vehicle.getBrand(),
+                vehicle.getModel(),
+                vehicle.getManufactureYear(),
+                vehicle.getCondition(),
+                vehicle.getPrice(),
+                vehicle.getImagePath(),
+                vehicle.getStatus(),
+                vehicle.getMileage(),
+                vehicle.getTransmission(),
+                vehicle.getEngine(),
+                vehicle.getTraction(),
+                updatedImages
+        );
+
+        var updatedOpt = vehicleCommandService.handle(updateCommand);
+        return updatedOpt
+                .map(v -> ResponseEntity.ok(VehicleResourceFromEntityAssembler.toResourceFromEntity(v)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
 }
+
 
