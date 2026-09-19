@@ -44,4 +44,11 @@ public class VehicleQueryServiceImpl implements VehicleQueryService {
     public Page<Vehicle> handle(GetAllVehiclesQuery query, Pageable pageable) {
         return vehicleRepository.findAll(query, pageable);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getDistinctBrands() {
+        return vehicleRepository.findDistinctBrands();
+    }
 }
+

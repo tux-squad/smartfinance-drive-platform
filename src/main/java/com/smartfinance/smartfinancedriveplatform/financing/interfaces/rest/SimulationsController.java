@@ -1,22 +1,28 @@
 package com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest;
 
+import com.smartfinance.smartfinancedriveplatform.financing.application.commandservices.CreditApplicationCommandService;
 import com.smartfinance.smartfinancedriveplatform.financing.application.commandservices.SimulationCommandService;
 import com.smartfinance.smartfinancedriveplatform.financing.application.queryservices.SimulationQueryService;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggregates.Simulation;
+import com.smartfinance.smartfinancedriveplatform.financing.domain.model.commands.CreateCreditApplicationCommand;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.commands.DeleteSimulationCommand;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetAllSimulationsQuery;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetSimulationByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.valueobjects.SimulationId;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.CreateSimulationResource;
+import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.CreditApplicationResource;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.resources.SimulationResource;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.transform.CreateSimulationCommandFromResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.transform.CreditApplicationResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.financing.interfaces.rest.transform.SimulationResourceFromEntityAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -28,11 +34,14 @@ public class SimulationsController {
 
     private final SimulationCommandService simulationCommandService;
     private final SimulationQueryService simulationQueryService;
+    private final CreditApplicationCommandService creditApplicationCommandService;
 
     public SimulationsController(SimulationCommandService simulationCommandService,
-                                 SimulationQueryService simulationQueryService) {
+                                 SimulationQueryService simulationQueryService,
+                                 CreditApplicationCommandService creditApplicationCommandService) {
         this.simulationCommandService = simulationCommandService;
         this.simulationQueryService = simulationQueryService;
+        this.creditApplicationCommandService = creditApplicationCommandService;
     }
 
     /**
@@ -81,6 +90,47 @@ public class SimulationsController {
         return simulationOpt
                 .map(simulation -> ResponseEntity.ok(SimulationResourceFromEntityAssembler.toResourceFromEntity(simulation)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * POST /api/v1/simulations/{id}/apply
+     * Promotes a saved simulation plan directly into a formal bank credit application.
+     */
+    @PostMapping("/{id}/apply")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CreditApplicationResource> applyFromSimulation(@PathVariable UUID id) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var simulationOpt = simulationQueryService.handle(new GetSimulationByIdQuery(new SimulationId(id)));
+        if (simulationOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var sim = simulationOpt.get();
+        UUID vehicleUuid = UUID.fromString(sim.getVehicleId());
+        UUID entityUuid = UUID.fromString(sim.getFinancialEntityId());
+
+        Money monthlyIncome = new Money(new BigDecimal("3000.00"), sim.getFinancedAmount().currency());
+        Money downPayment = sim.getDownPaymentAmount();
+
+        var command = new CreateCreditApplicationCommand(
+                authUserId,
+                vehicleUuid,
+                entityUuid,
+                sim.getId().value(),
+                sim.getFinancedAmount(),
+                downPayment,
+                sim.getLoanTermMonths(),
+                monthlyIncome,
+                "EMPLOYED"
+        );
+
+        var appOpt = creditApplicationCommandService.handle(command);
+        return appOpt
+                .map(app -> new ResponseEntity<>(
+                        CreditApplicationResourceFromEntityAssembler.toResourceFromEntity(app),
+                        HttpStatus.CREATED
+                ))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 
     /**

@@ -43,7 +43,14 @@ public final class CreateVehicleCommandFromResourceAssembler {
             resource.manufactureYear(),
             resource.condition(),
             new Money(resource.priceAmount(), resource.currency()),
-            resource.imagePath()
+            resource.imagePath(),
+            resource.status(),
+            resource.mileage(),
+            resource.transmission(),
+            resource.engine(),
+            resource.traction(),
+            resource.images()
         );
     }
 }
+

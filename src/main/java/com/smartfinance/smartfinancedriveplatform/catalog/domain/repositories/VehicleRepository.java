@@ -62,4 +62,12 @@ public interface VehicleRepository {
      * @param id The vehicle ID.
      */
     void deleteById(VehicleId id);
+
+    /**
+     * Finds all distinct vehicle brands registered in the catalog.
+     *
+     * @return List of brand names.
+     */
+    List<String> findDistinctBrands();
 }
+

@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.billing.application.internal.
 
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregates.Invoice;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregates.Subscription;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoiceByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetInvoicesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.queries.GetSubscriptionByUserIdQuery;
 
@@ -14,4 +15,5 @@ import java.util.Optional;
 public interface SubscriptionQueryService {
     Optional<Subscription> handle(GetSubscriptionByUserIdQuery query);
     List<Invoice> handle(GetInvoicesByUserIdQuery query);
+    Optional<Invoice> handle(GetInvoiceByIdQuery query);
 }

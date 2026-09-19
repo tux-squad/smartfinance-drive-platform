@@ -39,4 +39,12 @@ public interface VehicleQueryService {
      * @return A page of vehicles.
      */
     Page<Vehicle> handle(GetAllVehiclesQuery query, Pageable pageable);
+
+    /**
+     * Retrieves distinct vehicle brands.
+     *
+     * @return List of brand names.
+     */
+    List<String> getDistinctBrands();
 }
+
