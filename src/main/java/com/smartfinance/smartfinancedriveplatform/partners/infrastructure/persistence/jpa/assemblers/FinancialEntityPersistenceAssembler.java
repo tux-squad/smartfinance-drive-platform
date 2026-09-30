@@ -31,6 +31,8 @@ public final class FinancialEntityPersistenceAssembler {
         }
         entity.setId(domain.getId().value());
         entity.setName(domain.getName());
+        entity.setLogoUrl(domain.getLogoUrl());
+        entity.setBannerUrl(domain.getBannerUrl());
 
         // Update rate benchmarks list
         entity.getRateBenchmarks().clear();
@@ -71,6 +73,8 @@ public final class FinancialEntityPersistenceAssembler {
         return new FinancialEntity(
             new FinancialEntityId(entity.getId()),
             entity.getName(),
+            entity.getLogoUrl(),
+            entity.getBannerUrl(),
             benchmarks
         );
     }

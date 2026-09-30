@@ -38,7 +38,9 @@ public class DealershipCommandServiceImpl implements DealershipCommandService {
                     command.email(),
                     command.website(),
                     command.description(),
-                    command.operatingHours()
+                    command.operatingHours(),
+                    command.logoUrl(),
+                    command.bannerUrl()
             );
             return Optional.of(dealershipRepository.save(dealership));
         }
@@ -75,7 +77,9 @@ public class DealershipCommandServiceImpl implements DealershipCommandService {
                 command.email(),
                 command.website(),
                 command.description(),
-                command.operatingHours()
+                command.operatingHours(),
+                command.logoUrl(),
+                command.bannerUrl()
         );
         return Optional.of(dealershipRepository.save(dealership));
     }

@@ -22,6 +22,12 @@ public class FinancialEntityPersistenceEntity extends AuditableAbstractPersisten
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
+    @Column(name = "logo_url", length = 1000)
+    private String logoUrl;
+
+    @Column(name = "banner_url", length = 1000)
+    private String bannerUrl;
+
     @OneToMany(mappedBy = "financialEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<RateBenchmarkPersistenceEntity> rateBenchmarks = new ArrayList<>();
 

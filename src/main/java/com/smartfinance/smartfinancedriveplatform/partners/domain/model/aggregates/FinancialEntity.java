@@ -21,25 +21,39 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
 
     private final FinancialEntityId id;
     private String name;
+    private String logoUrl;
+    private String bannerUrl;
     private final List<RateBenchmark> rateBenchmarks = new ArrayList<>();
 
     /**
      * Constructor for reconstituting from persistence.
      */
-    public FinancialEntity(FinancialEntityId id, String name, List<RateBenchmark> rateBenchmarks) {
+    public FinancialEntity(FinancialEntityId id, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
         this.id = id;
         this.name = name;
+        setLogoUrl(logoUrl);
+        setBannerUrl(bannerUrl);
         if (rateBenchmarks != null) {
             this.rateBenchmarks.addAll(rateBenchmarks);
         }
     }
 
+    public FinancialEntity(FinancialEntityId id, String name, List<RateBenchmark> rateBenchmarks) {
+        this(id, name, null, null, rateBenchmarks);
+    }
+
     /**
      * Constructor for creating a new FinancialEntity.
      */
-    public FinancialEntity(String name) {
+    public FinancialEntity(String name, String logoUrl, String bannerUrl) {
         this.id = new FinancialEntityId(UUID.randomUUID());
         setName(name);
+        setLogoUrl(logoUrl);
+        setBannerUrl(bannerUrl);
+    }
+
+    public FinancialEntity(String name) {
+        this(name, null, null);
     }
 
     public void setName(String name) {
@@ -47,6 +61,24 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
             throw new DomainValidationException("partners.error.financialEntity.name.required");
         }
         this.name = name.trim();
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = (logoUrl != null && !logoUrl.isBlank()) ? logoUrl.trim() : null;
+    }
+
+    public void setBannerUrl(String bannerUrl) {
+        this.bannerUrl = (bannerUrl != null && !bannerUrl.isBlank()) ? bannerUrl.trim() : null;
+    }
+
+    public void updateDetails(String name, String logoUrl, String bannerUrl) {
+        setName(name);
+        if (logoUrl != null) {
+            setLogoUrl(logoUrl);
+        }
+        if (bannerUrl != null) {
+            setBannerUrl(bannerUrl);
+        }
     }
 
     public List<RateBenchmark> getRateBenchmarks() {

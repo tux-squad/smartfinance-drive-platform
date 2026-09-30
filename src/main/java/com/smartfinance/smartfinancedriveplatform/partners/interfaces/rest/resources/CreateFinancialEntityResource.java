@@ -9,5 +9,15 @@ import jakarta.validation.constraints.Size;
 public record CreateFinancialEntityResource(
     @NotBlank(message = "Name is required")
     @Size(max = 100, message = "Name cannot exceed 100 characters")
-    String name
-) {}
+    String name,
+
+    @Size(max = 1000, message = "Logo URL cannot exceed 1000 characters")
+    String logoUrl,
+
+    @Size(max = 1000, message = "Banner URL cannot exceed 1000 characters")
+    String bannerUrl
+) {
+    public CreateFinancialEntityResource(String name) {
+        this(name, null, null);
+    }
+}

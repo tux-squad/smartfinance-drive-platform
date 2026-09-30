@@ -60,6 +60,22 @@ class FinancialEntitiesControllerTest {
     }
 
     @Test
+    void testCreateFinancialEntityWithLogoAndBanner() {
+        CreateFinancialEntityResource resource = new CreateFinancialEntityResource("BBVA", "https://cdn.example.com/bbva-logo.png", "https://cdn.example.com/bbva-banner.png");
+        FinancialEntity entity = new FinancialEntity("BBVA", "https://cdn.example.com/bbva-logo.png", "https://cdn.example.com/bbva-banner.png");
+
+        when(financialEntityCommandService.handle(any(CreateFinancialEntityCommand.class))).thenReturn(Optional.of(entity));
+
+        ResponseEntity<FinancialEntityResource> response = financialEntitiesController.createFinancialEntity(resource);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("BBVA", response.getBody().name());
+        assertEquals("https://cdn.example.com/bbva-logo.png", response.getBody().logoUrl());
+        assertEquals("https://cdn.example.com/bbva-banner.png", response.getBody().bannerUrl());
+    }
+
+    @Test
     void testGetFinancialEntityByIdFound() {
         UUID id = UUID.randomUUID();
         FinancialEntity entity = new FinancialEntity("Interbank");

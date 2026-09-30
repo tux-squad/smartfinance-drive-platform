@@ -7,6 +7,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.application.queryserv
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.Dealership;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetAllDealershipsQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetDealershipByUserIdQuery;
+import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.CreateUpdateDealershipResource;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,5 +102,45 @@ class DealershipsControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().name()).isEqualTo("Autoland Peru");
+    }
+
+    @Test
+    @DisplayName("Should create or update my dealership with logo and banner")
+    void shouldCreateOrUpdateMyDealershipWithLogoAndBanner() {
+        Dealership dealership = new Dealership(
+                "dealer-user-1",
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Concesionaria líder en venta de autos",
+                "Lun-Vie 9am-6pm",
+                "https://cdn.example.com/logo.png",
+                "https://cdn.example.com/banner.png"
+        );
+        when(commandService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.CreateDealershipCommand.class)))
+                .thenReturn(Optional.of(dealership));
+
+        var resource = new CreateUpdateDealershipResource(
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Concesionaria líder en venta de autos",
+                "Lun-Vie 9am-6pm",
+                "https://cdn.example.com/logo.png",
+                "https://cdn.example.com/banner.png"
+        );
+
+        var response = controller.createOrUpdateMyDealership(resource);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().logoUrl()).isEqualTo("https://cdn.example.com/logo.png");
+        assertThat(response.getBody().bannerUrl()).isEqualTo("https://cdn.example.com/banner.png");
     }
 }

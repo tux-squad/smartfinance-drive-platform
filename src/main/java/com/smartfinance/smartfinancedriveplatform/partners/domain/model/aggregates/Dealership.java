@@ -110,15 +110,16 @@ public class Dealership extends AbstractDomainAggregateRoot<Dealership> {
     }
 
     public void setLogoUrl(String logoUrl) {
-        this.logoUrl = logoUrl != null ? logoUrl.trim() : null;
+        this.logoUrl = (logoUrl != null && !logoUrl.isBlank()) ? logoUrl.trim() : null;
     }
 
     public void setBannerUrl(String bannerUrl) {
-        this.bannerUrl = bannerUrl != null ? bannerUrl.trim() : null;
+        this.bannerUrl = (bannerUrl != null && !bannerUrl.isBlank()) ? bannerUrl.trim() : null;
     }
 
     public void updateDetails(String ruc, String name, String address, String phone, 
-                              String email, String website, String description, String operatingHours) {
+                              String email, String website, String description, String operatingHours,
+                              String logoUrl, String bannerUrl) {
         setRuc(ruc);
         setName(name);
         setAddress(address);
@@ -127,6 +128,17 @@ public class Dealership extends AbstractDomainAggregateRoot<Dealership> {
         this.website = website != null ? website.trim() : null;
         this.description = description != null ? description.trim() : null;
         this.operatingHours = operatingHours != null ? operatingHours.trim() : null;
+        if (logoUrl != null) {
+            setLogoUrl(logoUrl);
+        }
+        if (bannerUrl != null) {
+            setBannerUrl(bannerUrl);
+        }
+    }
+
+    public void updateDetails(String ruc, String name, String address, String phone, 
+                              String email, String website, String description, String operatingHours) {
+        updateDetails(ruc, name, address, phone, email, website, description, operatingHours, null, null);
     }
 
     public void activate() {

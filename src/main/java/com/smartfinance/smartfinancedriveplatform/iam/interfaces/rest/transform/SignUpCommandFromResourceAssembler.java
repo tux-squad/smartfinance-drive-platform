@@ -15,8 +15,18 @@ import java.util.List;
 public class SignUpCommandFromResourceAssembler {
 
     public static SignUpCommand toCommandFromResource(SignUpResource resource) {
-        // Public registration strictly assigns ROLE_USER to prevent privilege escalation
-        List<Roles> roles = List.of(Roles.ROLE_USER);
+        // Assign ROLE_USER by default. Allow ROLE_DEALER if explicitly requested, but disallow ROLE_ADMIN to prevent privilege escalation.
+        List<Roles> roles = new java.util.ArrayList<>();
+        roles.add(Roles.ROLE_USER);
+        if (resource.roles() != null) {
+            for (String r : resource.roles()) {
+                if ("ROLE_DEALER".equalsIgnoreCase(r) || "DEALER".equalsIgnoreCase(r)) {
+                    if (!roles.contains(Roles.ROLE_DEALER)) {
+                        roles.add(Roles.ROLE_DEALER);
+                    }
+                }
+            }
+        }
         return new SignUpCommand(
                 new Username(resource.username()),
                 new Password(resource.password()),
