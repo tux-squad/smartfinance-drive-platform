@@ -17,5 +17,11 @@ public interface CreditApplicationRepository {
 
     List<CreditApplication> findAllByApplicantUserId(String applicantUserId);
 
+    List<CreditApplication> findAllByFinancialEntityId(java.util.UUID financialEntityId);
+
+    List<CreditApplication> findAllByVehicleIdIn(List<java.util.UUID> vehicleIds);
+
+    long count();
+
     boolean existsById(CreditApplicationId id);
 }

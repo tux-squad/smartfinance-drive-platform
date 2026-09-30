@@ -19,4 +19,6 @@ public interface SimulationRepository {
     Page<Simulation> findByUserId(String userId, Pageable pageable);
     void deleteById(SimulationId simulationId);
     boolean existsById(SimulationId simulationId);
+    int countByFinancialEntityId(String financialEntityId);
+    long count();
 }

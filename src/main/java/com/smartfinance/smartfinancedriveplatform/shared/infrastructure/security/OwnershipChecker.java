@@ -6,6 +6,9 @@ import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobje
 import com.smartfinance.smartfinancedriveplatform.financing.application.queryservices.SimulationQueryService;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.queries.GetSimulationByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.financing.domain.model.valueobjects.SimulationId;
+import com.smartfinance.smartfinancedriveplatform.partners.application.queryservices.FinancialEntityQueryService;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.profiles.application.queryservices.ProfileQueryService;
 import com.smartfinance.smartfinancedriveplatform.profiles.domain.model.queries.GetProfileByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.profiles.domain.model.valueobjects.ProfileId;
@@ -32,17 +35,20 @@ public class OwnershipChecker {
     private final SimulationQueryService simulationQueryService;
     private final CreditScoreQueryService creditScoreQueryService;
     private final DepreciationProjectionQueryService depreciationProjectionQueryService;
+    private final FinancialEntityQueryService financialEntityQueryService;
 
     public OwnershipChecker(VehicleQueryService vehicleQueryService,
                             ProfileQueryService profileQueryService,
                             SimulationQueryService simulationQueryService,
                             CreditScoreQueryService creditScoreQueryService,
-                            DepreciationProjectionQueryService depreciationProjectionQueryService) {
+                            DepreciationProjectionQueryService depreciationProjectionQueryService,
+                            FinancialEntityQueryService financialEntityQueryService) {
         this.vehicleQueryService = vehicleQueryService;
         this.profileQueryService = profileQueryService;
         this.simulationQueryService = simulationQueryService;
         this.creditScoreQueryService = creditScoreQueryService;
         this.depreciationProjectionQueryService = depreciationProjectionQueryService;
+        this.financialEntityQueryService = financialEntityQueryService;
     }
 
     /**
@@ -176,6 +182,29 @@ public class OwnershipChecker {
                 .orElse(false);
     }
 
+    /**
+     * Checks if the currently authenticated user owns or represents the specified financial entity.
+     */
+    public boolean isFinancialEntityOwner(UUID financialEntityId, Authentication authentication) {
+        if (isAdmin(authentication)) return true;
+        String currentUserId = getUserIdFromAuthentication(authentication);
+        if (currentUserId == null || financialEntityId == null) return false;
+
+        return financialEntityQueryService.handle(new GetFinancialEntityByIdQuery(new FinancialEntityId(financialEntityId)))
+                .map(entity -> Objects.equals(entity.getUserId(), currentUserId))
+                .orElse(false);
+    }
+
+    public boolean isFinancialEntityOwnerStr(String financialEntityIdStr, Authentication authentication) {
+        if (isAdmin(authentication)) return true;
+        if (financialEntityIdStr == null || financialEntityIdStr.isBlank()) return false;
+        try {
+            return isFinancialEntityOwner(UUID.fromString(financialEntityIdStr), authentication);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private boolean isAdmin(Authentication authentication) {
         if (authentication == null) return false;
         return authentication.getAuthorities().stream()
@@ -184,6 +213,6 @@ public class OwnershipChecker {
 
     private String getUserIdFromAuthentication(Authentication authentication) {
         if (authentication == null) return null;
-        return SecurityUtils.getCurrentUserId().orElse(null);
+        return SecurityUtils.getCurrentUserId().orElse(authentication.getName());
     }
 }

@@ -19,6 +19,12 @@ import java.util.List;
 @NoArgsConstructor
 public class FinancialEntityPersistenceEntity extends AuditableAbstractPersistenceEntity {
 
+    @Column(name = "user_id")
+    private String userId;
+
+    @Column(name = "ruc", length = 11, unique = true)
+    private String ruc;
+
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 

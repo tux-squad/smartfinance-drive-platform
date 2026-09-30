@@ -24,4 +24,6 @@ public interface UserRepository {
     List<User> findAll();
 
     Page<User> findAll(Pageable pageable);
+
+    long count();
 }

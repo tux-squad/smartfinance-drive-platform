@@ -51,4 +51,14 @@ public class DealershipRepositoryAdapter implements DealershipRepository {
     public boolean existsById(DealershipId id) {
         return repository.existsById(id.value());
     }
+
+    @Override
+    public long count() {
+        return repository.count();
+    }
+
+    @Override
+    public int countByActive(boolean active) {
+        return repository.countByActive(active);
+    }
 }

@@ -41,19 +41,22 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final GoogleTokenVerifierService googleTokenVerifierService;
     private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
     private final com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService;
+    private final com.smartfinance.smartfinancedriveplatform.partners.application.commandservices.FinancialEntityCommandService financialEntityCommandService;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
                                   TokenService tokenService,
                                   GoogleTokenVerifierService googleTokenVerifierService,
                                   com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
-                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService) {
+                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService,
+                                  com.smartfinance.smartfinancedriveplatform.partners.application.commandservices.FinancialEntityCommandService financialEntityCommandService) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.googleTokenVerifierService = googleTokenVerifierService;
         this.tokenBlacklistService = tokenBlacklistService;
         this.sunatRucVerifierService = sunatRucVerifierService;
+        this.financialEntityCommandService = financialEntityCommandService;
     }
 
     @Override
@@ -270,6 +273,14 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         user.addRole(Roles.ROLE_FINANCIAL_INSTITUTION);
         User updatedUser = userRepository.save(user);
+
+        financialEntityCommandService.handle(
+                new com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkFinancialEntityToUserCommand(
+                        user.getId().toString(),
+                        rucInfo.ruc(),
+                        rucInfo.razonSocial()
+                )
+        );
 
         return Optional.of(updatedUser);
     }

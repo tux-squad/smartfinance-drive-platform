@@ -24,6 +24,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +37,9 @@ class UserCommandServiceImplTest {
 
     @Mock
     private SunatRucVerifierService sunatRucVerifierService;
+
+    @Mock
+    private com.smartfinance.smartfinancedriveplatform.partners.application.commandservices.FinancialEntityCommandService financialEntityCommandService;
 
     @InjectMocks
     private UserCommandServiceImpl userCommandService;
@@ -86,6 +91,7 @@ class UserCommandServiceImplTest {
 
         assertTrue(result.isPresent());
         assertTrue(result.get().getRoles().contains(Roles.ROLE_FINANCIAL_INSTITUTION));
+        verify(financialEntityCommandService, times(1)).handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkFinancialEntityToUserCommand.class));
     }
 
     @Test

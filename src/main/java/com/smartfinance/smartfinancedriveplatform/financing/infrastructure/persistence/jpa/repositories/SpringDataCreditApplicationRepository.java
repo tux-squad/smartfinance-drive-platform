@@ -11,4 +11,6 @@ import java.util.UUID;
  */
 public interface SpringDataCreditApplicationRepository extends JpaRepository<CreditApplicationPersistenceEntity, UUID> {
     List<CreditApplicationPersistenceEntity> findAllByApplicantUserId(String applicantUserId);
+    List<CreditApplicationPersistenceEntity> findAllByFinancialEntityId(UUID financialEntityId);
+    List<CreditApplicationPersistenceEntity> findAllByVehicleIdIn(java.util.Collection<UUID> vehicleIds);
 }

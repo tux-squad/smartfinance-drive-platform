@@ -35,6 +35,7 @@ Authorization: Bearer <tu_access_token_jwt>
 9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints + STOMP)](#9-messaging---mensajería-y-chat-en-tiempo-real)
 10. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#10-consultations---asesor-financiero-ia)
 11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
+12. [Analytics - Métricas Consolidadas y Dashboards por Rol (3 Endpoints)](#12-analytics---métricas-consolidadas-y-dashboards-por-rol)
 
 ---
 
@@ -312,12 +313,15 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.1 Listar Entidades Financieras
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: Autenticado
+* **Privacidad de Identificadores Internos**: El campo `userId` (identificador interno de la cuenta titular) se sanitiza a `null` para consultas públicas o de terceros (roles `USER`, `DEALER`, `FINANCIAL_ANALYST` u otras entidades). Solo el propietario de la entidad o un `ROLE_ADMIN` visualizan el `userId`.
 
 ```json
 // Output Response (200 OK)
 [
   {
     "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+    "userId": null,
+    "ruc": "20100047218",
     "name": "Banco de Credito BCP",
     "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
     "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
@@ -328,10 +332,14 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.2 Crear Entidad Financiera
 * **Método**: `POST` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+* **Seguridad y Restricciones**:
+  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el campo `userId` se enlaza automáticamente al usuario autenticado. Si el cliente envía un `userId` ajeno al del token JWT, la solicitud es rechazada de inmediato con `403 Forbidden` (`partners.error.accessDenied.cannotImpersonateUserId`). Solo `ROLE_ADMIN` puede asociar un `userId` explícito arbitrario.
+  * El campo `ruc` (opcional si se crea sin RUC inicial, ej. plantilla institucional) debe tener exactamente 11 dígitos numéricos y ser único en el sistema.
 
 ```json
 // Input Body
 {
+  "ruc": "20100047218",
   "name": "Banco de Credito BCP",
   "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
   "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png"
@@ -342,6 +350,8 @@ Authorization: Bearer <tu_access_token_jwt>
 // Output Response (201 Created)
 {
   "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "ruc": "20100047218",
   "name": "Banco de Credito BCP",
   "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
   "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
@@ -351,9 +361,14 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.3 Obtener Entidad Financiera por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: Autenticado
+* **Privacidad**: El campo `userId` solo se expone al propietario de `{id}` o a un `ROLE_ADMIN`; para terceros se sanitiza a `null`.
 
 ### 4.4 Actualizar Entidad Financiera
 * **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+* **Seguridad y Control de Propiedad**:
+  * Requiere autorización estricta: evaluada mediante SpEL `@PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")` y verificación defensiva interna.
+  * Si un usuario con rol `FINANCIAL_INSTITUTION` intenta modificar una entidad que no le pertenece, se rechaza con `403 Forbidden` (`partners.error.accessDenied.notOwner`), neutralizando cualquier intento de secuestro de entidad o bypass de analytics.
+  * Los usuarios `FINANCIAL_INSTITUTION` tienen prohibido transferir o alterar el campo `userId`; cualquier intento de enviar un `userId` en el payload genera `403 Forbidden` (`partners.error.accessDenied.cannotTransferOwnership`). Solo `ROLE_ADMIN` puede reasignar la titularidad de una entidad bancaria.
 
 ```json
 // Input Body
@@ -364,16 +379,50 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.5 Eliminar Entidad Financiera
+### 4.5 Agregar Tasa de Referencia (Rate Benchmark)
+* **Método**: `POST` | **Ruta**: `/api/v1/financial-entities/{id}/rate-benchmarks` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION` (solo propietario de `{id}`)
+* **Seguridad y Control de Propiedad**:
+  * Solo el banco propietario (`@ownershipChecker.isFinancialEntityOwner(#id, authentication)`) o un administrador pueden inyectar tasas referenciales en la entidad. Previene la inyección de tasas falsas y manipulación de promedios ponderados TEA en analytics.
+
+```json
+// Input Body
+{
+  "rateType": "TEA",
+  "annualRate": 14.50,
+  "currency": "PEN",
+  "sourceLabel": "SBS Referencial 2026",
+  "sourceUrl": "https://sbs.gob.pe/benchmarks",
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+### 4.6 Obtener Mi Entidad Financiera Asociada
+* **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/me` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+* **Descripción**: Retorna la entidad financiera vinculada al usuario autenticado (determinada a partir de su ID de usuario en el JWT tras la verificación SUNAT del RUC). Retorna `404 Not Found` si el usuario no tiene entidad asociada.
+
+```json
+// Output Response (200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "ruc": "20100047218",
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
+  "rateBenchmarks": []
+}
+```
+
+### 4.7 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
 
-### 4.6 Consulta SUNAT RUC
+### 4.8 Consulta SUNAT RUC
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
 
-### 4.7 Directorio Público de Concesionarias (Paginado & Búsqueda)
+### 4.9 Directorio Público de Concesionarias (Paginado & Búsqueda)
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships` | **Acceso**: Público
 
-### 4.8 Obtener Mi Concesionaria B2B
+### 4.10 Obtener Mi Concesionaria B2B
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -753,3 +802,112 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 11.11 Cancelar Cita de Prueba de Manejo
 * **Método**: `DELETE` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
+
+---
+
+## 12. Analytics - Métricas Consolidadas y Dashboards por Rol
+
+Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Financieras y Administradores de la plataforma con estricta validación de propiedad y protección contra IDOR.
+
+### 12.1 Obtener Métricas de Dashboard para Concesionario
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/dealer` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Seguridad y Control de Propiedad**:
+  * Un usuario con rol `DEALER` solo puede consultar sus propias métricas. Si omite el parámetro `dealerUserId` o lo envía vacío, se infiere automáticamente del JWT autenticado. Si especifica un `dealerUserId` correspondiente a otra concesionaria, la solicitud es rechazada con `403 Forbidden` tanto a nivel de SpEL `@PreAuthorize` como en la lógica defensiva del controlador.
+  * Los usuarios con rol `ADMIN` pueden consultar las métricas de cualquier concesionario especificando `dealerUserId`.
+* **Parámetros Opcionales de Consulta**:
+  * `dealerUserId` (string): Identificador de usuario del concesionario.
+  * `period` (string): Ventana temporal para métricas operacionales.
+    * Valores permitidos: `ALL_TIME` (por defecto si se omite o está en blanco), `LAST_30_DAYS`, `LAST_7_DAYS`.
+    * **Validación**: Si se envía un valor no soportado (ej. `?period=INVALID`), el endpoint retorna de forma inmediata `400 Bad Request` con código de error `analytics.error.invalidPeriod: <valor>`.
+* **Semántica de Métricas**:
+  * **Actividad Operativa Filtrada (`crm`, `testDrives`)**: Los prospectos capturados, estados del embudo y citas de prueba de manejo se filtran dinámicamente según la ventana de tiempo especificada en `period` (últimos 7 días, últimos 30 días o histórico total).
+  * **Snapshot en Tiempo Real de Activos y Pipeline (`inventory`, `financing`)**: Las métricas de vehículos en catálogo (conteo por estado AVAILABLE/RESERVED/SOLD y valorización monetaria total en PEN y USD) así como el pipeline de solicitudes de crédito asociadas reflejan el **estado actual en tiempo real** de la concesionaria, garantizando que el dashboard exponga siempre la disponibilidad viva del inventario independientemente del filtro de periodo histórico seleccionado.
+
+```json
+// Response (HTTP 200 OK)
+{
+  "dealerUserId": "dealer-user-123",
+  "inventory": {
+    "totalVehicles": 12,
+    "availableVehicles": 9,
+    "reservedVehicles": 2,
+    "soldVehicles": 1,
+    "totalInventoryValuePen": 450000.00,
+    "totalInventoryValueUsd": 35000.00
+  },
+  "crm": {
+    "totalLeads": 24,
+    "newLeads": 8,
+    "contactedLeads": 6,
+    "qualifiedLeads": 4,
+    "inNegotiationLeads": 3,
+    "closedWonLeads": 2,
+    "closedLostLeads": 1,
+    "conversionRate": 8.3
+  },
+  "testDrives": {
+    "totalTestDrives": 10,
+    "pendingTestDrives": 3,
+    "confirmedTestDrives": 4,
+    "completedTestDrives": 2,
+    "cancelledTestDrives": 1
+  },
+  "financing": {
+    "totalApplicationsReceived": 7,
+    "pendingApplications": 3,
+    "approvedApplications": 3,
+    "rejectedApplications": 1
+  },
+  "period": "LAST_30_DAYS"
+}
+```
+
+### 12.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+* **Seguridad y Control de Propiedad**:
+  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el parámetro `financialEntityId` es opcional: si se omite, se resuelve automáticamente la entidad financiera asociada a su cuenta de usuario (`userId`). Si el usuario aún no posee una entidad vinculada (ej. registro previo a la validación de RUC), recibe `403 Forbidden` con error `partners.error.financialEntity.notAssociated`.
+  * Si se provee explícitamente `financialEntityId`, se valida mediante SpEL `@ownershipChecker.isFinancialEntityOwner` que el usuario sea el propietario registrado de dicha entidad bancaria; si intenta consultar un banco ajeno, se rechaza de inmediato con `403 Forbidden` (`partners.error.accessDenied.notOwner`), mitigando cualquier vulnerabilidad IDOR.
+  * Los usuarios con rol `ADMIN` pueden consultar métricas de cualquier entidad financiera proporcionando `financialEntityId`.
+* **Parámetros Opcionales de Consulta**:
+  * `financialEntityId` (UUID): Identificador único de la entidad financiera.
+
+```json
+// Response (HTTP 200 OK)
+{
+  "financialEntityId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "financialEntityName": "Banco Internacional",
+  "totalApplicationsReceived": 48,
+  "underReviewApplications": 12,
+  "approvedApplications": 24,
+  "rejectedApplications": 8,
+  "disbursedApplications": 4,
+  "approvalRate": 58.3,
+  "totalRequestedVolumePen": 2450000.00,
+  "totalDisbursedVolumePen": 920000.00,
+  "averageTea": 14.85,
+  "activeRateBenchmarksCount": 4,
+  "totalSimulationsCount": 18
+}
+```
+
+### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
+* **Notas de Cálculo y Configuración**:
+  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales consolidados en USD calculados sobre todas las suscripciones de concesionarias activas. Los planes anuales se prorratean mensualmente dividiendo entre 12. Las tarifas contratadas en Soles (PEN) se normalizan a USD mediante la tasa de cambio configurable `analytics.fx.pen-to-usd` (por defecto `3.75`, configurable vía variable de entorno `ANALYTICS_FX_PEN_TO_USD`). El servicio valida estrictamente que la tasa sea un número estrictamente positivo (`> 0`); valores iguales a 0 o negativos son rechazados o protegidos con fallback automático a la tasa base `3.75`, blindando el cálculo de MRR contra excepciones de división por cero (`ArithmeticException`).
+
+```json
+// Response (HTTP 200 OK)
+{
+  "totalDealerships": 15,
+  "activeDealerships": 13,
+  "totalFinancialEntities": 6,
+  "totalRegisteredUsers": 320,
+  "totalVehiclesListed": 180,
+  "totalCreditApplications": 95,
+  "totalSimulationsRun": 412,
+  "totalActiveSubscriptions": 12,
+  "estimatedMonthlyRecurringRevenueUsd": 2400.00
+}
+```
+
+

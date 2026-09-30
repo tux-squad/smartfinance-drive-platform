@@ -35,4 +35,10 @@ public class FinancialEntityQueryServiceImpl implements FinancialEntityQueryServ
     public List<FinancialEntity> handle(GetAllFinancialEntitiesQuery query) {
         return financialEntityRepository.findAll();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<FinancialEntity> handle(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery query) {
+        return financialEntityRepository.findByUserId(query.userId());
+    }
 }
