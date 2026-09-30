@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.application.queryserv
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.DeleteFinancialEntityCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetAllFinancialEntitiesQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.AddRateBenchmarkResource;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.CreateFinancialEntityResource;
@@ -14,6 +15,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.trans
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.CreateFinancialEntityCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.FinancialEntityResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.UpdateFinancialEntityCommandFromResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +53,11 @@ public class FinancialEntitiesController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> createFinancialEntity(@jakarta.validation.Valid @RequestBody CreateFinancialEntityResource resource) {
-        var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource);
+        String authUserId = SecurityUtils.getCurrentUserId().orElse(null);
+        String targetUserId = (resource.userId() != null && !resource.userId().isBlank())
+                ? resource.userId()
+                : authUserId;
+        var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource, targetUserId);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
                 .map(entity -> new ResponseEntity<>(
@@ -59,6 +65,21 @@ public class FinancialEntitiesController {
                         HttpStatus.CREATED
                 ))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * GET /api/v1/financial-entities/me
+     * Retrieves the financial entity associated with the current authenticated institution user.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('FINANCIAL_INSTITUTION', 'ADMIN')")
+    public ResponseEntity<FinancialEntityResource> getMyFinancialEntity() {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var query = new GetFinancialEntityByUserIdQuery(authUserId);
+        var entityOpt = financialEntityQueryService.handle(query);
+        return entityOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
@@ -131,7 +152,11 @@ public class FinancialEntitiesController {
     public ResponseEntity<FinancialEntityResource> updateFinancialEntity(
             @PathVariable UUID id,
             @jakarta.validation.Valid @RequestBody UpdateFinancialEntityResource resource) {
-        var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource);
+        String authUserId = SecurityUtils.getCurrentUserId().orElse(null);
+        String targetUserId = (resource.userId() != null && !resource.userId().isBlank())
+                ? resource.userId()
+                : authUserId;
+        var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource, targetUserId);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
                 .map(entity -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity)))

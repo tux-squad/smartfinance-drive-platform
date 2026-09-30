@@ -98,4 +98,34 @@ class FinancialEntitiesControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isEmpty());
     }
+
+    @Test
+    void testGetMyFinancialEntity() {
+        String authUserId = "bank-user-99";
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                authUserId, "pwd", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_FINANCIAL_INSTITUTION"))
+        );
+        auth.setDetails(new com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.AuthenticatedUserDetails(authUserId, authUserId));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+
+        FinancialEntity entity = new FinancialEntity(
+                new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(UUID.randomUUID()),
+                authUserId,
+                "Mi Banco",
+                null,
+                null,
+                Collections.emptyList()
+        );
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+
+        try {
+            ResponseEntity<FinancialEntityResource> response = financialEntitiesController.getMyFinancialEntity();
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals("Mi Banco", response.getBody().name());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
 }

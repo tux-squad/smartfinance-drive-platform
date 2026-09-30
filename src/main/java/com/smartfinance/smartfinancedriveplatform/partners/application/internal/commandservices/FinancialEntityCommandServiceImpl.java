@@ -31,10 +31,24 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
     @Transactional
     public Optional<FinancialEntity> handle(CreateFinancialEntityCommand command) {
         if (financialEntityRepository.existsByName(command.name())) {
+            var existingOpt = financialEntityRepository.findByName(command.name());
+            if (existingOpt.isPresent() && existingOpt.get().getUserId() == null && command.userId() != null) {
+                FinancialEntity existing = existingOpt.get();
+                existing.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), command.userId());
+                FinancialEntity saved = financialEntityRepository.save(existing);
+                return Optional.of(saved);
+            }
             throw new DomainValidationException("partners.error.financialEntityAlreadyExists");
         }
 
-        FinancialEntity financialEntity = new FinancialEntity(command.name(), command.logoUrl(), command.bannerUrl());
+        FinancialEntity financialEntity = new FinancialEntity(
+                new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(java.util.UUID.randomUUID()),
+                command.userId(),
+                command.name(),
+                command.logoUrl(),
+                command.bannerUrl(),
+                new java.util.ArrayList<>()
+        );
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }
@@ -48,7 +62,7 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         }
 
         FinancialEntity financialEntity = entityOpt.get();
-        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl());
+        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), command.userId());
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }

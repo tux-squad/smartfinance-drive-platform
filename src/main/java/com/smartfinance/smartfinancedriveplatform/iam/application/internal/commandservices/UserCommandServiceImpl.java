@@ -41,19 +41,23 @@ public class UserCommandServiceImpl implements UserCommandService {
     private final GoogleTokenVerifierService googleTokenVerifierService;
     private final com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService;
     private final com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService;
+    private final com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.FinancialEntityRepository financialEntityRepository;
 
     public UserCommandServiceImpl(UserRepository userRepository,
                                   HashingService hashingService,
                                   TokenService tokenService,
                                   GoogleTokenVerifierService googleTokenVerifierService,
                                   com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.jwt.services.TokenBlacklistService tokenBlacklistService,
-                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService) {
+                                  com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.SunatRucVerifierService sunatRucVerifierService,
+                                  @org.springframework.beans.factory.annotation.Autowired(required = false)
+                                  com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.FinancialEntityRepository financialEntityRepository) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.googleTokenVerifierService = googleTokenVerifierService;
         this.tokenBlacklistService = tokenBlacklistService;
         this.sunatRucVerifierService = sunatRucVerifierService;
+        this.financialEntityRepository = financialEntityRepository;
     }
 
     @Override
@@ -270,6 +274,31 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         user.addRole(Roles.ROLE_FINANCIAL_INSTITUTION);
         User updatedUser = userRepository.save(user);
+
+        if (financialEntityRepository != null) {
+            String userIdStr = user.getId().toString();
+            var existingByUserId = financialEntityRepository.findByUserId(userIdStr);
+            if (existingByUserId.isEmpty()) {
+                var existingByName = financialEntityRepository.findByName(rucInfo.razonSocial());
+                if (existingByName.isPresent()) {
+                    com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity existing = existingByName.get();
+                    if (existing.getUserId() == null) {
+                        existing.setUserId(userIdStr);
+                        financialEntityRepository.save(existing);
+                    }
+                } else {
+                    var newEntity = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity(
+                            new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(java.util.UUID.randomUUID()),
+                            userIdStr,
+                            rucInfo.razonSocial(),
+                            null,
+                            null,
+                            new java.util.ArrayList<>()
+                    );
+                    financialEntityRepository.save(newEntity);
+                }
+            }
+        }
 
         return Optional.of(updatedUser);
     }

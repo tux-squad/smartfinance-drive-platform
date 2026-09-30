@@ -63,8 +63,8 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
         this(name, null, null);
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId != null ? userId.trim() : null;
+    public String getUserId() {
+        return userId;
     }
 
     public void setName(String name) {
@@ -82,13 +82,24 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
         this.bannerUrl = (bannerUrl != null && !bannerUrl.isBlank()) ? bannerUrl.trim() : null;
     }
 
+    public void setUserId(String userId) {
+        this.userId = (userId != null && !userId.isBlank()) ? userId.trim() : null;
+    }
+
     public void updateDetails(String name, String logoUrl, String bannerUrl) {
+        updateDetails(name, logoUrl, bannerUrl, this.userId);
+    }
+
+    public void updateDetails(String name, String logoUrl, String bannerUrl, String userId) {
         setName(name);
         if (logoUrl != null) {
             setLogoUrl(logoUrl);
         }
         if (bannerUrl != null) {
             setBannerUrl(bannerUrl);
+        }
+        if (userId != null) {
+            setUserId(userId);
         }
     }
 
