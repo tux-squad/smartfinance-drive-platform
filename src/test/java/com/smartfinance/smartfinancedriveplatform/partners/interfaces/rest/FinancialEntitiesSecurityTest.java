@@ -250,4 +250,77 @@ class FinancialEntitiesSecurityTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         verify(financialEntityCommandService).handle(argThat((CreateFinancialEntityCommand cmd) -> victimUserId.equals(cmd.userId())));
     }
+
+    @Test
+    @DisplayName("GET /{id}: regular USER sees sanitized resource with userId = null")
+    void regularUserGetsSanitizedEntityWithoutUserId() {
+        authenticateAs("regular-user-42", "USER");
+
+        FinancialEntity entity = new FinancialEntity(
+                new FinancialEntityId(entityId),
+                "internal-bank-owner-id",
+                "20100047218",
+                "Public Bank",
+                null,
+                null,
+                Collections.emptyList()
+        );
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+
+        ResponseEntity<FinancialEntityResource> response = controller.getFinancialEntityById(entityId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Public Bank", response.getBody().name());
+        assertNull(response.getBody().userId(), "Internal userId must be sanitized to null for third parties");
+    }
+
+    @Test
+    @DisplayName("GET /{id}: owner sees their own userId")
+    void ownerGetsEntityWithUserIdPopulated() {
+        authenticateAs("owner-user-77", "FINANCIAL_INSTITUTION");
+
+        FinancialEntity entity = new FinancialEntity(
+                new FinancialEntityId(entityId),
+                "owner-user-77",
+                "20100047218",
+                "My Bank",
+                null,
+                null,
+                Collections.emptyList()
+        );
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+
+        ResponseEntity<FinancialEntityResource> response = controller.getFinancialEntityById(entityId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("owner-user-77", response.getBody().userId());
+    }
+
+    @Test
+    @DisplayName("GET /{id}: ADMIN sees userId populated for any entity")
+    void adminGetsEntityWithUserIdPopulated() {
+        authenticateAs("admin-user-1", "ADMIN");
+
+        FinancialEntity entity = new FinancialEntity(
+                new FinancialEntityId(entityId),
+                "internal-bank-owner-id",
+                "20100047218",
+                "Any Bank",
+                null,
+                null,
+                Collections.emptyList()
+        );
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+
+        ResponseEntity<FinancialEntityResource> response = controller.getFinancialEntityById(entityId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("internal-bank-owner-id", response.getBody().userId());
+    }
 }

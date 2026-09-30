@@ -106,10 +106,17 @@ public class FinancialEntitiesController {
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<List<FinancialEntityResource>> getAllFinancialEntities() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String currentUserId = SecurityUtils.getCurrentUserId().orElse(null);
+
         var query = new GetAllFinancialEntitiesQuery();
         var entities = financialEntityQueryService.handle(query);
         var resources = entities.stream()
-                .map(FinancialEntityResourceFromEntityAssembler::toResourceFromEntity)
+                .map(entity -> {
+                    boolean isOwnerOrAdmin = isAdmin || (currentUserId != null && currentUserId.equals(entity.getUserId()));
+                    return FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity, isOwnerOrAdmin);
+                })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(resources);
     }
@@ -124,10 +131,17 @@ public class FinancialEntitiesController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<FinancialEntityResource> getFinancialEntityById(@PathVariable UUID id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String currentUserId = SecurityUtils.getCurrentUserId().orElse(null);
+
         var query = new GetFinancialEntityByIdQuery(new FinancialEntityId(id));
         var entityOpt = financialEntityQueryService.handle(query);
         return entityOpt
-                .map(entity -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity)))
+                .map(entity -> {
+                    boolean isOwnerOrAdmin = isAdmin || (currentUserId != null && currentUserId.equals(entity.getUserId()));
+                    return ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity, isOwnerOrAdmin));
+                })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
