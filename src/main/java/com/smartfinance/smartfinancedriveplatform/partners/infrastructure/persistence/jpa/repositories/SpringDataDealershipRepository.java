@@ -17,6 +17,14 @@ public interface SpringDataDealershipRepository extends JpaRepository<Dealership
 
     Optional<DealershipPersistenceEntity> findByUserId(String userId);
 
+    Optional<DealershipPersistenceEntity> findByRuc(String ruc);
+
+    Optional<DealershipPersistenceEntity> findByName(String name);
+
+    boolean existsByRuc(String ruc);
+
+    boolean existsByName(String name);
+
     @Query("SELECT d FROM DealershipPersistenceEntity d WHERE d.active = true AND " +
            "(:search IS NULL OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(d.ruc) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<DealershipPersistenceEntity> findAllActiveWithSearch(@Param("search") String search, Pageable pageable);

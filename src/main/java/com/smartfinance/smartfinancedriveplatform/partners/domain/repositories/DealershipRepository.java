@@ -37,6 +37,32 @@ public interface DealershipRepository {
     Optional<Dealership> findByUserId(String userId);
 
     /**
+     * Finds a Dealership by RUC.
+     *
+     * @param ruc The 11-digit RUC.
+     * @return Optional containing Dealership if found.
+     */
+    Optional<Dealership> findByRuc(String ruc);
+
+    /**
+     * Finds a Dealership by name.
+     *
+     * @param name The dealership name.
+     * @return Optional containing Dealership if found.
+     */
+    Optional<Dealership> findByName(String name);
+
+    /**
+     * Checks if a Dealership exists with this RUC.
+     */
+    boolean existsByRuc(String ruc);
+
+    /**
+     * Checks if a Dealership exists with this name.
+     */
+    boolean existsByName(String name);
+
+    /**
      * Retrieves a page of active Dealerships for public directory listing.
      *
      * @param search   Optional search substring.
