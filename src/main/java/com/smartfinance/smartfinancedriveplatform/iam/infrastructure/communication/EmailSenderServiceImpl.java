@@ -23,20 +23,25 @@ public class EmailSenderServiceImpl implements EmailSenderService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
-    @Value("${spring.mail.username:no-reply@smartfinance.drive.pe}")
-    private String fromEmail;
+    private final String fromEmail;
+    private final boolean allowEmulated;
 
-    @Value("${app.mail.allow-emulated:true}")
-    private boolean allowEmulated = true;
-
-    public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public EmailSenderServiceImpl(
+            ObjectProvider<JavaMailSender> mailSenderProvider,
+            @Value("${app.mail.allow-emulated:true}") boolean allowEmulated,
+            @Value("${spring.mail.username:no-reply@smartfinance.drive.pe}") String fromEmail) {
         this.mailSenderProvider = mailSenderProvider;
-        this.allowEmulated = true;
+        this.allowEmulated = allowEmulated;
+        this.fromEmail = fromEmail;
     }
 
     public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider, boolean allowEmulated) {
-        this.mailSenderProvider = mailSenderProvider;
-        this.allowEmulated = allowEmulated;
+        this(mailSenderProvider, allowEmulated, "no-reply@smartfinance.drive.pe");
+    }
+
+    public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider) {
+        this(mailSenderProvider, true, "no-reply@smartfinance.drive.pe");
     }
 
     @Override

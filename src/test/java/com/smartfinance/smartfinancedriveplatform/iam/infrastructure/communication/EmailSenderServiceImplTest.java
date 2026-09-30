@@ -70,4 +70,22 @@ class EmailSenderServiceImplTest {
                 )
         );
     }
+
+    @Test
+    @DisplayName("Should initialize cleanly with primary @Autowired constructor and custom fromEmail")
+    void shouldInitializeWithAutowiredConstructorAndCustomFromEmail() {
+        @SuppressWarnings("unchecked")
+        ObjectProvider<JavaMailSender> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(null);
+
+        var service = new EmailSenderServiceImpl(provider, true, "custom-sender@domain.com");
+
+        assertDoesNotThrow(() -> service.sendCorporateVerificationOtp(
+                "analista@viabcp.com",
+                "Carlos",
+                "BANCO DE CREDITO DEL PERU",
+                "123456",
+                10
+        ));
+    }
 }
