@@ -62,7 +62,10 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         }
 
         FinancialEntity financialEntity = entityOpt.get();
-        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), command.userId());
+        String updatedUserId = (command.userId() != null && !command.userId().isBlank())
+                ? command.userId()
+                : financialEntity.getUserId();
+        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), updatedUserId);
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }

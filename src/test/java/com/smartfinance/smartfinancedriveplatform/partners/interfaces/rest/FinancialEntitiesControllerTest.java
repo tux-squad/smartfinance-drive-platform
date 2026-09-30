@@ -38,11 +38,14 @@ class FinancialEntitiesControllerTest {
     @Mock
     private FinancialEntityQueryService financialEntityQueryService;
 
+    @Mock
+    private com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker ownershipChecker;
+
     private FinancialEntitiesController financialEntitiesController;
 
     @BeforeEach
     void setUp() {
-        financialEntitiesController = new FinancialEntitiesController(financialEntityCommandService, financialEntityQueryService);
+        financialEntitiesController = new FinancialEntitiesController(financialEntityCommandService, financialEntityQueryService, ownershipChecker);
     }
 
     @Test
