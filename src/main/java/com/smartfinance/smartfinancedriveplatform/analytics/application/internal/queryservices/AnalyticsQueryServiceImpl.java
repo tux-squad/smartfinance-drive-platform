@@ -32,6 +32,7 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjec
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -40,7 +41,8 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
-    private static final BigDecimal FX_PEN_TO_USD = BigDecimal.valueOf(3.75);
+    @Value("${analytics.fx.pen-to-usd:3.75}")
+    private BigDecimal fxPenToUsd = BigDecimal.valueOf(3.75);
 
     private final VehicleQueryService vehicleQueryService;
     private final VehicleRepository vehicleRepository;
@@ -300,7 +302,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                         price = price.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
                     }
                     if ("PEN".equalsIgnoreCase(s.getPlan().getCurrency())) {
-                        price = price.divide(FX_PEN_TO_USD, 2, RoundingMode.HALF_UP);
+                        price = price.divide(fxPenToUsd, 2, RoundingMode.HALF_UP);
                     }
                     return price;
                 })
@@ -318,6 +320,14 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 totalActiveSubscriptions,
                 mrr
         );
+    }
+
+    public BigDecimal getFxPenToUsd() {
+        return fxPenToUsd;
+    }
+
+    public void setFxPenToUsd(BigDecimal fxPenToUsd) {
+        this.fxPenToUsd = fxPenToUsd;
     }
 }
 

@@ -53,7 +53,7 @@ public class AnalyticsController {
      * Protected against IDOR: non-admins can strictly only view their own dealership data.
      */
     @GetMapping("/dealer")
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('DEALER') and (#dealerUserId == null or @ownershipChecker.isUserSelfStr(#dealerUserId, authentication)))")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('DEALER') and (#dealerUserId == null or #dealerUserId.isBlank() or @ownershipChecker.isUserSelfStr(#dealerUserId, authentication)))")
     public ResponseEntity<DealerDashboardResource> getDealerMetrics(
             @RequestParam(required = false) String dealerUserId,
             @RequestParam(defaultValue = "ALL_TIME") String period) {
@@ -71,10 +71,14 @@ public class AnalyticsController {
                 : currentUserId;
 
         MetricPeriod metricPeriod;
-        try {
-            metricPeriod = MetricPeriod.valueOf(period.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
+        if (period == null || period.isBlank()) {
             metricPeriod = MetricPeriod.ALL_TIME;
+        } else {
+            try {
+                metricPeriod = MetricPeriod.valueOf(period.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("analytics.error.invalidPeriod: " + period);
+            }
         }
 
         var metrics = analyticsQueryService.handle(new GetDealerDashboardMetricsQuery(targetDealerId, metricPeriod));
