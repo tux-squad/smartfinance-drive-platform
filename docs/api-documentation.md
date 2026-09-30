@@ -35,6 +35,7 @@ Authorization: Bearer <tu_access_token_jwt>
 9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints + STOMP)](#9-messaging---mensajería-y-chat-en-tiempo-real)
 10. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#10-consultations---asesor-financiero-ia)
 11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
+12. [Analytics - Métricas Consolidadas y Dashboards por Rol (3 Endpoints)](#12-analytics---métricas-consolidadas-y-dashboards-por-rol)
 
 ---
 
@@ -753,3 +754,97 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 11.11 Cancelar Cita de Prueba de Manejo
 * **Método**: `DELETE` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
+
+---
+
+## 12. Analytics - Métricas Consolidadas y Dashboards por Rol
+
+Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Financieras y Administradores de la plataforma.
+
+### 12.1 Obtener Métricas de Dashboard para Concesionario
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/dealer` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Parámetros Opcionales de Consulta**:
+  * `dealerUserId` (string): Identificador de usuario del concesionario (si se omite, extrae automáticamente el usuario del JWT autenticado).
+
+```json
+// Response (HTTP 200 OK)
+{
+  "dealerUserId": "dealer-user-123",
+  "inventory": {
+    "totalVehicles": 12,
+    "availableVehicles": 9,
+    "reservedVehicles": 2,
+    "soldVehicles": 1,
+    "totalInventoryValuePen": 450000.00,
+    "totalInventoryValueUsd": 35000.00
+  },
+  "crm": {
+    "totalLeads": 24,
+    "newLeads": 8,
+    "contactedLeads": 6,
+    "qualifiedLeads": 4,
+    "inNegotiationLeads": 3,
+    "closedWonLeads": 2,
+    "closedLostLeads": 1,
+    "conversionRate": 8.3
+  },
+  "testDrives": {
+    "totalTestDrives": 10,
+    "pendingTestDrives": 3,
+    "confirmedTestDrives": 4,
+    "completedTestDrives": 2,
+    "cancelledTestDrives": 1
+  },
+  "financing": {
+    "totalApplicationsReceived": 7,
+    "pendingApplications": 3,
+    "approvedApplications": 3,
+    "rejectedApplications": 1
+  },
+  "estimatedVehicleViews": 520,
+  "membershipRoi": "5.6x",
+  "period": "LAST_30_DAYS"
+}
+```
+
+### 12.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution?financialEntityId={uuid}` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+* **Parámetros Requeridos de Consulta**:
+  * `financialEntityId` (UUID): Identificador único de la entidad financiera.
+
+```json
+// Response (HTTP 200 OK)
+{
+  "financialEntityId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "financialEntityName": "Banco Internacional",
+  "totalApplicationsReceived": 48,
+  "underReviewApplications": 12,
+  "approvedApplications": 24,
+  "rejectedApplications": 8,
+  "disbursedApplications": 4,
+  "approvalRate": 58.3,
+  "totalRequestedVolumePen": 2450000.00,
+  "totalDisbursedVolumePen": 920000.00,
+  "averageTea": 14.85,
+  "activeRateBenchmarksCount": 4
+}
+```
+
+### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
+
+```json
+// Response (HTTP 200 OK)
+{
+  "totalDealerships": 15,
+  "activeDealerships": 13,
+  "totalFinancialEntities": 6,
+  "totalRegisteredUsers": 320,
+  "totalVehiclesListed": 180,
+  "totalCreditApplications": 95,
+  "totalSimulationsRun": 412,
+  "totalActiveSubscriptions": 12,
+  "estimatedMonthlyRecurringRevenueUsd": 2400.00
+}
+```
+
