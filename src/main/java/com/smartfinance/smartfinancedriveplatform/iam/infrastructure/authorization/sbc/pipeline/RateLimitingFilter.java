@@ -79,6 +79,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                path.startsWith("/api/v1/auth/registrations") ||
                path.startsWith("/api/v1/auth/google") ||
                path.startsWith("/api/v1/partners/sunat") ||
+               path.contains("/corporate-verification") ||
                (path.startsWith("/api/v1/billing") && !path.startsWith("/api/v1/billing/webhooks"));
     }
 

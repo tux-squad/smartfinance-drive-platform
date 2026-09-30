@@ -50,6 +50,10 @@ public final class FinancialEntityPersistenceAssembler {
             entity.addRateBenchmark(benchmarkEntity);
         }
 
+        // Update allowed domains
+        entity.getAllowedDomains().clear();
+        entity.getAllowedDomains().addAll(domain.getAllowedDomains());
+
         return entity;
     }
 
@@ -79,7 +83,8 @@ public final class FinancialEntityPersistenceAssembler {
             entity.getName(),
             entity.getLogoUrl(),
             entity.getBannerUrl(),
-            benchmarks
+            benchmarks,
+            entity.getAllowedDomains()
         );
     }
 }

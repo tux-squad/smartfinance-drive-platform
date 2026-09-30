@@ -14,6 +14,14 @@ import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.UserResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.transform.UserResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ConfirmCorporateVerificationCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.ConfirmCorporateVerificationResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.CorporateVerificationInitiatedResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.CorporateVerificationResultResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.InitiateCorporateVerificationResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.transform.CorporateVerificationResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -117,5 +125,57 @@ public class UsersController {
         return updatedUserOpt
                 .map(user -> ResponseEntity.ok(UserResourceFromEntityAssembler.toResourceFromEntity(user)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Initiates B2B corporate verification with email OTP for the authenticated user (/me).
+     */
+    @PostMapping("/me/corporate-verification/initiate")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CorporateVerificationInitiatedResource> initiateCorporateVerificationForMe(
+            @Valid @RequestBody InitiateCorporateVerificationResource resource) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var command = new InitiateCorporateVerificationCommand(authUserId, resource.ruc(), resource.corporateEmail());
+        var result = userCommandService.handle(command);
+        return ResponseEntity.ok(CorporateVerificationResourceAssembler.toResource(result));
+    }
+
+    /**
+     * Confirms B2B corporate verification code for the authenticated user (/me).
+     */
+    @PostMapping("/me/corporate-verification/confirm")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CorporateVerificationResultResource> confirmCorporateVerificationForMe(
+            @Valid @RequestBody ConfirmCorporateVerificationResource resource) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var command = new ConfirmCorporateVerificationCommand(authUserId, resource.ruc(), resource.code());
+        var result = userCommandService.handle(command);
+        return ResponseEntity.ok(CorporateVerificationResourceAssembler.toResource(result));
+    }
+
+    /**
+     * Initiates B2B corporate verification with email OTP for a target user ID (self or ADMIN).
+     */
+    @PostMapping("/{userId}/corporate-verification/initiate")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelf(#userId, authentication)")
+    public ResponseEntity<CorporateVerificationInitiatedResource> initiateCorporateVerification(
+            @PathVariable Long userId,
+            @Valid @RequestBody InitiateCorporateVerificationResource resource) {
+        var command = new InitiateCorporateVerificationCommand(String.valueOf(userId), resource.ruc(), resource.corporateEmail());
+        var result = userCommandService.handle(command);
+        return ResponseEntity.ok(CorporateVerificationResourceAssembler.toResource(result));
+    }
+
+    /**
+     * Confirms B2B corporate verification code for a target user ID (self or ADMIN).
+     */
+    @PostMapping("/{userId}/corporate-verification/confirm")
+    @PreAuthorize("hasRole('ADMIN') or @ownershipChecker.isUserSelf(#userId, authentication)")
+    public ResponseEntity<CorporateVerificationResultResource> confirmCorporateVerification(
+            @PathVariable Long userId,
+            @Valid @RequestBody ConfirmCorporateVerificationResource resource) {
+        var command = new ConfirmCorporateVerificationCommand(String.valueOf(userId), resource.ruc(), resource.code());
+        var result = userCommandService.handle(command);
+        return ResponseEntity.ok(CorporateVerificationResourceAssembler.toResource(result));
     }
 }

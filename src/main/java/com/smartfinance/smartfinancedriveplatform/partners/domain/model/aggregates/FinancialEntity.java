@@ -8,8 +8,11 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.model.aggregates
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -26,6 +29,17 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
     private String logoUrl;
     private String bannerUrl;
     private final List<RateBenchmark> rateBenchmarks = new ArrayList<>();
+    private final Set<String> allowedDomains = new HashSet<>();
+
+    /**
+     * Constructor for reconstituting from persistence with userId, ruc, and allowedDomains.
+     */
+    public FinancialEntity(FinancialEntityId id, String userId, String ruc, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks, Collection<String> allowedDomains) {
+        this(id, userId, ruc, name, logoUrl, bannerUrl, rateBenchmarks);
+        if (allowedDomains != null) {
+            allowedDomains.forEach(this::addAllowedDomain);
+        }
+    }
 
     /**
      * Constructor for reconstituting from persistence with userId and ruc.
@@ -145,5 +159,30 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
             throw new DomainValidationException("partners.error.rateBenchmark.required");
         }
         this.rateBenchmarks.add(benchmark);
+    }
+
+    public Set<String> getAllowedDomains() {
+        return Collections.unmodifiableSet(allowedDomains);
+    }
+
+    public void addAllowedDomain(String domain) {
+        if (domain != null && !domain.isBlank()) {
+            String normalized = domain.trim().toLowerCase();
+            if (normalized.startsWith("@")) {
+                normalized = normalized.substring(1);
+            }
+            this.allowedDomains.add(normalized);
+        }
+    }
+
+    public boolean isDomainAllowed(String domainOrEmail) {
+        if (domainOrEmail == null || domainOrEmail.isBlank()) {
+            return false;
+        }
+        String domain = domainOrEmail.trim().toLowerCase();
+        if (domain.contains("@")) {
+            domain = domain.substring(domain.lastIndexOf("@") + 1);
+        }
+        return this.allowedDomains.contains(domain);
     }
 }

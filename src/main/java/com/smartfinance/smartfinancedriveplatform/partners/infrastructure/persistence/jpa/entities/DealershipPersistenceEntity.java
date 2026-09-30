@@ -1,13 +1,13 @@
 package com.smartfinance.smartfinancedriveplatform.partners.infrastructure.persistence.jpa.entities;
 
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * JPA entity representing 'dealerships' table in the database.
@@ -22,7 +22,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class DealershipPersistenceEntity extends AuditableAbstractPersistenceEntity {
 
-    @Column(name = "user_id", nullable = false, unique = true)
+    @Column(name = "user_id", unique = true)
     private String userId;
 
     @Column(name = "ruc", nullable = false, length = 11)
@@ -60,4 +60,12 @@ public class DealershipPersistenceEntity extends AuditableAbstractPersistenceEnt
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "dealership_allowed_domains",
+            joinColumns = @JoinColumn(name = "dealership_id")
+    )
+    @Column(name = "domain", nullable = false)
+    private Set<String> allowedDomains = new HashSet<>();
 }

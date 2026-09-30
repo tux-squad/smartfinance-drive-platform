@@ -1,8 +1,10 @@
 package com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices;
 
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.User;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ConfirmCorporateVerificationCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ForgotPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.GoogleSignInCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RefreshTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ResetPasswordCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SignInCommand;
@@ -10,6 +12,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.Sign
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestDealerRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.RequestFinancialInstitutionRoleCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.UpdateUserRoleCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationInitiated;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationResult;
 
 import java.util.Optional;
 
@@ -40,4 +44,8 @@ public interface UserCommandService {
     Optional<User> handle(RequestDealerRoleCommand command);
 
     Optional<User> handle(RequestFinancialInstitutionRoleCommand command);
+
+    CorporateVerificationInitiated handle(InitiateCorporateVerificationCommand command);
+
+    CorporateVerificationResult handle(ConfirmCorporateVerificationCommand command);
 }
