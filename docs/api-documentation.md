@@ -329,10 +329,14 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.2 Crear Entidad Financiera
 * **Método**: `POST` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+* **Seguridad y Restricciones**:
+  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el campo `userId` se enlaza automáticamente al usuario autenticado. Si el cliente envía un `userId` ajeno al del token JWT, la solicitud es rechazada de inmediato con `403 Forbidden` (`partners.error.accessDenied.cannotImpersonateUserId`). Solo `ROLE_ADMIN` puede asociar un `userId` explícito arbitrario.
+  * El campo `ruc` (opcional si se crea sin RUC inicial, ej. plantilla institucional) debe tener exactamente 11 dígitos numéricos y ser único en el sistema.
 
 ```json
 // Input Body
 {
+  "ruc": "20100047218",
   "name": "Banco de Credito BCP",
   "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
   "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png"
@@ -343,6 +347,8 @@ Authorization: Bearer <tu_access_token_jwt>
 // Output Response (201 Created)
 {
   "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "ruc": "20100047218",
   "name": "Banco de Credito BCP",
   "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
   "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
@@ -355,6 +361,10 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.4 Actualizar Entidad Financiera
 * **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+* **Seguridad y Control de Propiedad**:
+  * Requiere autorización estricta: evaluada mediante SpEL `@PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")` y verificación defensiva interna.
+  * Si un usuario con rol `FINANCIAL_INSTITUTION` intenta modificar una entidad que no le pertenece, se rechaza con `403 Forbidden` (`partners.error.accessDenied.notOwner`), neutralizando cualquier intento de secuestro de entidad o bypass de analytics.
+  * Los usuarios `FINANCIAL_INSTITUTION` tienen prohibido transferir o alterar el campo `userId`; cualquier intento de enviar un `userId` en el payload genera `403 Forbidden` (`partners.error.accessDenied.cannotTransferOwnership`). Solo `ROLE_ADMIN` puede reasignar la titularidad de una entidad bancaria.
 
 ```json
 // Input Body
@@ -365,7 +375,24 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.5 Obtener Mi Entidad Financiera Asociada
+### 4.5 Agregar Tasa de Referencia (Rate Benchmark)
+* **Método**: `POST` | **Ruta**: `/api/v1/financial-entities/{id}/rate-benchmarks` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION` (solo propietario de `{id}`)
+* **Seguridad y Control de Propiedad**:
+  * Solo el banco propietario (`@ownershipChecker.isFinancialEntityOwner(#id, authentication)`) o un administrador pueden inyectar tasas referenciales en la entidad. Previene la inyección de tasas falsas y manipulación de promedios ponderados TEA en analytics.
+
+```json
+// Input Body
+{
+  "rateType": "TEA",
+  "annualRate": 14.50,
+  "currency": "PEN",
+  "sourceLabel": "SBS Referencial 2026",
+  "sourceUrl": "https://sbs.gob.pe/benchmarks",
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+### 4.6 Obtener Mi Entidad Financiera Asociada
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/me` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
 * **Descripción**: Retorna la entidad financiera vinculada al usuario autenticado (determinada a partir de su ID de usuario en el JWT tras la verificación SUNAT del RUC). Retorna `404 Not Found` si el usuario no tiene entidad asociada.
 
@@ -374,6 +401,7 @@ Authorization: Bearer <tu_access_token_jwt>
 {
   "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
   "userId": "15",
+  "ruc": "20100047218",
   "name": "Banco de Credito BCP",
   "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
   "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
@@ -381,16 +409,16 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.6 Eliminar Entidad Financiera
+### 4.7 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
 
-### 4.7 Consulta SUNAT RUC
+### 4.8 Consulta SUNAT RUC
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
 
-### 4.8 Directorio Público de Concesionarias (Paginado & Búsqueda)
+### 4.9 Directorio Público de Concesionarias (Paginado & Búsqueda)
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships` | **Acceso**: Público
 
-### 4.8 Obtener Mi Concesionaria B2B
+### 4.10 Obtener Mi Concesionaria B2B
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -861,7 +889,7 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 ### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
 * **Notas de Cálculo y Configuración**:
-  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales consolidados en USD calculados sobre todas las suscripciones de concesionarias activas. Los planes anuales se prorratean mensualmente dividiendo entre 12. Las tarifas contratadas en Soles (PEN) se normalizan a USD mediante la tasa de cambio configurable `analytics.fx.pen-to-usd` (por defecto `3.75`, configurable vía variable de entorno `ANALYTICS_FX_PEN_TO_USD`).
+  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales consolidados en USD calculados sobre todas las suscripciones de concesionarias activas. Los planes anuales se prorratean mensualmente dividiendo entre 12. Las tarifas contratadas en Soles (PEN) se normalizan a USD mediante la tasa de cambio configurable `analytics.fx.pen-to-usd` (por defecto `3.75`, configurable vía variable de entorno `ANALYTICS_FX_PEN_TO_USD`). El servicio valida estrictamente que la tasa sea un número estrictamente positivo (`> 0`); valores iguales a 0 o negativos son rechazados o protegidos con fallback automático a la tasa base `3.75`, blindando el cálculo de MRR contra excepciones de división por cero (`ArithmeticException`).
 
 ```json
 // Response (HTTP 200 OK)
