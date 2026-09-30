@@ -313,14 +313,56 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 4.1 Listar Entidades Financieras
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: Autenticado
 
+```json
+// Output Response (200 OK)
+[
+  {
+    "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+    "name": "Banco de Credito BCP",
+    "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+    "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
+    "rateBenchmarks": []
+  }
+]
+```
+
 ### 4.2 Crear Entidad Financiera
 * **Método**: `POST` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+
+```json
+// Input Body
+{
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png"
+}
+```
+
+```json
+// Output Response (201 Created)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
+  "rateBenchmarks": []
+}
+```
 
 ### 4.3 Obtener Entidad Financiera por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: Autenticado
 
 ### 4.4 Actualizar Entidad Financiera
 * **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
+
+```json
+// Input Body
+{
+  "name": "BBVA Peru",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bbva.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bbva-banner.png"
+}
+```
 
 ### 4.5 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`

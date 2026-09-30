@@ -23,7 +23,9 @@ public final class UpdateFinancialEntityCommandFromResourceAssembler {
     public static UpdateFinancialEntityCommand toCommandFromResource(UUID id, UpdateFinancialEntityResource resource) {
         return new UpdateFinancialEntityCommand(
             new FinancialEntityId(id),
-            resource.name()
+            resource.name(),
+            resource.logoUrl(),
+            resource.bannerUrl()
         );
     }
 }

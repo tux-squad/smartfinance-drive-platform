@@ -17,6 +17,10 @@ public final class CreateFinancialEntityCommandFromResourceAssembler {
      * @return The command.
      */
     public static CreateFinancialEntityCommand toCommandFromResource(CreateFinancialEntityResource resource) {
-        return new CreateFinancialEntityCommand(resource.name());
+        return new CreateFinancialEntityCommand(
+            resource.name(),
+            resource.logoUrl(),
+            resource.bannerUrl()
+        );
     }
 }

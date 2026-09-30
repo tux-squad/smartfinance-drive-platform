@@ -34,7 +34,7 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
             throw new DomainValidationException("partners.error.financialEntityAlreadyExists");
         }
 
-        FinancialEntity financialEntity = new FinancialEntity(command.name());
+        FinancialEntity financialEntity = new FinancialEntity(command.name(), command.logoUrl(), command.bannerUrl());
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }
@@ -48,7 +48,7 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         }
 
         FinancialEntity financialEntity = entityOpt.get();
-        financialEntity.setName(command.name());
+        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl());
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }

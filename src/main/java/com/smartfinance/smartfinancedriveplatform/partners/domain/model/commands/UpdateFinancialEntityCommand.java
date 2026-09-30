@@ -7,5 +7,11 @@ import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobj
  */
 public record UpdateFinancialEntityCommand(
     FinancialEntityId financialEntityId,
-    String name
-) {}
+    String name,
+    String logoUrl,
+    String bannerUrl
+) {
+    public UpdateFinancialEntityCommand(FinancialEntityId financialEntityId, String name) {
+        this(financialEntityId, name, null, null);
+    }
+}
