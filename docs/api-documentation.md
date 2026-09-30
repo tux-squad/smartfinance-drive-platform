@@ -365,13 +365,29 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.5 Eliminar Entidad Financiera
+### 4.5 Obtener Mi Entidad Financiera Asociada
+* **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/me` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+* **Descripción**: Retorna la entidad financiera vinculada al usuario autenticado (determinada a partir de su ID de usuario en el JWT tras la verificación SUNAT del RUC). Retorna `404 Not Found` si el usuario no tiene entidad asociada.
+
+```json
+// Output Response (200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
+  "rateBenchmarks": []
+}
+```
+
+### 4.6 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
 
-### 4.6 Consulta SUNAT RUC
+### 4.7 Consulta SUNAT RUC
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
 
-### 4.7 Directorio Público de Concesionarias (Paginado & Búsqueda)
+### 4.8 Directorio Público de Concesionarias (Paginado & Búsqueda)
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships` | **Acceso**: Público
 
 ### 4.8 Obtener Mi Concesionaria B2B
@@ -764,11 +780,16 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 ### 12.1 Obtener Métricas de Dashboard para Concesionario
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/dealer` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 * **Seguridad y Control de Propiedad**:
-  * Un usuario con rol `DEALER` solo puede consultar sus propias métricas. Si omite el parámetro `dealerUserId`, se infiere del JWT autenticado. Si especifica un `dealerUserId` distinto al propio, la solicitud es rechazada con `403 Forbidden`.
+  * Un usuario con rol `DEALER` solo puede consultar sus propias métricas. Si omite el parámetro `dealerUserId` o lo envía vacío, se infiere automáticamente del JWT autenticado. Si especifica un `dealerUserId` correspondiente a otra concesionaria, la solicitud es rechazada con `403 Forbidden` tanto a nivel de SpEL `@PreAuthorize` como en la lógica defensiva del controlador.
   * Los usuarios con rol `ADMIN` pueden consultar las métricas de cualquier concesionario especificando `dealerUserId`.
 * **Parámetros Opcionales de Consulta**:
   * `dealerUserId` (string): Identificador de usuario del concesionario.
-  * `period` (string): Ventana temporal para métricas de prospectos CRM y pruebas de manejo. Opciones: `ALL_TIME` (por defecto), `LAST_30_DAYS`, `LAST_7_DAYS`.
+  * `period` (string): Ventana temporal para métricas operacionales.
+    * Valores permitidos: `ALL_TIME` (por defecto si se omite o está en blanco), `LAST_30_DAYS`, `LAST_7_DAYS`.
+    * **Validación**: Si se envía un valor no soportado (ej. `?period=INVALID`), el endpoint retorna de forma inmediata `400 Bad Request` con código de error `analytics.error.invalidPeriod: <valor>`.
+* **Semántica de Métricas**:
+  * **Actividad Operativa Filtrada (`crm`, `testDrives`)**: Los prospectos capturados, estados del embudo y citas de prueba de manejo se filtran dinámicamente según la ventana de tiempo especificada en `period` (últimos 7 días, últimos 30 días o histórico total).
+  * **Snapshot en Tiempo Real de Activos y Pipeline (`inventory`, `financing`)**: Las métricas de vehículos en catálogo (conteo por estado AVAILABLE/RESERVED/SOLD y valorización monetaria total en PEN y USD) así como el pipeline de solicitudes de crédito asociadas reflejan el **estado actual en tiempo real** de la concesionaria, garantizando que el dashboard exponga siempre la disponibilidad viva del inventario independientemente del filtro de periodo histórico seleccionado.
 
 ```json
 // Response (HTTP 200 OK)
@@ -812,7 +833,8 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 ### 12.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
 * **Seguridad y Control de Propiedad**:
-  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el parámetro `financialEntityId` es opcional: si se omite, se resuelve automáticamente la entidad financiera asociada a su cuenta de usuario. Si se provee explícitamente, se valida mediante `@ownershipChecker` que el usuario sea el propietario registrado; en caso contrario, se rechaza con `403 Forbidden` (prevención de IDOR).
+  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el parámetro `financialEntityId` es opcional: si se omite, se resuelve automáticamente la entidad financiera asociada a su cuenta de usuario (`userId`). Si el usuario aún no posee una entidad vinculada (ej. registro previo a la validación de RUC), recibe `403 Forbidden` con error `partners.error.financialEntity.notAssociated`.
+  * Si se provee explícitamente `financialEntityId`, se valida mediante SpEL `@ownershipChecker.isFinancialEntityOwner` que el usuario sea el propietario registrado de dicha entidad bancaria; si intenta consultar un banco ajeno, se rechaza de inmediato con `403 Forbidden` (`partners.error.accessDenied.notOwner`), mitigando cualquier vulnerabilidad IDOR.
   * Los usuarios con rol `ADMIN` pueden consultar métricas de cualquier entidad financiera proporcionando `financialEntityId`.
 * **Parámetros Opcionales de Consulta**:
   * `financialEntityId` (UUID): Identificador único de la entidad financiera.
@@ -838,8 +860,8 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 
 ### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
-* **Notas de Cálculo**:
-  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales normalizados en USD a partir de suscripciones activas. Las suscripciones anuales se normalizan dividiendo el costo entre 12 y las tarifas en PEN se convierten a USD con tasa de referencia (3.75).
+* **Notas de Cálculo y Configuración**:
+  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales consolidados en USD calculados sobre todas las suscripciones de concesionarias activas. Los planes anuales se prorratean mensualmente dividiendo entre 12. Las tarifas contratadas en Soles (PEN) se normalizan a USD mediante la tasa de cambio configurable `analytics.fx.pen-to-usd` (por defecto `3.75`, configurable vía variable de entorno `ANALYTICS_FX_PEN_TO_USD`).
 
 ```json
 // Response (HTTP 200 OK)
