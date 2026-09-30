@@ -367,7 +367,8 @@ public class UserCommandServiceImpl implements UserCommandService {
         if (latestOpt.isPresent()) {
             CorporateVerificationSession latest = latestOpt.get();
             if (latest.getStatus() == CorporateVerificationSessionStatus.PENDING && !latest.isExpired()) {
-                long secondsElapsed = ChronoUnit.SECONDS.between(latest.getExpiresAt().minus(10, ChronoUnit.MINUTES), Instant.now());
+                long secondsElapsed = ChronoUnit.SECONDS.between(
+                        latest.getExpiresAt().minus(CorporateVerificationSession.OTP_TTL), Instant.now());
                 if (secondsElapsed < 60) {
                     throw new DomainValidationException("iam.error.corporateVerification.cooldownActive");
                 }
@@ -412,8 +413,8 @@ public class UserCommandServiceImpl implements UserCommandService {
         String rawOtp = otpGeneratorService.generateOtp();
         String codeHash = otpGeneratorService.hashOtp(rawOtp);
 
-        // 6. Create & persist verification session (TTL: 10 minutes)
-        Instant expiresAt = Instant.now().plus(10, ChronoUnit.MINUTES);
+        // 6. Create & persist verification session (TTL: see CorporateVerificationSession.OTP_TTL)
+        Instant expiresAt = Instant.now().plus(CorporateVerificationSession.OTP_TTL);
         CorporateVerificationSession session = new CorporateVerificationSession(
                 command.userId().trim(),
                 command.ruc().trim(),
@@ -433,14 +434,14 @@ public class UserCommandServiceImpl implements UserCommandService {
                 user.getUsername().username(),
                 rucInfo.razonSocial(),
                 rawOtp,
-                10
+                (int) CorporateVerificationSession.OTP_TTL.toMinutes()
         );
 
         return new CorporateVerificationInitiated(
                 savedSession.getId().toString(),
                 true,
                 maskEmail(command.corporateEmail().trim()),
-                600
+                (int) CorporateVerificationSession.OTP_TTL.toSeconds()
         );
     }
 

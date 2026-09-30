@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.Domai
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -15,6 +16,13 @@ import java.util.UUID;
 public class CorporateVerificationSession extends AbstractDomainAggregateRoot<CorporateVerificationSession> {
 
     public static final int MAX_ATTEMPTS = 3;
+
+    /**
+     * Single source of truth for the OTP session TTL. Creation time is derived as
+     * {@code expiresAt - OTP_TTL} wherever needed (e.g. rate-limit cooldowns),
+     * so changing this value never desynchronizes those calculations.
+     */
+    public static final Duration OTP_TTL = Duration.ofMinutes(10);
 
     private final UUID id;
     private final String userId;

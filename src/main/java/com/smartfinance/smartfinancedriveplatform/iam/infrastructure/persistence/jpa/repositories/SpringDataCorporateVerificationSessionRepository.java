@@ -21,11 +21,11 @@ public interface SpringDataCorporateVerificationSessionRepository extends JpaRep
     @Query("SELECT COUNT(s) FROM CorporateVerificationSessionPersistenceEntity s WHERE s.userId = :userId AND s.createdAt >= :since")
     long countRecentSessionsByUserId(@Param("userId") String userId, @Param("since") Instant since);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE CorporateVerificationSessionPersistenceEntity s SET s.status = 'EXPIRED' WHERE s.userId = :userId AND s.ruc = :ruc AND s.status = 'PENDING'")
     void expirePendingSessions(@Param("userId") String userId, @Param("ruc") String ruc);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM CorporateVerificationSessionPersistenceEntity s WHERE s.expiresAt < :threshold")
     void deleteExpiredSessionsBefore(@Param("threshold") Instant threshold);
 }

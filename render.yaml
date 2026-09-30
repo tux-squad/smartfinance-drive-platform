@@ -30,7 +30,18 @@ services:
         value: 604800000
       - key: CORS_ALLOWED_ORIGINS
         value: "http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:8080"
+      # Corporate OTP email fails closed in production: initiate returns an error
+      # instead of silently succeeding when SMTP is not configured.
+      # Override to "true" only for demo environments without an SMTP provider.
+      - key: APP_MAIL_ALLOW_EMULATED
+        value: "false"
       # Populate third-party service credentials in Render Dashboard Environment settings
+      - key: SPRING_MAIL_HOST
+        sync: false
+      - key: SPRING_MAIL_USERNAME
+        sync: false
+      - key: SPRING_MAIL_PASSWORD
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
