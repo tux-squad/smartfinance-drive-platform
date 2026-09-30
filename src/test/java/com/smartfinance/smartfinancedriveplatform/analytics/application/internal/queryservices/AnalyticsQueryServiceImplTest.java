@@ -378,4 +378,50 @@ class AnalyticsQueryServiceImplTest {
         // Total MRR: 150.00 + 100.00 = 250.00 USD
         assertEquals(0, BigDecimal.valueOf(250.00).compareTo(metrics.estimatedMonthlyRecurringRevenueUsd()));
     }
+
+    @Test
+    @DisplayName("Should reject invalid or non-positive FX rates in setter")
+    void shouldRejectInvalidFxRates() {
+        assertThrows(IllegalArgumentException.class, () -> analyticsQueryService.setFxPenToUsd(null));
+        assertThrows(IllegalArgumentException.class, () -> analyticsQueryService.setFxPenToUsd(BigDecimal.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> analyticsQueryService.setFxPenToUsd(BigDecimal.valueOf(-1.5)));
+    }
+
+    @Test
+    @DisplayName("Should fall back to default FX rate in validateConfiguration if non-positive")
+    void shouldFallbackToDefaultFxRateOnPostConstruct() throws Exception {
+        var field = AnalyticsQueryServiceImpl.class.getDeclaredField("fxPenToUsd");
+        field.setAccessible(true);
+        field.set(analyticsQueryService, BigDecimal.ZERO);
+
+        analyticsQueryService.validateConfiguration();
+
+        assertEquals(AnalyticsQueryServiceImpl.DEFAULT_FX_PEN_TO_USD, analyticsQueryService.getFxPenToUsd());
+    }
+
+    @Test
+    @DisplayName("Should guard against division by zero in MRR calculation if effective FX is non-positive")
+    void shouldGuardAgainstDivisionByZeroInMrr() throws Exception {
+        var field = AnalyticsQueryServiceImpl.class.getDeclaredField("fxPenToUsd");
+        field.setAccessible(true);
+        field.set(analyticsQueryService, BigDecimal.ZERO);
+
+        when(dealershipRepository.count()).thenReturn(1L);
+        when(dealershipRepository.countByActive(true)).thenReturn(1);
+        when(financialEntityRepository.count()).thenReturn(1L);
+        when(userRepository.count()).thenReturn(1L);
+        when(vehicleRepository.count()).thenReturn(1L);
+        when(creditApplicationRepository.count()).thenReturn(0L);
+        when(simulationRepository.count()).thenReturn(0L);
+
+        Plan penMonthlyPlan = new Plan("Starter", "Basic", BigDecimal.valueOf(375.00), "PEN",
+                BillingCycle.MONTHLY, 10, 20);
+        Subscription sub = new Subscription("dealer-1", penMonthlyPlan, true);
+        when(subscriptionRepository.findAllByStatus(SubscriptionStatus.ACTIVE)).thenReturn(List.of(sub));
+
+        // Must not throw ArithmeticException; should use default 3.75 => 375 / 3.75 = 100.00 USD
+        AdminDashboardMetrics metrics = analyticsQueryService.handle(new GetAdminDashboardMetricsQuery());
+        assertNotNull(metrics);
+        assertEquals(0, BigDecimal.valueOf(100.00).compareTo(metrics.estimatedMonthlyRecurringRevenueUsd()));
+    }
 }

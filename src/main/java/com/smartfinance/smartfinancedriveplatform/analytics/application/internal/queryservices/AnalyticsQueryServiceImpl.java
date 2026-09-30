@@ -32,7 +32,10 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjec
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -41,8 +44,19 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AnalyticsQueryServiceImpl.class);
+    public static final BigDecimal DEFAULT_FX_PEN_TO_USD = BigDecimal.valueOf(3.75);
+
     @Value("${analytics.fx.pen-to-usd:3.75}")
-    private BigDecimal fxPenToUsd = BigDecimal.valueOf(3.75);
+    private BigDecimal fxPenToUsd = DEFAULT_FX_PEN_TO_USD;
+
+    @PostConstruct
+    public void validateConfiguration() {
+        if (fxPenToUsd == null || fxPenToUsd.compareTo(BigDecimal.ZERO) <= 0) {
+            LOGGER.warn("Invalid FX rate configured: {}. Falling back to default: {}", fxPenToUsd, DEFAULT_FX_PEN_TO_USD);
+            this.fxPenToUsd = DEFAULT_FX_PEN_TO_USD;
+        }
+    }
 
     private final VehicleQueryService vehicleQueryService;
     private final VehicleRepository vehicleRepository;
@@ -302,7 +316,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                         price = price.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
                     }
                     if ("PEN".equalsIgnoreCase(s.getPlan().getCurrency())) {
-                        price = price.divide(fxPenToUsd, 2, RoundingMode.HALF_UP);
+                        price = price.divide(getEffectiveFxRate(), 2, RoundingMode.HALF_UP);
                     }
                     return price;
                 })
@@ -326,7 +340,17 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         return fxPenToUsd;
     }
 
+    public BigDecimal getEffectiveFxRate() {
+        if (fxPenToUsd == null || fxPenToUsd.compareTo(BigDecimal.ZERO) <= 0) {
+            return DEFAULT_FX_PEN_TO_USD;
+        }
+        return fxPenToUsd;
+    }
+
     public void setFxPenToUsd(BigDecimal fxPenToUsd) {
+        if (fxPenToUsd == null || fxPenToUsd.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("analytics.error.invalidFxRate");
+        }
         this.fxPenToUsd = fxPenToUsd;
     }
 }
