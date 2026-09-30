@@ -105,6 +105,39 @@ class AnalyticsSecurityTest {
     }
 
     @Test
+    @DisplayName("DEALER should be blocked with 403 AccessDeniedException when attempting IDOR to read another dealer's data")
+    void dealerCannotAccessOtherDealerMetrics_IdorBlocked() {
+        authenticateAs(dealerUserId, "DEALER");
+
+        assertThrows(AccessDeniedException.class, () ->
+                analyticsController.getDealerMetrics("other-dealer-user-id", "ALL_TIME"));
+    }
+
+    @Test
+    @DisplayName("DEALER providing blank or empty string for dealerUserId safely falls back to own dealership")
+    void dealerCanAccessOwnMetricsWithBlankDealerUserId() {
+        authenticateAs(dealerUserId, "DEALER");
+
+        DealerDashboardMetrics metrics = createSampleDealerMetrics(dealerUserId);
+        when(analyticsQueryService.handle(any(GetDealerDashboardMetricsQuery.class))).thenReturn(metrics);
+
+        ResponseEntity<DealerDashboardResource> response = analyticsController.getDealerMetrics("   ", "ALL_TIME");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(dealerUserId, response.getBody().dealerUserId());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when period parameter is invalid")
+    void dealerThrowsIllegalArgumentExceptionOnInvalidPeriod() {
+        authenticateAs(dealerUserId, "DEALER");
+
+        assertThrows(IllegalArgumentException.class, () ->
+                analyticsController.getDealerMetrics(dealerUserId, "INVALID_PERIOD_99"));
+    }
+
+    @Test
     @DisplayName("FINANCIAL_INSTITUTION should auto-resolve their bank entity ID when omitted")
     void financialInstitutionCanAccessOwnMetricsWhenOmitted() {
         authenticateAs("bank-user-1", "FINANCIAL_INSTITUTION");

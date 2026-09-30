@@ -41,7 +41,7 @@ public final class SecurityUtils {
         if (authentication.getDetails() instanceof AuthenticatedUserDetails details) {
             return Optional.ofNullable(details.userId());
         }
-        return Optional.empty();
+        return Optional.ofNullable(authentication.getName());
     }
 
     /**
