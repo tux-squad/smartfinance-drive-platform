@@ -39,4 +39,16 @@ class SunatRucInfoTest {
         SunatRucInfo auxiliaryInfo = new SunatRucInfo("20600000000", "CORRETAJE Y", "ACTIVO", "HABIDO", "SOCIEDAD ANONIMA", "150101", "AV. LIMA 456", "6612");
         assertTrue(auxiliaryInfo.isFinancialInstitutionCiiu());
     }
+
+    @Test
+    @DisplayName("Should return false for both classifications when CIIU is null or blank")
+    void shouldReturnFalseWhenCiiuIsNullOrBlank() {
+        SunatRucInfo nullCiiu = new SunatRucInfo("20100000000", "GENERIC CORP", "ACTIVO", "HABIDO", "S.A.", "150101", "DIR", null);
+        assertFalse(nullCiiu.isAutomotiveCiiu());
+        assertFalse(nullCiiu.isFinancialInstitutionCiiu());
+
+        SunatRucInfo blankCiiu = new SunatRucInfo("20100000000", "GENERIC CORP", "ACTIVO", "HABIDO", "S.A.", "150101", "DIR", "   ");
+        assertFalse(blankCiiu.isAutomotiveCiiu());
+        assertFalse(blankCiiu.isFinancialInstitutionCiiu());
+    }
 }

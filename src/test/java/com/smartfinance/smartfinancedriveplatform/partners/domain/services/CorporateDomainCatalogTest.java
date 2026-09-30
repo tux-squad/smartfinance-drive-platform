@@ -73,4 +73,35 @@ class CorporateDomainCatalogTest {
         );
         assertTrue(allowed);
     }
+
+    @Test
+    @DisplayName("Should strictly reject email domain spoofing, suffix extensions, and evil subdomains")
+    void shouldRejectDomainSpoofingAttempts() {
+        String bcpRuc = "20100047218";
+        // Subdomain of evil domain:
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "attacker@viabcp.com.evil.com", null));
+        // Suffix/prefix typo-squatting:
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "attacker@fakeviabcp.com", null));
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "attacker@viabcp.pe", null));
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "attacker@notviabcp.com", null));
+        // Multiple @ or invalid emails:
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "attacker@viabcp.com@evil.com", null));
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "invalid-email-without-at", null));
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, "", null));
+        assertFalse(catalog.isDomainAllowedForRuc(bcpRuc, null, null));
+
+        String autolandRuc = "20349887714";
+        assertFalse(catalog.isDomainAllowedForRuc(autolandRuc, "attacker@autoland.com.pe.attacker.com", null));
+        assertFalse(catalog.isDomainAllowedForRuc(autolandRuc, "attacker@evilautoland.com.pe", null));
+    }
+
+    @Test
+    @DisplayName("Should return UNKNOWN entity type when entity is not in catalog and has null or unrelated CIIU")
+    void shouldReturnUnknownWhenNoCatalogAndNoCiiu() {
+        var unknownInfoNullCiiu = new SunatRucInfo("20999999991", "EMPRESA SIN CIIU", "ACTIVO", "HABIDO", "S.A.", "150101", "DIR", null);
+        assertEquals(CorporateEntityType.UNKNOWN, catalog.determineEntityType(unknownInfoNullCiiu));
+
+        var unknownInfoBlankCiiu = new SunatRucInfo("20999999992", "EMPRESA BLANK CIIU", "ACTIVO", "HABIDO", "S.A.", "150101", "DIR", "  ");
+        assertEquals(CorporateEntityType.UNKNOWN, catalog.determineEntityType(unknownInfoBlankCiiu));
+    }
 }

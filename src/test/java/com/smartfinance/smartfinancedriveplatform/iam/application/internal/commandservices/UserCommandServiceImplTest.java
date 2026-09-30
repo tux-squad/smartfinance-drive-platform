@@ -180,6 +180,42 @@ class UserCommandServiceImplTest {
     }
 
     @Test
+    @DisplayName("Should reject initiate corporate verification when user exceeds daily limit of 5 requests")
+    void shouldRejectInitiateWhenDailyLimitExceeded() {
+        String ruc = "20100047218";
+        String email = "funcionario@viabcp.com";
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(corporateVerificationSessionRepository.countRecentSessionsByUserId(eq("1"), any())).thenReturn(5L);
+
+        var ex = assertThrows(DomainValidationException.class, () ->
+                userCommandService.handle(new com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand("1", ruc, email)));
+
+        assertEquals("iam.error.corporateVerification.dailyLimitExceeded", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should reject initiate corporate verification when 60-second cooldown is still active")
+    void shouldRejectInitiateWhenCooldownIsActive() {
+        String ruc = "20100047218";
+        String email = "funcionario@viabcp.com";
+        // Session created 30 seconds ago (expires in 9m 30s)
+        var recentSession = new CorporateVerificationSession(
+                "1", ruc, email, "hash1", "FINANCIAL_INSTITUTION", "ROLE_FINANCIAL_INSTITUTION",
+                "BANCO DE CREDITO", "DIR", java.time.Instant.now().plus(9, java.time.temporal.ChronoUnit.MINUTES).plus(30, java.time.temporal.ChronoUnit.SECONDS)
+        );
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(corporateVerificationSessionRepository.countRecentSessionsByUserId(eq("1"), any())).thenReturn(1L);
+        when(corporateVerificationSessionRepository.findLatestActiveSession("1", ruc)).thenReturn(Optional.of(recentSession));
+
+        var ex = assertThrows(DomainValidationException.class, () ->
+                userCommandService.handle(new com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand("1", ruc, email)));
+
+        assertEquals("iam.error.corporateVerification.cooldownActive", ex.getMessage());
+    }
+
+    @Test
     @DisplayName("Should successfully confirm corporate verification and auto-profile Dealership")
     void shouldSuccessfullyConfirmCorporateVerificationAndAutoProfileDealership() {
         String ruc = "20349887714";

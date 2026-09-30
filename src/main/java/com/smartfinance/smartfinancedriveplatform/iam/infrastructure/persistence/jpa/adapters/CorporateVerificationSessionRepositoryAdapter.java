@@ -39,4 +39,19 @@ public class CorporateVerificationSessionRepositoryAdapter implements CorporateV
     public Optional<CorporateVerificationSession> findLatestActiveSession(String userId, String ruc) {
         return repository.findLatestSession(userId, ruc).map(CorporateVerificationSessionPersistenceAssembler::toDomain);
     }
+
+    @Override
+    public long countRecentSessionsByUserId(String userId, java.time.Instant since) {
+        return repository.countRecentSessionsByUserId(userId, since);
+    }
+
+    @Override
+    public void expirePendingSessions(String userId, String ruc) {
+        repository.expirePendingSessions(userId, ruc);
+    }
+
+    @Override
+    public void deleteExpiredSessionsBefore(java.time.Instant threshold) {
+        repository.deleteExpiredSessionsBefore(threshold);
+    }
 }

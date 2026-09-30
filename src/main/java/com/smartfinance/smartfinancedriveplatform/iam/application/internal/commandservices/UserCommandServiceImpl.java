@@ -355,6 +355,28 @@ public class UserCommandServiceImpl implements UserCommandService {
         User user = userRepository.findById(userIdLong)
                 .orElseThrow(() -> new DomainValidationException("iam.error.userNotFound"));
 
+        // Anti-abuse check 1: Enforce maximum 5 verification requests per user per 24 hours
+        Instant last24h = Instant.now().minus(24, ChronoUnit.HOURS);
+        long dailyCount = corporateVerificationSessionRepository.countRecentSessionsByUserId(command.userId().trim(), last24h);
+        if (dailyCount >= 5) {
+            throw new DomainValidationException("iam.error.corporateVerification.dailyLimitExceeded");
+        }
+
+        // Anti-abuse check 2: Enforce a 60-second cooldown between initiation requests
+        var latestOpt = corporateVerificationSessionRepository.findLatestActiveSession(command.userId().trim(), command.ruc().trim());
+        if (latestOpt.isPresent()) {
+            CorporateVerificationSession latest = latestOpt.get();
+            if (latest.getStatus() == CorporateVerificationSessionStatus.PENDING && !latest.isExpired()) {
+                long secondsElapsed = ChronoUnit.SECONDS.between(latest.getExpiresAt().minus(10, ChronoUnit.MINUTES), Instant.now());
+                if (secondsElapsed < 60) {
+                    throw new DomainValidationException("iam.error.corporateVerification.cooldownActive");
+                }
+            }
+        }
+
+        // Invalidate / expire any prior pending sessions for this user & RUC so old sessions cannot be hopped
+        corporateVerificationSessionRepository.expirePendingSessions(command.userId().trim(), command.ruc().trim());
+
         // 1. Verify RUC against official SUNAT
         var rucInfoOpt = sunatRucVerifierService.verifyRuc(command.ruc().trim());
         if (rucInfoOpt.isEmpty()) {
@@ -374,9 +396,9 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         // 3. Read custom domains if already registered in the DB
         Set<String> customDomains = new HashSet<>();
-        if (entityType == CorporateEntityType.FINANCIAL_INSTITUTION && financialEntityRepository != null) {
+        if (entityType == CorporateEntityType.FINANCIAL_INSTITUTION) {
             financialEntityRepository.findByRuc(command.ruc().trim()).ifPresent(fe -> customDomains.addAll(fe.getAllowedDomains()));
-        } else if (entityType == CorporateEntityType.DEALERSHIP && dealershipRepository != null) {
+        } else if (entityType == CorporateEntityType.DEALERSHIP) {
             dealershipRepository.findByRuc(command.ruc().trim()).ifPresent(d -> customDomains.addAll(d.getAllowedDomains()));
         }
 

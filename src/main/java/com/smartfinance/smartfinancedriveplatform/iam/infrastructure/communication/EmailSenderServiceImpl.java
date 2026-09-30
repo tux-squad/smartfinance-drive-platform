@@ -26,8 +26,17 @@ public class EmailSenderServiceImpl implements EmailSenderService {
     @Value("${spring.mail.username:no-reply@smartfinance.drive.pe}")
     private String fromEmail;
 
+    @Value("${app.mail.allow-emulated:true}")
+    private boolean allowEmulated = true;
+
     public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider) {
         this.mailSenderProvider = mailSenderProvider;
+        this.allowEmulated = true;
+    }
+
+    public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider, boolean allowEmulated) {
+        this.mailSenderProvider = mailSenderProvider;
+        this.allowEmulated = allowEmulated;
     }
 
     @Override
@@ -37,8 +46,12 @@ public class EmailSenderServiceImpl implements EmailSenderService {
 
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
-            log.warn("JavaMailSender is not configured. Emulated email OTP for [{}]: Code={}", toEmail, otpCode);
-            return;
+            if (allowEmulated) {
+                log.info("JavaMailSender is not configured. Emulated email OTP dispatch for [{}]", toEmail);
+                return;
+            }
+            log.error("JavaMailSender is not configured and email emulation is disabled. Failed to dispatch OTP to [{}]", toEmail);
+            throw new IllegalStateException("iam.error.email.serviceUnavailable");
         }
 
         try {
@@ -55,7 +68,8 @@ public class EmailSenderServiceImpl implements EmailSenderService {
             mailSender.send(message);
             log.info("Verification OTP email successfully dispatched to [{}]", toEmail);
         } catch (MessagingException | RuntimeException e) {
-            log.warn("Failed to dispatch email via SMTP to [{}]: {}. Code={}", toEmail, e.getMessage(), otpCode);
+            log.error("Failed to dispatch email via SMTP to [{}]: {}", toEmail, e.getMessage());
+            throw new RuntimeException("iam.error.email.dispatchFailed", e);
         }
     }
 

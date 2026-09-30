@@ -15,4 +15,10 @@ public interface CorporateVerificationSessionRepository {
     Optional<CorporateVerificationSession> findById(UUID id);
 
     Optional<CorporateVerificationSession> findLatestActiveSession(String userId, String ruc);
+
+    long countRecentSessionsByUserId(String userId, java.time.Instant since);
+
+    void expirePendingSessions(String userId, String ruc);
+
+    void deleteExpiredSessionsBefore(java.time.Instant threshold);
 }
