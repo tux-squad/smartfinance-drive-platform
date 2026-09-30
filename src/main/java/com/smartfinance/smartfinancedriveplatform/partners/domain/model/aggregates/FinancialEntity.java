@@ -21,17 +21,19 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
 
     private final FinancialEntityId id;
     private String userId;
+    private String ruc;
     private String name;
     private String logoUrl;
     private String bannerUrl;
     private final List<RateBenchmark> rateBenchmarks = new ArrayList<>();
 
     /**
-     * Constructor for reconstituting from persistence with userId.
+     * Constructor for reconstituting from persistence with userId and ruc.
      */
-    public FinancialEntity(FinancialEntityId id, String userId, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
+    public FinancialEntity(FinancialEntityId id, String userId, String ruc, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
         this.id = id;
         this.userId = userId;
+        setRuc(ruc);
         this.name = name;
         setLogoUrl(logoUrl);
         setBannerUrl(bannerUrl);
@@ -40,12 +42,16 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
         }
     }
 
+    public FinancialEntity(FinancialEntityId id, String userId, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
+        this(id, userId, null, name, logoUrl, bannerUrl, rateBenchmarks);
+    }
+
     public FinancialEntity(FinancialEntityId id, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
-        this(id, null, name, logoUrl, bannerUrl, rateBenchmarks);
+        this(id, null, null, name, logoUrl, bannerUrl, rateBenchmarks);
     }
 
     public FinancialEntity(FinancialEntityId id, String name, List<RateBenchmark> rateBenchmarks) {
-        this(id, null, name, null, null, rateBenchmarks);
+        this(id, null, null, name, null, null, rateBenchmarks);
     }
 
     /**
@@ -54,6 +60,7 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
     public FinancialEntity(String name, String logoUrl, String bannerUrl) {
         this.id = new FinancialEntityId(UUID.randomUUID());
         this.userId = null;
+        this.ruc = null;
         setName(name);
         setLogoUrl(logoUrl);
         setBannerUrl(bannerUrl);
@@ -65,6 +72,22 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
 
     public String getUserId() {
         return userId;
+    }
+
+    public String getRuc() {
+        return ruc;
+    }
+
+    public void setRuc(String ruc) {
+        if (ruc != null && !ruc.isBlank()) {
+            String trimmed = ruc.trim();
+            if (!trimmed.matches("^\\d{11}$")) {
+                throw new DomainValidationException("partners.error.financialEntity.ruc.invalid");
+            }
+            this.ruc = trimmed;
+        } else {
+            this.ruc = null;
+        }
     }
 
     public void setName(String name) {
@@ -87,10 +110,14 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
     }
 
     public void updateDetails(String name, String logoUrl, String bannerUrl) {
-        updateDetails(name, logoUrl, bannerUrl, this.userId);
+        updateDetails(name, logoUrl, bannerUrl, this.userId, this.ruc);
     }
 
     public void updateDetails(String name, String logoUrl, String bannerUrl, String userId) {
+        updateDetails(name, logoUrl, bannerUrl, userId, this.ruc);
+    }
+
+    public void updateDetails(String name, String logoUrl, String bannerUrl, String userId, String ruc) {
         setName(name);
         if (logoUrl != null) {
             setLogoUrl(logoUrl);
@@ -100,6 +127,9 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
         }
         if (userId != null) {
             setUserId(userId);
+        }
+        if (ruc != null) {
+            setRuc(ruc);
         }
     }
 

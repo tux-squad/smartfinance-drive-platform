@@ -4,6 +4,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregat
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.AddRateBenchmarkCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.CreateFinancialEntityCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.DeleteFinancialEntityCommand;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkFinancialEntityToUserCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.UpdateFinancialEntityCommand;
 
 import java.util.Optional;
@@ -36,6 +37,14 @@ public interface FinancialEntityCommandService {
      * @return An Optional containing the updated financial entity with the new benchmark.
      */
     Optional<FinancialEntity> handle(AddRateBenchmarkCommand command);
+
+    /**
+     * Handles linking or creating a financial entity for a user with verified RUC.
+     *
+     * @param command The link financial entity command.
+     * @return The linked or created financial entity.
+     */
+    FinancialEntity handle(LinkFinancialEntityToUserCommand command);
 
     /**
      * Handles deleting a financial entity.

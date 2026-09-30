@@ -86,4 +86,25 @@ class FinancialEntityTest {
         assertNull(entity.getLogoUrl());
         assertNull(entity.getBannerUrl());
     }
+
+    @Test
+    void testValidRuc() {
+        FinancialEntity entity = new FinancialEntity("BCP");
+        entity.setRuc("20100047218");
+        assertEquals("20100047218", entity.getRuc());
+    }
+
+    @Test
+    void testInvalidRucThrowsException() {
+        FinancialEntity entity = new FinancialEntity("BCP");
+        assertThrows(DomainValidationException.class, () -> entity.setRuc("12345"));
+        assertThrows(DomainValidationException.class, () -> entity.setRuc("2010004721A"));
+    }
+
+    @Test
+    void testBlankRucSanitizedToNull() {
+        FinancialEntity entity = new FinancialEntity("BCP");
+        entity.setRuc("   ");
+        assertNull(entity.getRuc());
+    }
 }

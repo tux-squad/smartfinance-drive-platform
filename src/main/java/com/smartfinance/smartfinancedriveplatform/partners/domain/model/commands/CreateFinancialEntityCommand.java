@@ -5,15 +5,20 @@ package com.smartfinance.smartfinancedriveplatform.partners.domain.model.command
  */
 public record CreateFinancialEntityCommand(
     String userId,
+    String ruc,
     String name,
     String logoUrl,
     String bannerUrl
 ) {
+    public CreateFinancialEntityCommand(String userId, String name, String logoUrl, String bannerUrl) {
+        this(userId, null, name, logoUrl, bannerUrl);
+    }
+
     public CreateFinancialEntityCommand(String name, String logoUrl, String bannerUrl) {
-        this(null, name, logoUrl, bannerUrl);
+        this(null, null, name, logoUrl, bannerUrl);
     }
 
     public CreateFinancialEntityCommand(String name) {
-        this(null, name, null, null);
+        this(null, null, name, null, null);
     }
 }

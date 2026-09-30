@@ -29,6 +29,7 @@ public final class UpdateFinancialEntityCommandFromResourceAssembler {
         return new UpdateFinancialEntityCommand(
             new FinancialEntityId(id),
             effectiveUserId,
+            resource.ruc(),
             resource.name(),
             resource.logoUrl(),
             resource.bannerUrl()

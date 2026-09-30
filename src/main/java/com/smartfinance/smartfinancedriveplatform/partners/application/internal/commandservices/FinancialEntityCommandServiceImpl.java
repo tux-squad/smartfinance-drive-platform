@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregat
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.AddRateBenchmarkCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.CreateFinancialEntityCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.DeleteFinancialEntityCommand;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkFinancialEntityToUserCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.UpdateFinancialEntityCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.entities.RateBenchmark;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.FinancialEntityRepository;
@@ -30,11 +31,20 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
     @Override
     @Transactional
     public Optional<FinancialEntity> handle(CreateFinancialEntityCommand command) {
+        if (command.ruc() != null && !command.ruc().isBlank()) {
+            if (financialEntityRepository.existsByRuc(command.ruc())) {
+                throw new DomainValidationException("partners.error.financialEntityRucAlreadyExists");
+            }
+        }
+
         if (financialEntityRepository.existsByName(command.name())) {
             var existingOpt = financialEntityRepository.findByName(command.name());
             if (existingOpt.isPresent() && existingOpt.get().getUserId() == null && command.userId() != null) {
                 FinancialEntity existing = existingOpt.get();
-                existing.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), command.userId());
+                if (command.ruc() != null && existing.getRuc() != null && !existing.getRuc().equals(command.ruc())) {
+                    throw new DomainValidationException("partners.error.financialEntityRucMismatch");
+                }
+                existing.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), command.userId(), command.ruc());
                 FinancialEntity saved = financialEntityRepository.save(existing);
                 return Optional.of(saved);
             }
@@ -44,6 +54,7 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         FinancialEntity financialEntity = new FinancialEntity(
                 new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(java.util.UUID.randomUUID()),
                 command.userId(),
+                command.ruc(),
                 command.name(),
                 command.logoUrl(),
                 command.bannerUrl(),
@@ -65,7 +76,18 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         String updatedUserId = (command.userId() != null && !command.userId().isBlank())
                 ? command.userId()
                 : financialEntity.getUserId();
-        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), updatedUserId);
+        String updatedRuc = (command.ruc() != null && !command.ruc().isBlank())
+                ? command.ruc()
+                : financialEntity.getRuc();
+
+        if (command.ruc() != null && !command.ruc().isBlank()) {
+            var existingByRuc = financialEntityRepository.findByRuc(command.ruc());
+            if (existingByRuc.isPresent() && !existingByRuc.get().getId().equals(financialEntity.getId())) {
+                throw new DomainValidationException("partners.error.financialEntityRucAlreadyExists");
+            }
+        }
+
+        financialEntity.updateDetails(command.name(), command.logoUrl(), command.bannerUrl(), updatedUserId, updatedRuc);
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
     }
@@ -90,6 +112,67 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
         financialEntity.addRateBenchmark(benchmark);
         FinancialEntity savedEntity = financialEntityRepository.save(financialEntity);
         return Optional.of(savedEntity);
+    }
+
+    @Override
+    @Transactional
+    public FinancialEntity handle(LinkFinancialEntityToUserCommand command) {
+        String userId = command.userId();
+        String ruc = command.ruc();
+        String legalName = command.legalName();
+
+        // 1. If user is already associated with an entity, return it (update RUC if empty)
+        var existingByUserId = financialEntityRepository.findByUserId(userId);
+        if (existingByUserId.isPresent()) {
+            FinancialEntity entity = existingByUserId.get();
+            if (entity.getRuc() == null && ruc != null && !ruc.isBlank()) {
+                entity.setRuc(ruc);
+                return financialEntityRepository.save(entity);
+            }
+            return entity;
+        }
+
+        // 2. Check if an entity already exists with this RUC
+        if (ruc != null && !ruc.isBlank()) {
+            var existingByRuc = financialEntityRepository.findByRuc(ruc);
+            if (existingByRuc.isPresent()) {
+                FinancialEntity entity = existingByRuc.get();
+                if (entity.getUserId() != null && !entity.getUserId().equals(userId)) {
+                    throw new DomainValidationException("partners.error.financialEntity.rucAlreadyLinked");
+                }
+                entity.setUserId(userId);
+                return financialEntityRepository.save(entity);
+            }
+        }
+
+        // 3. Check if an unlinked entity exists with this legal name (e.g. initial seed banks)
+        if (legalName != null && !legalName.isBlank()) {
+            var existingByName = financialEntityRepository.findByName(legalName);
+            if (existingByName.isPresent()) {
+                FinancialEntity entity = existingByName.get();
+                if (entity.getUserId() == null) {
+                    entity.setUserId(userId);
+                    if (entity.getRuc() == null && ruc != null && !ruc.isBlank()) {
+                        entity.setRuc(ruc);
+                    }
+                    return financialEntityRepository.save(entity);
+                } else if (!entity.getUserId().equals(userId)) {
+                    throw new DomainValidationException("partners.error.financialEntityAlreadyExists");
+                }
+            }
+        }
+
+        // 4. Create new financial entity with verified RUC and legal name
+        FinancialEntity newEntity = new FinancialEntity(
+                new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(java.util.UUID.randomUUID()),
+                userId,
+                ruc,
+                legalName,
+                null,
+                null,
+                new java.util.ArrayList<>()
+        );
+        return financialEntityRepository.save(newEntity);
     }
 
     @Override

@@ -35,6 +35,8 @@ public final class FinancialEntityResourceFromEntityAssembler {
 
         return new FinancialEntityResource(
             entity.getId().value(),
+            entity.getUserId(),
+            entity.getRuc(),
             entity.getName(),
             entity.getLogoUrl(),
             entity.getBannerUrl(),

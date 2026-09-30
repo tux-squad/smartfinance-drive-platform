@@ -39,7 +39,7 @@ class UserCommandServiceImplTest {
     private SunatRucVerifierService sunatRucVerifierService;
 
     @Mock
-    private com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.FinancialEntityRepository financialEntityRepository;
+    private com.smartfinance.smartfinancedriveplatform.partners.application.commandservices.FinancialEntityCommandService financialEntityCommandService;
 
     @InjectMocks
     private UserCommandServiceImpl userCommandService;
@@ -86,14 +86,12 @@ class UserCommandServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(sunatRucVerifierService.verifyRuc("20100047218")).thenReturn(Optional.of(validFinanceInfo));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(financialEntityRepository.findByUserId("1")).thenReturn(Optional.empty());
-        when(financialEntityRepository.findByName("BBVA PERU")).thenReturn(Optional.empty());
 
         Optional<User> result = userCommandService.handle(new RequestFinancialInstitutionRoleCommand(1L, "20100047218"));
 
         assertTrue(result.isPresent());
         assertTrue(result.get().getRoles().contains(Roles.ROLE_FINANCIAL_INSTITUTION));
-        verify(financialEntityRepository, times(1)).save(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity.class));
+        verify(financialEntityCommandService, times(1)).handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkFinancialEntityToUserCommand.class));
     }
 
     @Test

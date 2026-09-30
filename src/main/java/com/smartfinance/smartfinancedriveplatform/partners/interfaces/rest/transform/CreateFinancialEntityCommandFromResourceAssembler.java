@@ -24,6 +24,7 @@ public final class CreateFinancialEntityCommandFromResourceAssembler {
         String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : resource.userId();
         return new CreateFinancialEntityCommand(
             effectiveUserId,
+            resource.ruc(),
             resource.name(),
             resource.logoUrl(),
             resource.bannerUrl()
