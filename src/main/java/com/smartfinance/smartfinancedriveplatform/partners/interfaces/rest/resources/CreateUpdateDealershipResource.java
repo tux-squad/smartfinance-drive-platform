@@ -30,7 +30,9 @@ public record CreateUpdateDealershipResource(
 
     String operatingHours,
 
+    @Size(max = 1000, message = "Logo URL cannot exceed 1000 characters")
     String logoUrl,
 
+    @Size(max = 1000, message = "Banner URL cannot exceed 1000 characters")
     String bannerUrl
 ) {}

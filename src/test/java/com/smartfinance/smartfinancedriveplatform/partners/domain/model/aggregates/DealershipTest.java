@@ -46,4 +46,97 @@ class DealershipTest {
                 null, null, null, null, null, null, null
         )).isInstanceOf(DomainValidationException.class);
     }
+
+    @Test
+    @DisplayName("Should update details including logo and banner URLs")
+    void shouldUpdateDetailsIncludingLogoAndBanner() {
+        Dealership dealership = new Dealership(
+                "user-123",
+                "20100070970",
+                "Derco Peru",
+                "Av. Javier Prado 123",
+                "987654321",
+                "contacto@derco.pe",
+                "https://derco.pe",
+                "Concesionario oficial",
+                "Lun-Vie 9-18",
+                "old-logo.png",
+                "old-banner.png"
+        );
+
+        dealership.updateDetails(
+                "20100070970",
+                "Derco Peru Updated",
+                "Av. Javier Prado 456",
+                "912345678",
+                "ventas@derco.pe",
+                "https://derco-nuevo.pe",
+                "Nueva descripcion",
+                "Lun-Sab 9-20",
+                "https://cdn.example.com/new-logo.png",
+                "https://cdn.example.com/new-banner.png"
+        );
+
+        assertThat(dealership.getName()).isEqualTo("Derco Peru Updated");
+        assertThat(dealership.getAddress()).isEqualTo("Av. Javier Prado 456");
+        assertThat(dealership.getPhone()).isEqualTo("912345678");
+        assertThat(dealership.getEmail()).isEqualTo("ventas@derco.pe");
+        assertThat(dealership.getWebsite()).isEqualTo("https://derco-nuevo.pe");
+        assertThat(dealership.getDescription()).isEqualTo("Nueva descripcion");
+        assertThat(dealership.getOperatingHours()).isEqualTo("Lun-Sab 9-20");
+        assertThat(dealership.getLogoUrl()).isEqualTo("https://cdn.example.com/new-logo.png");
+        assertThat(dealership.getBannerUrl()).isEqualTo("https://cdn.example.com/new-banner.png");
+    }
+
+    @Test
+    @DisplayName("Should preserve existing logo and banner when updated with null")
+    void shouldPreserveExistingLogoAndBannerWhenUpdatingWithNull() {
+        Dealership dealership = new Dealership(
+                "user-123",
+                "20100070970",
+                "Derco Peru",
+                "Av. Javier Prado 123",
+                "987654321",
+                "contacto@derco.pe",
+                "https://derco.pe",
+                "Concesionario oficial",
+                "Lun-Vie 9-18",
+                "https://cdn.example.com/initial-logo.png",
+                "https://cdn.example.com/initial-banner.png"
+        );
+
+        dealership.updateDetails(
+                "20100070970",
+                "Derco Peru Updated",
+                "Av. Javier Prado 456",
+                "912345678",
+                "ventas@derco.pe",
+                "https://derco.pe",
+                "Desc",
+                "Horas",
+                null,
+                null
+        );
+
+        assertThat(dealership.getLogoUrl()).isEqualTo("https://cdn.example.com/initial-logo.png");
+        assertThat(dealership.getBannerUrl()).isEqualTo("https://cdn.example.com/initial-banner.png");
+    }
+
+    @Test
+    @DisplayName("Should sanitize blank logo and banner to null")
+    void shouldSanitizeBlankLogoAndBannerToNull() {
+        Dealership dealership = new Dealership(
+                "user-123",
+                "20100070970",
+                "Derco Peru",
+                "Av. Javier Prado 123",
+                null, null, null, null, null, null, null
+        );
+
+        dealership.setLogoUrl("   ");
+        dealership.setBannerUrl("");
+
+        assertThat(dealership.getLogoUrl()).isNull();
+        assertThat(dealership.getBannerUrl()).isNull();
+    }
 }
