@@ -759,12 +759,16 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ## 12. Analytics - Métricas Consolidadas y Dashboards por Rol
 
-Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Financieras y Administradores de la plataforma.
+Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Financieras y Administradores de la plataforma con estricta validación de propiedad y protección contra IDOR.
 
 ### 12.1 Obtener Métricas de Dashboard para Concesionario
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/dealer` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Seguridad y Control de Propiedad**:
+  * Un usuario con rol `DEALER` solo puede consultar sus propias métricas. Si omite el parámetro `dealerUserId`, se infiere del JWT autenticado. Si especifica un `dealerUserId` distinto al propio, la solicitud es rechazada con `403 Forbidden`.
+  * Los usuarios con rol `ADMIN` pueden consultar las métricas de cualquier concesionario especificando `dealerUserId`.
 * **Parámetros Opcionales de Consulta**:
-  * `dealerUserId` (string): Identificador de usuario del concesionario (si se omite, extrae automáticamente el usuario del JWT autenticado).
+  * `dealerUserId` (string): Identificador de usuario del concesionario.
+  * `period` (string): Ventana temporal para métricas de prospectos CRM y pruebas de manejo. Opciones: `ALL_TIME` (por defecto), `LAST_30_DAYS`, `LAST_7_DAYS`.
 
 ```json
 // Response (HTTP 200 OK)
@@ -801,15 +805,16 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
     "approvedApplications": 3,
     "rejectedApplications": 1
   },
-  "estimatedVehicleViews": 520,
-  "membershipRoi": "5.6x",
   "period": "LAST_30_DAYS"
 }
 ```
 
 ### 12.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
-* **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution?financialEntityId={uuid}` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
-* **Parámetros Requeridos de Consulta**:
+* **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
+* **Seguridad y Control de Propiedad**:
+  * Para usuarios con rol `FINANCIAL_INSTITUTION`, el parámetro `financialEntityId` es opcional: si se omite, se resuelve automáticamente la entidad financiera asociada a su cuenta de usuario. Si se provee explícitamente, se valida mediante `@ownershipChecker` que el usuario sea el propietario registrado; en caso contrario, se rechaza con `403 Forbidden` (prevención de IDOR).
+  * Los usuarios con rol `ADMIN` pueden consultar métricas de cualquier entidad financiera proporcionando `financialEntityId`.
+* **Parámetros Opcionales de Consulta**:
   * `financialEntityId` (UUID): Identificador único de la entidad financiera.
 
 ```json
@@ -826,12 +831,15 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
   "totalRequestedVolumePen": 2450000.00,
   "totalDisbursedVolumePen": 920000.00,
   "averageTea": 14.85,
-  "activeRateBenchmarksCount": 4
+  "activeRateBenchmarksCount": 4,
+  "totalSimulationsCount": 18
 }
 ```
 
 ### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
+* **Notas de Cálculo**:
+  * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales normalizados en USD a partir de suscripciones activas. Las suscripciones anuales se normalizan dividiendo el costo entre 12 y las tarifas en PEN se convierten a USD con tasa de referencia (3.75).
 
 ```json
 // Response (HTTP 200 OK)
@@ -847,4 +855,5 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
   "estimatedMonthlyRecurringRevenueUsd": 2400.00
 }
 ```
+
 
