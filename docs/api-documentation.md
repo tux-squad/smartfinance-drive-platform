@@ -334,14 +334,70 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 4.8 Obtener Mi Concesionaria B2B
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
+```json
+// Output Response (200 OK)
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "userId": "user-uuid",
+  "ruc": "20601234567",
+  "name": "Autoland Peru",
+  "address": "Av. Javier Prado 1234",
+  "phone": "+51987654321",
+  "email": "contacto@autoland.pe",
+  "website": "https://autoland.pe",
+  "description": "Concesionaria líder en venta de autos",
+  "operatingHours": "Lun-Vie 9am-6pm",
+  "rating": 5.0,
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/logos/logo.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/banners/banner.png",
+  "active": true
+}
+```
+
 ### 4.9 Crear o Actualizar Mi Concesionaria B2B
 * **Método**: `PUT` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
+```json
+// Input Body
+{
+  "ruc": "20601234567",
+  "name": "Autoland Peru",
+  "address": "Av. Javier Prado 1234",
+  "phone": "+51987654321",
+  "email": "contacto@autoland.pe",
+  "website": "https://autoland.pe",
+  "description": "Concesionaria oficial multimarca",
+  "operatingHours": "Lun-Sab 9am-7pm",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/logos/logo.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/banners/banner.png"
+}
+```
+
+```json
+// Output Response (200 OK)
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "userId": "user-uuid",
+  "ruc": "20601234567",
+  "name": "Autoland Peru",
+  "address": "Av. Javier Prado 1234",
+  "phone": "+51987654321",
+  "email": "contacto@autoland.pe",
+  "website": "https://autoland.pe",
+  "description": "Concesionaria oficial multimarca",
+  "operatingHours": "Lun-Sab 9am-7pm",
+  "rating": 5.0,
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/logos/logo.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/dealerships/banners/banner.png",
+  "active": true
+}
+```
+
 ### 4.10 Cargar Logo de Concesionaria
-* **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/logo` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/logo` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
 ### 4.11 Cargar Banner de Concesionaria
-* **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/banner` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
+* **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/banner` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
 ### 4.12 Obtener Concesionaria por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/{id}` | **Acceso**: Público

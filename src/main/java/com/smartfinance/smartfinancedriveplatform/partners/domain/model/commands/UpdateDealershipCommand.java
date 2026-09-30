@@ -14,5 +14,13 @@ public record UpdateDealershipCommand(
     String email,
     String website,
     String description,
-    String operatingHours
-) {}
+    String operatingHours,
+    String logoUrl,
+    String bannerUrl
+) {
+    public UpdateDealershipCommand(DealershipId dealershipId, String ruc, String name, String address,
+                                   String phone, String email, String website, String description,
+                                   String operatingHours) {
+        this(dealershipId, ruc, name, address, phone, email, website, description, operatingHours, null, null);
+    }
+}
