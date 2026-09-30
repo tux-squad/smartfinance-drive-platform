@@ -24,10 +24,10 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ## Índice de Bounded Contexts
 
-1. [IAM - Autenticación, Usuarios y Asesores de Ventas (16 Endpoints)](#1-iam---autenticación-usuarios-y-asesores-de-ventas)
+1. [IAM - Autenticación, Usuarios y Asesores de Ventas (20 Endpoints)](#1-iam---autenticación-usuarios-y-asesores-de-ventas)
 2. [Profiles - Perfiles de Cliente (5 Endpoints)](#2-profiles---perfiles-de-cliente)
 3. [Catalog - Catálogo de Vehículos, Especificaciones y Marcas (11 Endpoints)](#3-catalog---catálogo-de-vehículos-especificaciones-y-marcas)
-4. [Partners - Entidades Financieras, Directorio B2B y SUNAT (13 Endpoints)](#4-partners---entidades-financieras-directorio-b2b-y-sunat)
+4. [Partners - Entidades Financieras, Directorio B2B y SUNAT (16 Endpoints)](#4-partners---entidades-financieras-directorio-b2b-y-sunat)
 5. [Financing - Simulaciones de Crédito y Solicitudes Bancarias (9 Endpoints)](#5-financing---simulaciones-de-crédito-y-solicitudes-bancarias)
 6. [Scoring - Evaluación Crediticia (5 Endpoints)](#6-scoring---evaluación-crediticia)
 7. [Projections - Depreciación de Vehículos (5 Endpoints)](#7-projections---depreciación-de-vehículos)
@@ -211,6 +211,106 @@ Authorization: Bearer <tu_access_token_jwt>
 // Input Body
 {
   "targetAgentId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566"
+}
+```
+
+---
+
+### 1.17 Iniciar Verificación Corporativa B2B con OTP por Correo (/me)
+* **Método**: `POST` | **Ruta**: `/api/v1/users/me/corporate-verification/initiate` | **Acceso**: Autenticado
+* **Descripción**: Inicia el flujo de verificación institucional para una Entidad Financiera (Banco) o Concesionaria (Dealership). Valida que el RUC exista y se encuentre ACTIVO/HABIDO en SUNAT, verifica que el correo corporativo pertenezca al dominio institucional autorizado (ej. `@viabcp.com`, `@interbank.pe`, `@autoland.com.pe`), genera un código criptográfico OTP de 6 dígitos con hash SHA-256 (TTL de 10 minutos, máx. 3 intentos) y lo despacha por correo transaccional.
+
+```json
+// Input Body
+{
+  "ruc": "20100047218",
+  "corporateEmail": "analista.creditos@viabcp.com"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "sessionActive": true,
+  "maskedEmail": "a*****************s@viabcp.com",
+  "expiresInSeconds": 600
+}
+```
+
+---
+
+### 1.18 Confirmar Código OTP de Verificación Corporativa B2B (/me)
+* **Método**: `POST` | **Ruta**: `/api/v1/users/me/corporate-verification/confirm` | **Acceso**: Autenticado
+* **Descripción**: Valida el código OTP de 6 dígitos ingresado por el usuario con protección en tiempo constante. Al verificarse exitosamente:
+  1. Promueve el rol del usuario a `ROLE_FINANCIAL_INSTITUTION` o `ROLE_DEALER` según el tipo de entidad detectado por SUNAT.
+  2. Auto-aprovisiona o vincula automáticamente el perfil corporativo (`FinancialEntity` o `Dealership`) con los datos oficiales de SUNAT (Razón Social, RUC, Dirección, Ubigeo, Logos institucionales).
+
+```json
+// Input Body
+{
+  "ruc": "20100047218",
+  "code": "849201"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "verified": true,
+  "entityType": "FINANCIAL_INSTITUTION",
+  "assignedRole": "ROLE_FINANCIAL_INSTITUTION",
+  "profileId": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "profileName": "BANCO DE CREDITO DEL PERU",
+  "message": "Corporate identity verified successfully. Profile provisioned and linked."
+}
+```
+
+---
+
+### 1.19 Iniciar Verificación Corporativa B2B para Usuario Específico
+* **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/corporate-verification/initiate` | **Acceso**: `ROLE_ADMIN` o Mismo usuario (`@ownershipChecker.isUserSelf`)
+
+```json
+// Input Body
+{
+  "ruc": "20100128056",
+  "corporateEmail": "gerencia@autoland.com.pe"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "sessionId": "b2c3d4e5-f6a7-8901-bcde-fa2345678901",
+  "sessionActive": true,
+  "maskedEmail": "g******a@autoland.com.pe",
+  "expiresInSeconds": 600
+}
+```
+
+---
+
+### 1.20 Confirmar Código OTP para Usuario Específico
+* **Método**: `POST` | **Ruta**: `/api/v1/users/{userId}/corporate-verification/confirm` | **Acceso**: `ROLE_ADMIN` o Mismo usuario (`@ownershipChecker.isUserSelf`)
+
+```json
+// Input Body
+{
+  "ruc": "20100128056",
+  "code": "512934"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "verified": true,
+  "entityType": "DEALERSHIP",
+  "assignedRole": "ROLE_DEALER",
+  "profileId": "c3d4e5f6-a7b8-9012-cdef-ab3456789012",
+  "profileName": "AUTOLAND S.A.",
+  "message": "Corporate identity verified successfully. Profile provisioned and linked."
 }
 ```
 
@@ -445,7 +545,7 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.9 Crear o Actualizar Mi Concesionaria B2B
+### 4.11 Crear o Actualizar Mi Concesionaria B2B
 * **Método**: `PUT` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -484,17 +584,39 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.10 Cargar Logo de Concesionaria
+### 4.12 Cargar Logo de Concesionaria
 * **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/logo` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
-### 4.11 Cargar Banner de Concesionaria
+### 4.13 Cargar Banner de Concesionaria
 * **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/banner` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
-### 4.12 Obtener Concesionaria por ID
+### 4.14 Obtener Concesionaria por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/{id}` | **Acceso**: Público
 
-### 4.13 Obtener Vehículos de una Concesionaria Específica
+### 4.15 Obtener Vehículos de una Concesionaria Específica
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/{id}/vehicles` | **Acceso**: Público
+
+### 4.16 Consulta SUNAT para Autocompletado de Perfil Corporativo y Dominios Autorizados
+* **Método**: `GET` | **Ruta**: `/api/v1/partners/corporate-verification/lookup/{ruc}` | **Acceso**: Autenticado
+* **Descripción**: Valida el RUC peruano de 11 dígitos contra el servicio oficial de SUNAT, detecta automáticamente si corresponde a una **Entidad Financiera** (`ROLE_FINANCIAL_INSTITUTION`) o a una **Concesionaria** (`ROLE_DEALER`), y retorna la información oficial requerida para rellenar automáticamente los campos del perfil corporativo (Razón Social, Dirección Fiscal, Ubigeo, Logo) junto con la lista blanca de dominios de correo institucional autorizados para verificación OTP (ej. `@viabcp.com`, `@interbank.pe`, `@autoland.com.pe`, `@derco.pe`).
+
+```json
+// Output Response (200 OK)
+{
+  "ruc": "20100047218",
+  "entityType": "FINANCIAL_INSTITUTION",
+  "targetRole": "ROLE_FINANCIAL_INSTITUTION",
+  "suggestedName": "BANCO DE CREDITO DEL PERU",
+  "fiscalAddress": "CALLE CENTENARIO NRO. 156 URB. LAS LADERAS DE MELGAREJO",
+  "ubigeo": "150118",
+  "allowedEmailDomains": [
+    "viabcp.com",
+    "bcp.com.pe"
+  ],
+  "suggestedLogoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
+  "activeAndHabido": true
+}
+```
 
 ---
 
