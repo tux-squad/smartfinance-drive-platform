@@ -128,4 +128,105 @@ class UsersControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getBody().roles().contains("ROLE_FINANCIAL_INSTITUTION"));
     }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on initiateCorporateVerificationForMe")
+    void shouldInitiateCorporateVerificationForMe() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "1", "pw", java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))
+                )
+        );
+        var resource = new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.InitiateCorporateVerificationResource(
+                "20100047218", "finanzas@viabcp.com"
+        );
+        var initiated = new com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationInitiated(
+                "sess-123", true, "f***s@viabcp.com", 600
+        );
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand.class)))
+                .thenReturn(initiated);
+
+        var response = usersController.initiateCorporateVerificationForMe(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("sess-123", response.getBody().sessionId());
+        assertTrue(response.getBody().sessionActive());
+        assertEquals("f***s@viabcp.com", response.getBody().maskedEmail());
+        assertEquals(600, response.getBody().expiresInSeconds());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on confirmCorporateVerificationForMe")
+    void shouldConfirmCorporateVerificationForMe() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "1", "pw", java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))
+                )
+        );
+        var resource = new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.ConfirmCorporateVerificationResource(
+                "20100047218", "123456"
+        );
+        var result = new com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationResult(
+                true, "FINANCIAL_INSTITUTION", "ROLE_FINANCIAL_INSTITUTION", "bcp-id", "BANCO DE CREDITO DEL PERU", "Verification successful"
+        );
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ConfirmCorporateVerificationCommand.class)))
+                .thenReturn(result);
+
+        var response = usersController.confirmCorporateVerificationForMe(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().verified());
+        assertEquals("ROLE_FINANCIAL_INSTITUTION", response.getBody().assignedRole());
+        assertEquals("BANCO DE CREDITO DEL PERU", response.getBody().profileName());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on initiateCorporateVerification for target user")
+    void shouldInitiateCorporateVerificationForTargetUser() {
+        var resource = new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.InitiateCorporateVerificationResource(
+                "20100128056", "contacto@autoland.com.pe"
+        );
+        var initiated = new com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationInitiated(
+                "sess-456", true, "c***o@autoland.com.pe", 600
+        );
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.InitiateCorporateVerificationCommand.class)))
+                .thenReturn(initiated);
+
+        var response = usersController.initiateCorporateVerification(2L, resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("sess-456", response.getBody().sessionId());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK on confirmCorporateVerification for target user")
+    void shouldConfirmCorporateVerificationForTargetUser() {
+        var resource = new com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.ConfirmCorporateVerificationResource(
+                "20100128056", "654321"
+        );
+        var result = new com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.CorporateVerificationResult(
+                true, "DEALERSHIP", "ROLE_DEALER", "autoland-id", "AUTOLAND S.A.", "Verification successful"
+        );
+
+        when(userCommandService.handle(any(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.ConfirmCorporateVerificationCommand.class)))
+                .thenReturn(result);
+
+        var response = usersController.confirmCorporateVerification(2L, resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().verified());
+        assertEquals("ROLE_DEALER", response.getBody().assignedRole());
+    }
 }
