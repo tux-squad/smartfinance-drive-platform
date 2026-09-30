@@ -43,6 +43,26 @@ public class DealershipRepositoryAdapter implements DealershipRepository {
     }
 
     @Override
+    public Optional<Dealership> findByRuc(String ruc) {
+        return repository.findByRuc(ruc).map(DealershipPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public Optional<Dealership> findByName(String name) {
+        return repository.findByName(name).map(DealershipPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public boolean existsByRuc(String ruc) {
+        return repository.existsByRuc(ruc);
+    }
+
+    @Override
+    public boolean existsByName(String name) {
+        return repository.existsByName(name);
+    }
+
+    @Override
     public Page<Dealership> findAll(String search, Pageable pageable) {
         return repository.findAllActiveWithSearch(search, pageable).map(DealershipPersistenceAssembler::toDomain);
     }

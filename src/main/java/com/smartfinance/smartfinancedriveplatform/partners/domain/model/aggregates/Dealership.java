@@ -5,6 +5,10 @@ import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.Domai
 import com.smartfinance.smartfinancedriveplatform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -28,6 +32,20 @@ public class Dealership extends AbstractDomainAggregateRoot<Dealership> {
     private String logoUrl;
     private String bannerUrl;
     private boolean active;
+    private final Set<String> allowedDomains = new HashSet<>();
+
+    /**
+     * Constructor for reconstituting from persistence with allowedDomains.
+     */
+    public Dealership(DealershipId id, String userId, String ruc, String name, String address, 
+                      String phone, String email, String website, String description, 
+                      String operatingHours, Double rating, String logoUrl, String bannerUrl, 
+                      boolean active, Collection<String> allowedDomains) {
+        this(id, userId, ruc, name, address, phone, email, website, description, operatingHours, rating, logoUrl, bannerUrl, active);
+        if (allowedDomains != null) {
+            allowedDomains.forEach(this::addAllowedDomain);
+        }
+    }
 
     /**
      * Constructor for reconstituting from persistence.
@@ -75,10 +93,7 @@ public class Dealership extends AbstractDomainAggregateRoot<Dealership> {
     }
 
     public void setUserId(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new DomainValidationException("partners.error.dealership.userId.required");
-        }
-        this.userId = userId.trim();
+        this.userId = (userId != null && !userId.isBlank()) ? userId.trim() : null;
     }
 
     public void setRuc(String ruc) {
@@ -147,5 +162,30 @@ public class Dealership extends AbstractDomainAggregateRoot<Dealership> {
 
     public void deactivate() {
         this.active = false;
+    }
+
+    public Set<String> getAllowedDomains() {
+        return Collections.unmodifiableSet(allowedDomains);
+    }
+
+    public void addAllowedDomain(String domain) {
+        if (domain != null && !domain.isBlank()) {
+            String normalized = domain.trim().toLowerCase();
+            if (normalized.startsWith("@")) {
+                normalized = normalized.substring(1);
+            }
+            this.allowedDomains.add(normalized);
+        }
+    }
+
+    public boolean isDomainAllowed(String domainOrEmail) {
+        if (domainOrEmail == null || domainOrEmail.isBlank()) {
+            return false;
+        }
+        String domain = domainOrEmail.trim().toLowerCase();
+        if (domain.contains("@")) {
+            domain = domain.substring(domain.lastIndexOf("@") + 1);
+        }
+        return this.allowedDomains.contains(domain);
     }
 }

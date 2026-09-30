@@ -99,4 +99,50 @@ class RateLimitingFilterTest {
 
         assertEquals(429, blockedResponse.getStatus());
     }
+
+    @Test
+    @DisplayName("Should rate limit /api/v1/users/me/corporate-verification/initiate endpoint")
+    void shouldRateLimitCorporateVerificationInitiateEndpoint() throws ServletException, IOException {
+        String path = "/api/v1/users/me/corporate-verification/initiate";
+
+        for (int i = 1; i <= 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+            request.setRemoteAddr("192.168.1.150");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            rateLimitingFilter.doFilterInternal(request, response, filterChain);
+            assertEquals(200, response.getStatus());
+        }
+
+        MockHttpServletRequest blockedRequest = new MockHttpServletRequest("POST", path);
+        blockedRequest.setRemoteAddr("192.168.1.150");
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+
+        rateLimitingFilter.doFilterInternal(blockedRequest, blockedResponse, filterChain);
+
+        assertEquals(429, blockedResponse.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should rate limit /api/v1/partners/corporate-verification/lookup/{ruc} endpoint")
+    void shouldRateLimitCorporateVerificationLookupEndpoint() throws ServletException, IOException {
+        String path = "/api/v1/partners/corporate-verification/lookup/20100047218";
+
+        for (int i = 1; i <= 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
+            request.setRemoteAddr("192.168.1.160");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            rateLimitingFilter.doFilterInternal(request, response, filterChain);
+            assertEquals(200, response.getStatus());
+        }
+
+        MockHttpServletRequest blockedRequest = new MockHttpServletRequest("GET", path);
+        blockedRequest.setRemoteAddr("192.168.1.160");
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+
+        rateLimitingFilter.doFilterInternal(blockedRequest, blockedResponse, filterChain);
+
+        assertEquals(429, blockedResponse.getStatus());
+    }
 }

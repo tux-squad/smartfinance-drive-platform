@@ -29,6 +29,8 @@ public final class DealershipPersistenceAssembler {
         entity.setLogoUrl(domain.getLogoUrl());
         entity.setBannerUrl(domain.getBannerUrl());
         entity.setActive(domain.isActive());
+        entity.getAllowedDomains().clear();
+        entity.getAllowedDomains().addAll(domain.getAllowedDomains());
         return entity;
     }
 
@@ -47,7 +49,8 @@ public final class DealershipPersistenceAssembler {
             entity.getRating(),
             entity.getLogoUrl(),
             entity.getBannerUrl(),
-            entity.isActive()
+            entity.isActive(),
+            entity.getAllowedDomains()
         );
     }
 }

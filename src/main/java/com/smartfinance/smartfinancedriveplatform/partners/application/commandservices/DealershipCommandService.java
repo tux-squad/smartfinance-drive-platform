@@ -2,6 +2,7 @@ package com.smartfinance.smartfinancedriveplatform.partners.application.commands
 
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.Dealership;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.CreateDealershipCommand;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.LinkDealershipToUserCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.UpdateDealershipCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.DealershipId;
 
@@ -15,6 +16,8 @@ public interface DealershipCommandService {
     Optional<Dealership> handle(CreateDealershipCommand command);
 
     Optional<Dealership> handle(UpdateDealershipCommand command);
+
+    Dealership handle(LinkDealershipToUserCommand command);
 
     Optional<Dealership> updateLogo(DealershipId dealershipId, String logoUrl);
 
