@@ -69,5 +69,12 @@ public interface VehicleRepository {
      * @return List of brand names.
      */
     List<String> findDistinctBrands();
+
+    /**
+     * Returns the total count of vehicles.
+     *
+     * @return total vehicle count.
+     */
+    long count();
 }
 

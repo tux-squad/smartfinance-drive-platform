@@ -45,6 +45,25 @@ public class CreditApplicationRepositoryAdapter implements CreditApplicationRepo
     }
 
     @Override
+    public List<CreditApplication> findAllByFinancialEntityId(java.util.UUID financialEntityId) {
+        return repository.findAllByFinancialEntityId(financialEntityId).stream()
+                .map(CreditApplicationPersistenceAssembler::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CreditApplication> findAllByVehicleIdIn(List<java.util.UUID> vehicleIds) {
+        return repository.findAllByVehicleIdIn(vehicleIds).stream()
+                .map(CreditApplicationPersistenceAssembler::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long count() {
+        return repository.count();
+    }
+
+    @Override
     public boolean existsById(CreditApplicationId id) {
         return repository.existsById(id.value());
     }

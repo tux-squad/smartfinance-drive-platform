@@ -59,6 +59,11 @@ public class UserRepositoryAdapter implements UserRepository {
         return repository.findAllPaged(pageable).map(this::toDomain);
     }
 
+    @Override
+    public long count() {
+        return repository.count();
+    }
+
     private UserJPAEntity toEntity(User domain) {
         UserJPAEntity entity = new UserJPAEntity(
                 domain.getUsername().username(),

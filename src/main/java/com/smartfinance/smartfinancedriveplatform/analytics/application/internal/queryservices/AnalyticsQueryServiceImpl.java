@@ -6,28 +6,29 @@ import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.queries
 import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.queries.GetFinancialInstitutionDashboardMetricsQuery;
 import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.valueobjects.*;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.aggregates.Subscription;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.BillingCycle;
 import com.smartfinance.smartfinancedriveplatform.billing.domain.model.valueobjects.SubscriptionStatus;
-import com.smartfinance.smartfinancedriveplatform.billing.infrastructure.persistence.jpa.repositories.SubscriptionJpaRepository;
+import com.smartfinance.smartfinancedriveplatform.billing.domain.repositories.SubscriptionRepository;
 import com.smartfinance.smartfinancedriveplatform.catalog.application.queryservices.VehicleQueryService;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.aggregates.Vehicle;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.queries.GetVehiclesByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.catalog.domain.model.valueobjects.UserId;
-import com.smartfinance.smartfinancedriveplatform.catalog.infrastructure.persistence.jpa.repositories.SpringDataVehicleRepository;
+import com.smartfinance.smartfinancedriveplatform.catalog.domain.repositories.VehicleRepository;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.aggregates.Prospect;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.model.aggregates.TestDrive;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.repositories.ProspectRepository;
 import com.smartfinance.smartfinancedriveplatform.crm.domain.repositories.TestDriveRepository;
-import com.smartfinance.smartfinancedriveplatform.financing.infrastructure.persistence.jpa.entities.CreditApplicationPersistenceEntity;
-import com.smartfinance.smartfinancedriveplatform.financing.infrastructure.persistence.jpa.repositories.SpringDataCreditApplicationRepository;
-import com.smartfinance.smartfinancedriveplatform.financing.infrastructure.persistence.jpa.repositories.SpringDataSimulationRepository;
-import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.persistence.jpa.repositories.SpringDataUserRepository;
+import com.smartfinance.smartfinancedriveplatform.financing.domain.model.aggregates.CreditApplication;
+import com.smartfinance.smartfinancedriveplatform.financing.domain.repositories.CreditApplicationRepository;
+import com.smartfinance.smartfinancedriveplatform.financing.domain.repositories.SimulationRepository;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.UserRepository;
 import com.smartfinance.smartfinancedriveplatform.partners.application.queryservices.FinancialEntityQueryService;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.DealershipRepository;
-import com.smartfinance.smartfinancedriveplatform.partners.infrastructure.persistence.jpa.repositories.SpringDataDealershipRepository;
-import com.smartfinance.smartfinancedriveplatform.partners.infrastructure.persistence.jpa.repositories.SpringDataFinancialEntityRepository;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.FinancialEntityRepository;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.model.valueobjects.Money;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,43 +40,42 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
+    private static final BigDecimal FX_PEN_TO_USD = BigDecimal.valueOf(3.75);
+
     private final VehicleQueryService vehicleQueryService;
+    private final VehicleRepository vehicleRepository;
     private final ProspectRepository prospectRepository;
     private final TestDriveRepository testDriveRepository;
     private final DealershipRepository dealershipRepository;
     private final FinancialEntityQueryService financialEntityQueryService;
-    private final SpringDataCreditApplicationRepository creditApplicationRepository;
-    private final SpringDataSimulationRepository simulationRepository;
-    private final SpringDataDealershipRepository springDataDealershipRepository;
-    private final SpringDataFinancialEntityRepository springDataFinancialEntityRepository;
-    private final SpringDataUserRepository springDataUserRepository;
-    private final SpringDataVehicleRepository springDataVehicleRepository;
-    private final SubscriptionJpaRepository subscriptionJpaRepository;
+    private final FinancialEntityRepository financialEntityRepository;
+    private final CreditApplicationRepository creditApplicationRepository;
+    private final SimulationRepository simulationRepository;
+    private final UserRepository userRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     public AnalyticsQueryServiceImpl(VehicleQueryService vehicleQueryService,
+                                     VehicleRepository vehicleRepository,
                                      ProspectRepository prospectRepository,
                                      TestDriveRepository testDriveRepository,
                                      DealershipRepository dealershipRepository,
                                      FinancialEntityQueryService financialEntityQueryService,
-                                     SpringDataCreditApplicationRepository creditApplicationRepository,
-                                     SpringDataSimulationRepository simulationRepository,
-                                     SpringDataDealershipRepository springDataDealershipRepository,
-                                     SpringDataFinancialEntityRepository springDataFinancialEntityRepository,
-                                     SpringDataUserRepository springDataUserRepository,
-                                     SpringDataVehicleRepository springDataVehicleRepository,
-                                     SubscriptionJpaRepository subscriptionJpaRepository) {
+                                     FinancialEntityRepository financialEntityRepository,
+                                     CreditApplicationRepository creditApplicationRepository,
+                                     SimulationRepository simulationRepository,
+                                     UserRepository userRepository,
+                                     SubscriptionRepository subscriptionRepository) {
         this.vehicleQueryService = vehicleQueryService;
+        this.vehicleRepository = vehicleRepository;
         this.prospectRepository = prospectRepository;
         this.testDriveRepository = testDriveRepository;
         this.dealershipRepository = dealershipRepository;
         this.financialEntityQueryService = financialEntityQueryService;
+        this.financialEntityRepository = financialEntityRepository;
         this.creditApplicationRepository = creditApplicationRepository;
         this.simulationRepository = simulationRepository;
-        this.springDataDealershipRepository = springDataDealershipRepository;
-        this.springDataFinancialEntityRepository = springDataFinancialEntityRepository;
-        this.springDataUserRepository = springDataUserRepository;
-        this.springDataVehicleRepository = springDataVehicleRepository;
-        this.subscriptionJpaRepository = subscriptionJpaRepository;
+        this.userRepository = userRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -173,14 +173,20 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
         // 4. Financing applications for dealer's vehicles
         List<UUID> vehicleIds = vehicles.stream().map(v -> v.getId().value()).toList();
-        List<CreditApplicationPersistenceEntity> applications = vehicleIds.isEmpty()
+        List<CreditApplication> applications = vehicleIds.isEmpty()
                 ? Collections.emptyList()
                 : creditApplicationRepository.findAllByVehicleIdIn(vehicleIds);
 
         int totalApplications = applications.size();
-        int pendingApplications = (int) applications.stream().filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()) || "SUBMITTED".equalsIgnoreCase(a.getStatus())).count();
-        int approvedApplications = (int) applications.stream().filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus())).count();
-        int rejectedApplications = (int) applications.stream().filter(a -> "REJECTED".equalsIgnoreCase(a.getStatus())).count();
+        int pendingApplications = (int) applications.stream()
+                .filter(a -> a.getStatus() != null && ("PENDING".equalsIgnoreCase(a.getStatus()) || "SUBMITTED".equalsIgnoreCase(a.getStatus()) || "IN_REVIEW".equalsIgnoreCase(a.getStatus())))
+                .count();
+        int approvedApplications = (int) applications.stream()
+                .filter(a -> a.getStatus() != null && ("APPROVED".equalsIgnoreCase(a.getStatus()) || "PRE_APPROVED".equalsIgnoreCase(a.getStatus())))
+                .count();
+        int rejectedApplications = (int) applications.stream()
+                .filter(a -> a.getStatus() != null && "REJECTED".equalsIgnoreCase(a.getStatus()))
+                .count();
 
         DealerFinancingMetrics financing = new DealerFinancingMetrics(
                 totalApplications, pendingApplications, approvedApplications, rejectedApplications
@@ -211,29 +217,37 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         int activeRateBenchmarks = entity.getRateBenchmarks().size();
 
         // Applications for this bank
-        List<CreditApplicationPersistenceEntity> applications = creditApplicationRepository.findAllByFinancialEntityId(financialEntityId);
+        List<CreditApplication> applications = creditApplicationRepository.findAllByFinancialEntityId(financialEntityId);
         int totalApplications = applications.size();
         int underReview = (int) applications.stream()
-                .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()) || "UNDER_REVIEW".equalsIgnoreCase(a.getStatus()) || "SUBMITTED".equalsIgnoreCase(a.getStatus())).count();
+                .filter(a -> a.getStatus() != null && ("PENDING".equalsIgnoreCase(a.getStatus()) || "UNDER_REVIEW".equalsIgnoreCase(a.getStatus()) || "SUBMITTED".equalsIgnoreCase(a.getStatus()) || "IN_REVIEW".equalsIgnoreCase(a.getStatus())))
+                .count();
         int approved = (int) applications.stream()
-                .filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus())).count();
+                .filter(a -> a.getStatus() != null && ("APPROVED".equalsIgnoreCase(a.getStatus()) || "PRE_APPROVED".equalsIgnoreCase(a.getStatus())))
+                .count();
         int rejected = (int) applications.stream()
-                .filter(a -> "REJECTED".equalsIgnoreCase(a.getStatus())).count();
+                .filter(a -> a.getStatus() != null && "REJECTED".equalsIgnoreCase(a.getStatus()))
+                .count();
         int disbursed = (int) applications.stream()
-                .filter(a -> "DISBURSED".equalsIgnoreCase(a.getStatus())).count();
+                .filter(a -> a.getStatus() != null && "DISBURSED".equalsIgnoreCase(a.getStatus()))
+                .count();
 
         double approvalRate = totalApplications > 0
                 ? Math.round(((approved + disbursed) * 100.0 / totalApplications) * 10.0) / 10.0
                 : 0.0;
 
         BigDecimal totalRequestedPen = applications.stream()
-                .map(CreditApplicationPersistenceEntity::getRequestedAmount)
+                .map(CreditApplication::getRequestedAmount)
+                .filter(Objects::nonNull)
+                .map(Money::amount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalDisbursedPen = applications.stream()
-                .filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus()) || "DISBURSED".equalsIgnoreCase(a.getStatus()))
-                .map(CreditApplicationPersistenceEntity::getRequestedAmount)
+                .filter(a -> a.getStatus() != null && ("APPROVED".equalsIgnoreCase(a.getStatus()) || "PRE_APPROVED".equalsIgnoreCase(a.getStatus()) || "DISBURSED".equalsIgnoreCase(a.getStatus()) || "ACCEPTED".equalsIgnoreCase(a.getStatus())))
+                .map(CreditApplication::getRequestedAmount)
+                .filter(Objects::nonNull)
+                .map(Money::amount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -267,23 +281,31 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
     @Override
     public AdminDashboardMetrics handle(GetAdminDashboardMetricsQuery query) {
-        int totalDealerships = (int) springDataDealershipRepository.count();
-        int activeDealerships = springDataDealershipRepository.countByActive(true);
-        int totalFinancialEntities = (int) springDataFinancialEntityRepository.count();
-        int totalUsers = (int) springDataUserRepository.count();
-        int totalVehicles = (int) springDataVehicleRepository.count();
+        int totalDealerships = (int) dealershipRepository.count();
+        int activeDealerships = dealershipRepository.countByActive(true);
+        int totalFinancialEntities = (int) financialEntityRepository.count();
+        int totalUsers = (int) userRepository.count();
+        int totalVehicles = (int) vehicleRepository.count();
         int totalCreditApplications = (int) creditApplicationRepository.count();
         int totalSimulations = (int) simulationRepository.count();
 
-        List<Subscription> activeSubscriptions = subscriptionJpaRepository.findAll().stream()
-                .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
-                .toList();
+        List<Subscription> activeSubscriptions = subscriptionRepository.findAllByStatus(SubscriptionStatus.ACTIVE);
         int totalActiveSubscriptions = activeSubscriptions.size();
 
         BigDecimal mrr = activeSubscriptions.stream()
                 .filter(s -> s.getPlan() != null && s.getPlan().getPrice() != null)
-                .map(s -> s.getPlan().getPrice())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(s -> {
+                    BigDecimal price = s.getPlan().getPrice();
+                    if (s.getPlan().getBillingCycle() == BillingCycle.ANNUAL) {
+                        price = price.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+                    }
+                    if ("PEN".equalsIgnoreCase(s.getPlan().getCurrency())) {
+                        price = price.divide(FX_PEN_TO_USD, 2, RoundingMode.HALF_UP);
+                    }
+                    return price;
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
 
         return new AdminDashboardMetrics(
                 totalDealerships,
@@ -298,3 +320,4 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         );
     }
 }
+

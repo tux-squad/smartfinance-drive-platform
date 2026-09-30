@@ -39,6 +39,16 @@ public class SubscriptionRepositoryAdapter implements SubscriptionRepository {
     }
 
     @Override
+    public List<Subscription> findAllByStatus(SubscriptionStatus status) {
+        return subscriptionJpaRepository.findAllByStatus(status);
+    }
+
+    @Override
+    public long count() {
+        return subscriptionJpaRepository.count();
+    }
+
+    @Override
     public Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId) {
         return subscriptionJpaRepository.findByStripeSubscriptionId(stripeSubscriptionId);
     }

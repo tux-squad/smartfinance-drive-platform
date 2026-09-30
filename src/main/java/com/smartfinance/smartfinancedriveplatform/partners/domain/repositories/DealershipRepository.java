@@ -52,4 +52,19 @@ public interface DealershipRepository {
      * @return true if exists.
      */
     boolean existsById(DealershipId id);
+
+    /**
+     * Returns the total count of dealerships.
+     *
+     * @return total count.
+     */
+    long count();
+
+    /**
+     * Returns the count of dealerships by active status.
+     *
+     * @param active whether to count active or inactive dealerships.
+     * @return count matching active flag.
+     */
+    int countByActive(boolean active);
 }
