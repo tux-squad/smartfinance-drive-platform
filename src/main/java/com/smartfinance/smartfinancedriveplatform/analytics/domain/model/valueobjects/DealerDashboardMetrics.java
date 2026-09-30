@@ -1,7 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.analytics.domain.model.valueobjects;
 
 /**
- * Value Object representing the consolidated dashboard metrics for an authenticated dealership.
+ * Value Object representing the consolidated factual dashboard metrics for an authenticated dealership.
  */
 public record DealerDashboardMetrics(
     String dealerUserId,
@@ -9,7 +9,5 @@ public record DealerDashboardMetrics(
     DealerCrmMetrics crm,
     DealerTestDriveMetrics testDrives,
     DealerFinancingMetrics financing,
-    int estimatedVehicleViews,
-    String membershipRoi,
     String period
 ) {}

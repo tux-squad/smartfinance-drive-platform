@@ -15,5 +15,6 @@ public record FinancialInstitutionDashboardResource(
         BigDecimal totalRequestedVolumePen,
         BigDecimal totalDisbursedVolumePen,
         BigDecimal averageTea,
-        int activeRateBenchmarksCount
+        int activeRateBenchmarksCount,
+        int totalSimulationsCount
 ) {}

@@ -111,8 +111,28 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 totalVehicles, availableVehicles, reservedVehicles, soldVehicles, totalPen, totalUsd
         );
 
-        // 2. CRM Leads metrics
-        List<Prospect> prospects = prospectRepository.findAllByDealerUserId(dealerUserId);
+        // 2. CRM Leads metrics (filtered by requested period)
+        MetricPeriod period = query.period() != null ? query.period() : MetricPeriod.ALL_TIME;
+        java.time.Instant fromInstant = null;
+        java.time.LocalDateTime fromDateTime = null;
+        if (period == MetricPeriod.LAST_30_DAYS) {
+            fromInstant = java.time.Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS);
+            fromDateTime = java.time.LocalDateTime.now().minusDays(30);
+        } else if (period == MetricPeriod.LAST_7_DAYS) {
+            fromInstant = java.time.Instant.now().minus(7, java.time.temporal.ChronoUnit.DAYS);
+            fromDateTime = java.time.LocalDateTime.now().minusDays(7);
+        }
+
+        java.time.Instant finalFromInstant = fromInstant;
+        java.time.LocalDateTime finalFromDateTime = fromDateTime;
+
+        List<Prospect> rawProspects = prospectRepository.findAllByDealerUserId(dealerUserId);
+        List<Prospect> prospects = (finalFromInstant == null)
+                ? rawProspects
+                : rawProspects.stream()
+                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(finalFromInstant))
+                        .toList();
+
         int totalLeads = prospects.size();
         int newLeads = (int) prospects.stream().filter(p -> "NEW".equalsIgnoreCase(p.getStatus())).count();
         int contactedLeads = (int) prospects.stream().filter(p -> "CONTACTED".equalsIgnoreCase(p.getStatus())).count();
@@ -129,11 +149,17 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 totalLeads, newLeads, contactedLeads, qualifiedLeads, inNegotiationLeads, closedWonLeads, closedLostLeads, conversionRate
         );
 
-        // 3. Test Drive metrics
+        // 3. Test Drive metrics (filtered by requested period)
         var dealershipOpt = dealershipRepository.findByUserId(dealerUserId);
-        List<TestDrive> testDrives = dealershipOpt.isPresent()
+        List<TestDrive> rawTestDrives = dealershipOpt.isPresent()
                 ? testDriveRepository.findAllByDealershipId(dealershipOpt.get().getId().value())
                 : Collections.emptyList();
+
+        List<TestDrive> testDrives = (finalFromDateTime == null)
+                ? rawTestDrives
+                : rawTestDrives.stream()
+                        .filter(t -> t.getScheduledDateTime() != null && !t.getScheduledDateTime().isBefore(finalFromDateTime))
+                        .toList();
 
         int totalTestDrives = testDrives.size();
         int pendingTestDrives = (int) testDrives.stream().filter(t -> "PENDING".equalsIgnoreCase(t.getStatus())).count();
@@ -160,24 +186,13 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 totalApplications, pendingApplications, approvedApplications, rejectedApplications
         );
 
-        // 5. Views and ROI estimations
-        int estimatedVehicleViews = (totalVehicles * 185) + (totalLeads * 30);
-        if (estimatedVehicleViews == 0 && totalVehicles > 0) {
-            estimatedVehicleViews = totalVehicles * 150;
-        }
-
-        double roiVal = 4.0 + (totalLeads * 0.4) + (closedWonLeads * 1.2);
-        String membershipRoi = String.format(Locale.US, "%.1fx", roiVal);
-
         return new DealerDashboardMetrics(
                 dealerUserId,
                 inventory,
                 crm,
                 testDriveMetrics,
                 financing,
-                estimatedVehicleViews,
-                membershipRoi,
-                query.period().name()
+                period.name()
         );
     }
 
@@ -245,7 +260,8 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 totalRequestedPen,
                 totalDisbursedPen,
                 averageTea,
-                activeRateBenchmarks > 0 ? activeRateBenchmarks : simulationsCount
+                activeRateBenchmarks,
+                simulationsCount
         ));
     }
 

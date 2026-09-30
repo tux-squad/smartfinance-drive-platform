@@ -55,8 +55,6 @@ public final class DealerDashboardResourceFromModelAssembler {
                 crm,
                 testDrives,
                 financing,
-                model.estimatedVehicleViews(),
-                model.membershipRoi(),
                 model.period()
         );
     }

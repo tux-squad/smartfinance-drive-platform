@@ -4,15 +4,22 @@ import com.smartfinance.smartfinancedriveplatform.analytics.application.queryser
 import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.queries.GetAdminDashboardMetricsQuery;
 import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.queries.GetDealerDashboardMetricsQuery;
 import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.queries.GetFinancialInstitutionDashboardMetricsQuery;
+import com.smartfinance.smartfinancedriveplatform.analytics.domain.model.valueobjects.MetricPeriod;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.resources.AdminDashboardResource;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.resources.DealerDashboardResource;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.resources.FinancialInstitutionDashboardResource;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.transform.AdminDashboardResourceFromModelAssembler;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.transform.DealerDashboardResourceFromModelAssembler;
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.transform.FinancialInstitutionDashboardResourceFromModelAssembler;
+import com.smartfinance.smartfinancedriveplatform.partners.application.queryservices.FinancialEntityQueryService;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,44 +29,82 @@ import java.util.UUID;
 
 /**
  * REST controller for unified Dashboard Analytics across Dealer, Financial Institution, and Admin portals.
+ * Fully secured against IDOR using SpEL @ownershipChecker and contextual tenant enforcement.
  */
 @RestController
 @RequestMapping(value = "/api/v1/analytics", produces = "application/json")
 public class AnalyticsController {
 
     private final AnalyticsQueryService analyticsQueryService;
+    private final FinancialEntityQueryService financialEntityQueryService;
+    private final OwnershipChecker ownershipChecker;
 
-    public AnalyticsController(AnalyticsQueryService analyticsQueryService) {
+    public AnalyticsController(AnalyticsQueryService analyticsQueryService,
+                               FinancialEntityQueryService financialEntityQueryService,
+                               OwnershipChecker ownershipChecker) {
         this.analyticsQueryService = analyticsQueryService;
+        this.financialEntityQueryService = financialEntityQueryService;
+        this.ownershipChecker = ownershipChecker;
     }
 
     /**
      * GET /api/v1/analytics/dealer
-     * Aggregated metrics for Dealerships (Inventory, CRM Leads, Test Drives, Credit applications).
+     * Aggregated factual metrics for Dealerships (Inventory, CRM Leads, Test Drives, Credit applications).
+     * Protected against IDOR: non-admins can strictly only view their own dealership data.
      */
     @GetMapping("/dealer")
-    @PreAuthorize("hasAnyRole('DEALER', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('DEALER') and (#dealerUserId == null or @ownershipChecker.isUserSelfStr(#dealerUserId, authentication)))")
     public ResponseEntity<DealerDashboardResource> getDealerMetrics(
-            @RequestParam(required = false) String dealerUserId) {
+            @RequestParam(required = false) String dealerUserId,
+            @RequestParam(defaultValue = "ALL_TIME") String period) {
 
-        String targetDealerId = (dealerUserId != null && !dealerUserId.isBlank())
+        String currentUserId = SecurityUtils.getRequiredCurrentUserId();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && dealerUserId != null && !dealerUserId.isBlank() && !dealerUserId.equals(currentUserId)) {
+            throw new AccessDeniedException("iam.error.accessDenied.notOwner");
+        }
+
+        String targetDealerId = (isAdmin && dealerUserId != null && !dealerUserId.isBlank())
                 ? dealerUserId
-                : SecurityUtils.getRequiredCurrentUserId();
+                : currentUserId;
 
-        var metrics = analyticsQueryService.handle(new GetDealerDashboardMetricsQuery(targetDealerId));
+        MetricPeriod metricPeriod;
+        try {
+            metricPeriod = MetricPeriod.valueOf(period.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            metricPeriod = MetricPeriod.ALL_TIME;
+        }
+
+        var metrics = analyticsQueryService.handle(new GetDealerDashboardMetricsQuery(targetDealerId, metricPeriod));
         return ResponseEntity.ok(DealerDashboardResourceFromModelAssembler.toResource(metrics));
     }
 
     /**
      * GET /api/v1/analytics/financial-institution?financialEntityId={uuid}
-     * Aggregated metrics for Financial Entities (Applications pipeline, Approval rate, Disbursed volume, TEA benchmark, Simulations).
+     * Aggregated metrics for Financial Entities.
+     * Protected against IDOR: non-admins can strictly only view their own financial entity data.
      */
     @GetMapping("/financial-institution")
-    @PreAuthorize("hasAnyRole('FINANCIAL_INSTITUTION', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and (#financialEntityId == null or @ownershipChecker.isFinancialEntityOwner(#financialEntityId, authentication)))")
     public ResponseEntity<FinancialInstitutionDashboardResource> getFinancialInstitutionMetrics(
-            @RequestParam UUID financialEntityId) {
+            @RequestParam(required = false) UUID financialEntityId) {
 
-        return analyticsQueryService.handle(new GetFinancialInstitutionDashboardMetricsQuery(financialEntityId))
+        String currentUserId = SecurityUtils.getRequiredCurrentUserId();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        UUID targetEntityId = financialEntityId;
+        if (targetEntityId == null) {
+            targetEntityId = financialEntityQueryService.handle(new GetFinancialEntityByUserIdQuery(currentUserId))
+                    .map(e -> e.getId().value())
+                    .orElseThrow(() -> new AccessDeniedException("partners.error.financialEntity.notAssociated"));
+        } else if (!isAdmin && !ownershipChecker.isFinancialEntityOwner(targetEntityId, auth)) {
+            throw new AccessDeniedException("partners.error.accessDenied.notOwner");
+        }
+
+        return analyticsQueryService.handle(new GetFinancialInstitutionDashboardMetricsQuery(targetEntityId))
                 .map(FinancialInstitutionDashboardResourceFromModelAssembler::toResource)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -67,7 +112,7 @@ public class AnalyticsController {
 
     /**
      * GET /api/v1/analytics/admin
-     * Platform-wide aggregated metrics for Administrators (Users, Dealerships, Banks, Catalog, Subscriptions, MRR).
+     * Platform-wide aggregated metrics for Administrators.
      */
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")

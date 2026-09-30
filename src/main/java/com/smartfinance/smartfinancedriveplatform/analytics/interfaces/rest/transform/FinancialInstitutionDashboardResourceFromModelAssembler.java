@@ -22,7 +22,8 @@ public final class FinancialInstitutionDashboardResourceFromModelAssembler {
                 model.totalRequestedVolumePen(),
                 model.totalDisbursedVolumePen(),
                 model.averageTea(),
-                model.activeRateBenchmarksCount()
+                model.activeRateBenchmarksCount(),
+                model.totalSimulationsCount()
         );
     }
 }

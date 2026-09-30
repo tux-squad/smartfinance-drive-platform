@@ -6,7 +6,5 @@ public record DealerDashboardResource(
         DealerCrmMetricsResource crm,
         DealerTestDriveMetricsResource testDrives,
         DealerFinancingMetricsResource financing,
-        int estimatedVehicleViews,
-        String membershipRoi,
         String period
 ) {}
