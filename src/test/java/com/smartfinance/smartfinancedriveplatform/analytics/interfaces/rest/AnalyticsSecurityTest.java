@@ -10,7 +10,6 @@ import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.reso
 import com.smartfinance.smartfinancedriveplatform.analytics.interfaces.rest.resources.FinancialInstitutionDashboardResource;
 import com.smartfinance.smartfinancedriveplatform.partners.application.queryservices.FinancialEntityQueryService;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity;
-import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
@@ -107,10 +106,10 @@ class AnalyticsSecurityTest {
     @Test
     @DisplayName("DEALER should be blocked with 403 AccessDeniedException when attempting IDOR to read another dealer's data")
     void dealerCannotAccessOtherDealerMetrics_IdorBlocked() {
-        authenticateAs(dealerUserId, "DEALER");
+        authenticateAs(attackerDealerUserId, "DEALER");
 
         assertThrows(AccessDeniedException.class, () ->
-                analyticsController.getDealerMetrics("other-dealer-user-id", "ALL_TIME"));
+                analyticsController.getDealerMetrics(dealerUserId, "ALL_TIME"));
     }
 
     @Test
