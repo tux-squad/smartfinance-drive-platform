@@ -213,6 +213,6 @@ public class OwnershipChecker {
 
     private String getUserIdFromAuthentication(Authentication authentication) {
         if (authentication == null) return null;
-        return SecurityUtils.getCurrentUserId().orElse(null);
+        return SecurityUtils.getCurrentUserId().orElse(authentication.getName());
     }
 }
