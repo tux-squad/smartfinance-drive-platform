@@ -219,6 +219,12 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 1.17 Iniciar Verificación Corporativa B2B con OTP por Correo (/me)
 * **Método**: `POST` | **Ruta**: `/api/v1/users/me/corporate-verification/initiate` | **Acceso**: Autenticado
 * **Descripción**: Inicia el flujo de verificación institucional para una Entidad Financiera (Banco) o Concesionaria (Dealership). Valida que el RUC exista y se encuentre ACTIVO/HABIDO en SUNAT, verifica que el correo corporativo pertenezca al dominio institucional autorizado (ej. `@viabcp.com`, `@interbank.pe`, `@autoland.com.pe`), genera un código criptográfico OTP de 6 dígitos con hash SHA-256 (TTL de 10 minutos, máx. 3 intentos) y lo despacha por correo transaccional.
+* **Seguridad y Protección Anti-Abuso**:
+  * **Rate Limiter de Red**: Protegido por `RateLimitingFilter` (máximo 10 peticiones por minuto por IP; exceso retorna `429 Too Many Requests`).
+  * **Tope Diario de Sesiones**: Máximo 5 solicitudes de verificación corporativa por usuario en una ventana de 24 horas (`iam.error.corporateVerification.dailyLimitExceeded`).
+  * **Cooldown Anti-Spam (60 segundos)**: Si el usuario cuenta con una sesión pendiente iniciada hace menos de 60 segundos, se rechaza la re-emisión para mitigar saturación de correo y consumo innecesario de la API SUNAT (`iam.error.corporateVerification.cooldownActive`).
+  * **Invalidación de Sesiones Huérfanas**: Al emitir un nuevo código para el mismo usuario y RUC, las sesiones `PENDING` previas son invalidadas de inmediato a estado `EXPIRED`, neutralizando cualquier intento de alternar o ciclar sesiones.
+  * **Políticas Fail-Closed**: En producción, si el servidor SMTP no se encuentra disponible o la entrega falla, la transacción se aborta con error, evitando falsos positivos sin entrega real. Los códigos OTP jamás se registran en los logs del servidor.
 
 ```json
 // Input Body
@@ -599,6 +605,9 @@ Authorization: Bearer <tu_access_token_jwt>
 ### 4.16 Consulta SUNAT para Autocompletado de Perfil Corporativo y Dominios Autorizados
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/corporate-verification/lookup/{ruc}` | **Acceso**: Autenticado
 * **Descripción**: Valida el RUC peruano de 11 dígitos contra el servicio oficial de SUNAT, detecta automáticamente si corresponde a una **Entidad Financiera** (`ROLE_FINANCIAL_INSTITUTION`) o a una **Concesionaria** (`ROLE_DEALER`), y retorna la información oficial requerida para rellenar automáticamente los campos del perfil corporativo (Razón Social, Dirección Fiscal, Ubigeo, Logo) junto con la lista blanca de dominios de correo institucional autorizados para verificación OTP (ej. `@viabcp.com`, `@interbank.pe`, `@autoland.com.pe`, `@derco.pe`).
+* **Seguridad y Validación**:
+  * **Rate Limiting**: Protegido por `RateLimitingFilter` (10 peticiones/minuto por IP).
+  * **Clasificación Estricta**: Empresas que no pertenezcan al catálogo institucional ni posean actividad económica principal automotriz (CIIU 451) o financiera (CIIU 64/66) son clasificadas como `UNKNOWN` y rechazadas con `400 Bad Request` (`iam.error.sunat.notAuthorizedCorporateEntity`). RUCs con CIIU nulo o en blanco no son asumidos como corporativos.
 
 ```json
 // Output Response (200 OK)
