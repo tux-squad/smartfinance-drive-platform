@@ -20,16 +20,18 @@ import java.util.UUID;
 public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity> {
 
     private final FinancialEntityId id;
+    private String userId;
     private String name;
     private String logoUrl;
     private String bannerUrl;
     private final List<RateBenchmark> rateBenchmarks = new ArrayList<>();
 
     /**
-     * Constructor for reconstituting from persistence.
+     * Constructor for reconstituting from persistence with userId.
      */
-    public FinancialEntity(FinancialEntityId id, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
+    public FinancialEntity(FinancialEntityId id, String userId, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
         this.id = id;
+        this.userId = userId;
         this.name = name;
         setLogoUrl(logoUrl);
         setBannerUrl(bannerUrl);
@@ -38,8 +40,12 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
         }
     }
 
+    public FinancialEntity(FinancialEntityId id, String name, String logoUrl, String bannerUrl, List<RateBenchmark> rateBenchmarks) {
+        this(id, null, name, logoUrl, bannerUrl, rateBenchmarks);
+    }
+
     public FinancialEntity(FinancialEntityId id, String name, List<RateBenchmark> rateBenchmarks) {
-        this(id, name, null, null, rateBenchmarks);
+        this(id, null, name, null, null, rateBenchmarks);
     }
 
     /**
@@ -47,6 +53,7 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
      */
     public FinancialEntity(String name, String logoUrl, String bannerUrl) {
         this.id = new FinancialEntityId(UUID.randomUUID());
+        this.userId = null;
         setName(name);
         setLogoUrl(logoUrl);
         setBannerUrl(bannerUrl);
@@ -54,6 +61,10 @@ public class FinancialEntity extends AbstractDomainAggregateRoot<FinancialEntity
 
     public FinancialEntity(String name) {
         this(name, null, null);
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId != null ? userId.trim() : null;
     }
 
     public void setName(String name) {

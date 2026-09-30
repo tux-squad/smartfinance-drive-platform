@@ -59,6 +59,21 @@ public interface FinancialEntityRepository {
     boolean existsByName(String name);
 
     /**
+     * Finds a FinancialEntity by the owner user ID.
+     *
+     * @param userId The authenticated user ID.
+     * @return An Optional containing the aggregate if found.
+     */
+    Optional<FinancialEntity> findByUserId(String userId);
+
+    /**
+     * Returns the total count of financial entities.
+     *
+     * @return count of entities.
+     */
+    long count();
+
+    /**
      * Deletes a FinancialEntity by its identifier.
      *
      * @param id The financial entity ID.

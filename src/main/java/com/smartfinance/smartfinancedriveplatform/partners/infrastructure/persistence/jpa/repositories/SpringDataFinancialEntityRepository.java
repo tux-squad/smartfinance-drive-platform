@@ -26,4 +26,5 @@ public interface SpringDataFinancialEntityRepository extends JpaRepository<Finan
      * @return true if it exists, false otherwise.
      */
     boolean existsByName(String name);
+    Optional<FinancialEntityPersistenceEntity> findByUserId(String userId);
 }
