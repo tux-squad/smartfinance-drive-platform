@@ -125,5 +125,10 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     public List<String> findDistinctBrands() {
         return springDataVehicleRepository.findDistinctBrands();
     }
+
+    @Override
+    public long count() {
+        return springDataVehicleRepository.count();
+    }
 }
 

@@ -59,6 +59,37 @@ public interface FinancialEntityRepository {
     boolean existsByName(String name);
 
     /**
+     * Finds a FinancialEntity by the owner user ID.
+     *
+     * @param userId The authenticated user ID.
+     * @return An Optional containing the aggregate if found.
+     */
+    Optional<FinancialEntity> findByUserId(String userId);
+
+    /**
+     * Finds a FinancialEntity by its RUC.
+     *
+     * @param ruc The 11-digit RUC.
+     * @return An Optional containing the aggregate if found.
+     */
+    Optional<FinancialEntity> findByRuc(String ruc);
+
+    /**
+     * Checks if a FinancialEntity exists by its RUC.
+     *
+     * @param ruc The 11-digit RUC.
+     * @return true if it exists, false otherwise.
+     */
+    boolean existsByRuc(String ruc);
+
+    /**
+     * Returns the total count of financial entities.
+     *
+     * @return count of entities.
+     */
+    long count();
+
+    /**
      * Deletes a FinancialEntity by its identifier.
      *
      * @param id The financial entity ID.

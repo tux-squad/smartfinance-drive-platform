@@ -30,6 +30,8 @@ public final class FinancialEntityPersistenceAssembler {
             entity = new FinancialEntityPersistenceEntity();
         }
         entity.setId(domain.getId().value());
+        entity.setUserId(domain.getUserId());
+        entity.setRuc(domain.getRuc());
         entity.setName(domain.getName());
         entity.setLogoUrl(domain.getLogoUrl());
         entity.setBannerUrl(domain.getBannerUrl());
@@ -72,6 +74,8 @@ public final class FinancialEntityPersistenceAssembler {
 
         return new FinancialEntity(
             new FinancialEntityId(entity.getId()),
+            entity.getUserId(),
+            entity.getRuc(),
             entity.getName(),
             entity.getLogoUrl(),
             entity.getBannerUrl(),

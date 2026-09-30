@@ -14,4 +14,5 @@ import java.util.UUID;
 @Repository
 public interface SpringDataSimulationRepository extends JpaRepository<SimulationPersistenceEntity, UUID> {
     Page<SimulationPersistenceEntity> findByUserId(String userId, Pageable pageable);
+    int countByFinancialEntityId(String financialEntityId);
 }

@@ -5,6 +5,7 @@ import com.smartfinance.smartfinancedriveplatform.partners.application.queryserv
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.commands.DeleteFinancialEntityCommand;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetAllFinancialEntitiesQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery;
+import com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.AddRateBenchmarkResource;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resources.CreateFinancialEntityResource;
@@ -14,7 +15,12 @@ import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.trans
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.CreateFinancialEntityCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.FinancialEntityResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.UpdateFinancialEntityCommandFromResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
+import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,11 +40,14 @@ public class FinancialEntitiesController {
 
     private final FinancialEntityCommandService financialEntityCommandService;
     private final FinancialEntityQueryService financialEntityQueryService;
+    private final OwnershipChecker ownershipChecker;
 
     public FinancialEntitiesController(FinancialEntityCommandService financialEntityCommandService, 
-                                       FinancialEntityQueryService financialEntityQueryService) {
+                                       FinancialEntityQueryService financialEntityQueryService,
+                                       OwnershipChecker ownershipChecker) {
         this.financialEntityCommandService = financialEntityCommandService;
         this.financialEntityQueryService = financialEntityQueryService;
+        this.ownershipChecker = ownershipChecker;
     }
 
     /**
@@ -51,7 +60,19 @@ public class FinancialEntitiesController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
     public ResponseEntity<FinancialEntityResource> createFinancialEntity(@jakarta.validation.Valid @RequestBody CreateFinancialEntityResource resource) {
-        var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String authUserId = SecurityUtils.getCurrentUserId().orElse(null);
+
+        if (!isAdmin && resource.userId() != null && !resource.userId().isBlank() && !resource.userId().equals(authUserId)) {
+            throw new AccessDeniedException("partners.error.accessDenied.cannotImpersonateUserId");
+        }
+
+        String targetUserId = isAdmin
+                ? ((resource.userId() != null && !resource.userId().isBlank()) ? resource.userId().trim() : authUserId)
+                : authUserId;
+
+        var command = CreateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(resource, targetUserId);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
                 .map(entity -> new ResponseEntity<>(
@@ -59,6 +80,21 @@ public class FinancialEntitiesController {
                         HttpStatus.CREATED
                 ))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * GET /api/v1/financial-entities/me
+     * Retrieves the financial entity associated with the current authenticated institution user.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('FINANCIAL_INSTITUTION', 'ADMIN')")
+    public ResponseEntity<FinancialEntityResource> getMyFinancialEntity() {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var query = new GetFinancialEntityByUserIdQuery(authUserId);
+        var entityOpt = financialEntityQueryService.handle(query);
+        return entityOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
@@ -70,10 +106,17 @@ public class FinancialEntitiesController {
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<List<FinancialEntityResource>> getAllFinancialEntities() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String currentUserId = SecurityUtils.getCurrentUserId().orElse(null);
+
         var query = new GetAllFinancialEntitiesQuery();
         var entities = financialEntityQueryService.handle(query);
         var resources = entities.stream()
-                .map(FinancialEntityResourceFromEntityAssembler::toResourceFromEntity)
+                .map(entity -> {
+                    boolean isOwnerOrAdmin = isAdmin || (currentUserId != null && currentUserId.equals(entity.getUserId()));
+                    return FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity, isOwnerOrAdmin);
+                })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(resources);
     }
@@ -88,10 +131,17 @@ public class FinancialEntitiesController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'FINANCIAL_ANALYST', 'FINANCIAL_INSTITUTION', 'DEALER')")
     public ResponseEntity<FinancialEntityResource> getFinancialEntityById(@PathVariable UUID id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String currentUserId = SecurityUtils.getCurrentUserId().orElse(null);
+
         var query = new GetFinancialEntityByIdQuery(new FinancialEntityId(id));
         var entityOpt = financialEntityQueryService.handle(query);
         return entityOpt
-                .map(entity -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity)))
+                .map(entity -> {
+                    boolean isOwnerOrAdmin = isAdmin || (currentUserId != null && currentUserId.equals(entity.getUserId()));
+                    return ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity, isOwnerOrAdmin));
+                })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -104,10 +154,16 @@ public class FinancialEntitiesController {
      * @return The updated financial entity resource payload.
      */
     @PostMapping("/{id}/rate-benchmarks")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")
     public ResponseEntity<FinancialEntityResource> addRateBenchmark(
             @PathVariable UUID id,
             @jakarta.validation.Valid @RequestBody AddRateBenchmarkResource resource) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !ownershipChecker.isFinancialEntityOwner(id, auth)) {
+            throw new AccessDeniedException("partners.error.accessDenied.notOwner");
+        }
+
         var command = AddRateBenchmarkCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
@@ -120,18 +176,33 @@ public class FinancialEntitiesController {
 
     /**
      * PUT /api/v1/financial-entities/{id}
-     * Updates an existing financial entity name.
+     * Updates an existing financial entity.
      *
      * @param id       The financial entity UUID.
      * @param resource The update payload.
      * @return The updated financial entity resource payload.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCIAL_INSTITUTION')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")
     public ResponseEntity<FinancialEntityResource> updateFinancialEntity(
             @PathVariable UUID id,
             @jakarta.validation.Valid @RequestBody UpdateFinancialEntityResource resource) {
-        var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !ownershipChecker.isFinancialEntityOwner(id, auth)) {
+            throw new AccessDeniedException("partners.error.accessDenied.notOwner");
+        }
+
+        if (!isAdmin && resource.userId() != null && !resource.userId().isBlank()) {
+            throw new AccessDeniedException("partners.error.accessDenied.cannotTransferOwnership");
+        }
+
+        String targetUserId = (isAdmin && resource.userId() != null && !resource.userId().isBlank())
+                ? resource.userId().trim()
+                : null;
+
+        var command = UpdateFinancialEntityCommandFromResourceAssembler.toCommandFromResource(id, resource, targetUserId);
         var entityOpt = financialEntityCommandService.handle(command);
         return entityOpt
                 .map(entity -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(entity)))

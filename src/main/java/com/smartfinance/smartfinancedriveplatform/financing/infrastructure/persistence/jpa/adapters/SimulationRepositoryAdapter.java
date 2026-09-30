@@ -67,4 +67,14 @@ public class SimulationRepositoryAdapter implements SimulationRepository {
     public boolean existsById(SimulationId id) {
         return springDataSimulationRepository.existsById(id.value());
     }
+
+    @Override
+    public int countByFinancialEntityId(String financialEntityId) {
+        return springDataSimulationRepository.countByFinancialEntityId(financialEntityId);
+    }
+
+    @Override
+    public long count() {
+        return springDataSimulationRepository.count();
+    }
 }

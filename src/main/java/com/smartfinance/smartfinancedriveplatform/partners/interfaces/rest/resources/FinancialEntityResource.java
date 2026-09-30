@@ -8,12 +8,18 @@ import java.util.UUID;
  */
 public record FinancialEntityResource(
     UUID id,
+    String userId,
+    String ruc,
     String name,
     String logoUrl,
     String bannerUrl,
     List<RateBenchmarkResource> rateBenchmarks
 ) {
+    public FinancialEntityResource(UUID id, String name, String logoUrl, String bannerUrl, List<RateBenchmarkResource> rateBenchmarks) {
+        this(id, null, null, name, logoUrl, bannerUrl, rateBenchmarks);
+    }
+
     public FinancialEntityResource(UUID id, String name, List<RateBenchmarkResource> rateBenchmarks) {
-        this(id, name, null, null, rateBenchmarks);
+        this(id, null, null, name, null, null, rateBenchmarks);
     }
 }

@@ -63,6 +63,28 @@ public class FinancialEntityRepositoryAdapter implements FinancialEntityReposito
     }
 
     @Override
+    public Optional<FinancialEntity> findByUserId(String userId) {
+        return springDataFinancialEntityRepository.findByUserId(userId)
+                .map(FinancialEntityPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public Optional<FinancialEntity> findByRuc(String ruc) {
+        return springDataFinancialEntityRepository.findByRuc(ruc)
+                .map(FinancialEntityPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public boolean existsByRuc(String ruc) {
+        return springDataFinancialEntityRepository.existsByRuc(ruc);
+    }
+
+    @Override
+    public long count() {
+        return springDataFinancialEntityRepository.count();
+    }
+
+    @Override
     public void deleteById(FinancialEntityId id) {
         springDataFinancialEntityRepository.deleteById(id.value());
     }

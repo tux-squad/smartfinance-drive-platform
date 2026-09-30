@@ -21,8 +21,15 @@ public final class UpdateFinancialEntityCommandFromResourceAssembler {
      * @return The command.
      */
     public static UpdateFinancialEntityCommand toCommandFromResource(UUID id, UpdateFinancialEntityResource resource) {
+        return toCommandFromResource(id, resource, resource.userId());
+    }
+
+    public static UpdateFinancialEntityCommand toCommandFromResource(UUID id, UpdateFinancialEntityResource resource, String userId) {
+        String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : resource.userId();
         return new UpdateFinancialEntityCommand(
             new FinancialEntityId(id),
+            effectiveUserId,
+            resource.ruc(),
             resource.name(),
             resource.logoUrl(),
             resource.bannerUrl()

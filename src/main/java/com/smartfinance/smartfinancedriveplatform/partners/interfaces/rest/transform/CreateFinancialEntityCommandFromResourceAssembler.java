@@ -17,7 +17,14 @@ public final class CreateFinancialEntityCommandFromResourceAssembler {
      * @return The command.
      */
     public static CreateFinancialEntityCommand toCommandFromResource(CreateFinancialEntityResource resource) {
+        return toCommandFromResource(resource, resource.userId());
+    }
+
+    public static CreateFinancialEntityCommand toCommandFromResource(CreateFinancialEntityResource resource, String userId) {
+        String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : resource.userId();
         return new CreateFinancialEntityCommand(
+            effectiveUserId,
+            resource.ruc(),
             resource.name(),
             resource.logoUrl(),
             resource.bannerUrl()
