@@ -208,7 +208,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 .filter(a -> "DISBURSED".equalsIgnoreCase(a.getStatus())).count();
 
         double approvalRate = totalApplications > 0
-                ? Math.round((approved * 100.0 / totalApplications) * 10.0) / 10.0
+                ? Math.round(((approved + disbursed) * 100.0 / totalApplications) * 10.0) / 10.0
                 : 0.0;
 
         BigDecimal totalRequestedPen = applications.stream()
