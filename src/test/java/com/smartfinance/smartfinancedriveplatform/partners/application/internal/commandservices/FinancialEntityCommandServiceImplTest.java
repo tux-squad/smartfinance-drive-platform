@@ -72,6 +72,20 @@ class FinancialEntityCommandServiceImplTest {
     }
 
     @Test
+    @DisplayName("LinkCommand: throws exception if entity with matching name exists but has a different non-null RUC")
+    void linkThrowsWhenFallbackByNameHasDifferentRuc() {
+        FinancialEntity entity = new FinancialEntity(new FinancialEntityId(UUID.randomUUID()), null, "20555555555", "Banco BCP", null, null, new ArrayList<>());
+        when(financialEntityRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(financialEntityRepository.findByRuc("20100047218")).thenReturn(Optional.empty());
+        when(financialEntityRepository.findByName("Banco BCP")).thenReturn(Optional.of(entity));
+
+        var ex = assertThrows(DomainValidationException.class, () ->
+                commandService.handle(new LinkFinancialEntityToUserCommand("user-1", "20100047218", "Banco BCP")));
+
+        assertEquals("partners.error.financialEntityRucMismatch", ex.getMessage());
+    }
+
+    @Test
     @DisplayName("LinkCommand: creates new entity when neither user nor RUC nor name matches existing")
     void linkCreatesNewEntityWhenNoMatch() {
         when(financialEntityRepository.findByUserId("user-1")).thenReturn(Optional.empty());

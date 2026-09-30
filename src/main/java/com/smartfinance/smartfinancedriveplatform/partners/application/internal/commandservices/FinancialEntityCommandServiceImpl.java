@@ -151,6 +151,9 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
             if (existingByName.isPresent()) {
                 FinancialEntity entity = existingByName.get();
                 if (entity.getUserId() == null) {
+                    if (ruc != null && entity.getRuc() != null && !entity.getRuc().equals(ruc)) {
+                        throw new DomainValidationException("partners.error.financialEntityRucMismatch");
+                    }
                     entity.setUserId(userId);
                     if (entity.getRuc() == null && ruc != null && !ruc.isBlank()) {
                         entity.setRuc(ruc);
