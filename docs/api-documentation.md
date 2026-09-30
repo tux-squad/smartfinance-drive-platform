@@ -313,12 +313,15 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.1 Listar Entidades Financieras
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities` | **Acceso**: Autenticado
+* **Privacidad de Identificadores Internos**: El campo `userId` (identificador interno de la cuenta titular) se sanitiza a `null` para consultas públicas o de terceros (roles `USER`, `DEALER`, `FINANCIAL_ANALYST` u otras entidades). Solo el propietario de la entidad o un `ROLE_ADMIN` visualizan el `userId`.
 
 ```json
 // Output Response (200 OK)
 [
   {
     "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+    "userId": null,
+    "ruc": "20100047218",
     "name": "Banco de Credito BCP",
     "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/logos/bcp.png",
     "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
@@ -358,6 +361,7 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 4.3 Obtener Entidad Financiera por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: Autenticado
+* **Privacidad**: El campo `userId` solo se expone al propietario de `{id}` o a un `ROLE_ADMIN`; para terceros se sanitiza a `null`.
 
 ### 4.4 Actualizar Entidad Financiera
 * **Método**: `PUT` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`, `ROLE_FINANCIAL_INSTITUTION`
