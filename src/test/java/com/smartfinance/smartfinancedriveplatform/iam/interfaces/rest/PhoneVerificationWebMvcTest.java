@@ -8,6 +8,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationResult;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationStatus;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.ExternalServiceUnavailableException;
 import com.smartfinance.smartfinancedriveplatform.shared.interfaces.rest.setup.GlobalExceptionHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -167,5 +168,25 @@ class PhoneVerificationWebMvcTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/phone-verification/send should return 503 Service Unavailable when external gateway is unavailable")
+    void sendPhoneVerificationServiceUnavailable() throws Exception {
+        when(commandService.handle(any(SendPhoneVerificationCodeCommand.class)))
+                .thenThrow(new ExternalServiceUnavailableException("iam.error.phoneVerification.serviceUnavailable"));
+
+        String payload = """
+                {
+                    "phoneNumber": "+51 993913924"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/phone-verification/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"));
     }
 }

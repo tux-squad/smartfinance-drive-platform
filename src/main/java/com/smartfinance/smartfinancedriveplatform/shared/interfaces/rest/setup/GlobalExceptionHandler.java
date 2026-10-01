@@ -1,6 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.shared.interfaces.rest.setup;
 
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.ExternalServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -89,25 +90,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex) {
-        if ("iam.error.phoneVerification.serviceUnavailable".equals(ex.getMessage())) {
-            logger.error("Phone verification service unavailable: {}", ex.getMessage());
-            var body = new ErrorResponse(
-                    HttpStatus.SERVICE_UNAVAILABLE.value(),
-                    "Service Unavailable",
-                    "El servicio de verificación por WhatsApp no está disponible en este momento. Inténtelo más tarde."
-            );
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
-        }
-        logger.warn("Invalid state: {}", ex.getMessage());
-        var body = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleExternalServiceUnavailableException(ExternalServiceUnavailableException ex) {
+        logger.error("External service unavailable: {}", ex.getMessage());
+        var body = new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                "El servicio de verificación por WhatsApp no está disponible en este momento. Inténtelo más tarde."
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        logger.warn("Invalid argument: {}", ex.getMessage());
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(RuntimeException ex) {
+        logger.warn("Invalid argument/state: {}", ex.getMessage());
         var body = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }

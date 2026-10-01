@@ -1,6 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication;
 
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.ExternalServiceUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,13 +81,13 @@ class FactilizaWhatsAppSenderServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should fail-closed and throw IllegalStateException in production when apiKey is blank and allowEmulated is false")
+    @DisplayName("Should fail-closed and throw ExternalServiceUnavailableException in production when apiKey is blank and allowEmulated is false")
     void shouldFailClosedWhenApiKeyIsBlankAndEmulationDisabled() {
         FactilizaWhatsAppSenderServiceImpl unconfiguredService = new FactilizaWhatsAppSenderServiceImpl(
                 "https://apiwsp.factiliza.com", "smartfinance-test", "", false, 5
         );
 
-        assertThrows(IllegalStateException.class, () -> unconfiguredService.sendVerificationCode("51993913924", "123456"));
+        assertThrows(ExternalServiceUnavailableException.class, () -> unconfiguredService.sendVerificationCode("51993913924", "123456"));
     }
 
     @Test

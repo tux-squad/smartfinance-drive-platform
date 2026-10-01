@@ -4,6 +4,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservic
 import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication.resources.FactilizaSendTextRequest;
 import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication.resources.FactilizaSendTextResponse;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.ExternalServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,7 +86,7 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
                 return;
             }
             LOGGER.error("Factiliza WhatsApp API key is not configured and WhatsApp emulation is disabled. Failed to dispatch OTP to [{}]", maskedPhone);
-            throw new IllegalStateException("iam.error.phoneVerification.serviceUnavailable");
+            throw new ExternalServiceUnavailableException("iam.error.phoneVerification.serviceUnavailable");
         }
 
         String messageText = String.format(
@@ -116,7 +117,7 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
             LOGGER.error("HTTP error response from Factiliza WhatsApp API for recipient [{}]: Status {} Body {}",
                     maskedPhone, e.getStatusCode(), e.getResponseBodyAsString());
             throw new DomainValidationException("iam.error.phoneVerification.dispatchFailed");
-        } catch (DomainValidationException | IllegalStateException e) {
+        } catch (DomainValidationException | ExternalServiceUnavailableException e) {
             throw e;
         } catch (Exception e) {
             LOGGER.error("Unexpected failure connecting to Factiliza WhatsApp API for recipient [{}]: {}",
