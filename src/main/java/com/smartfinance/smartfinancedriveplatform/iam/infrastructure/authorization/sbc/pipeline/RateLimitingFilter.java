@@ -83,6 +83,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                path.endsWith("/logo") ||
                path.endsWith("/banner") ||
                path.endsWith("/image") ||
+               path.endsWith("/images") ||
                (path.startsWith("/api/v1/billing") && !path.startsWith("/api/v1/billing/webhooks"));
     }
 
