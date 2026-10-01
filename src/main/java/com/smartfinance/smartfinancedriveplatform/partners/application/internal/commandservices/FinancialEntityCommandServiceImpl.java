@@ -180,6 +180,30 @@ public class FinancialEntityCommandServiceImpl implements FinancialEntityCommand
 
     @Override
     @Transactional
+    public Optional<FinancialEntity> updateLogo(com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId financialEntityId, String logoUrl) {
+        var existingOpt = financialEntityRepository.findById(financialEntityId);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        var entity = existingOpt.get();
+        entity.setLogoUrl(logoUrl);
+        return Optional.of(financialEntityRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public Optional<FinancialEntity> updateBanner(com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId financialEntityId, String bannerUrl) {
+        var existingOpt = financialEntityRepository.findById(financialEntityId);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        var entity = existingOpt.get();
+        entity.setBannerUrl(bannerUrl);
+        return Optional.of(financialEntityRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
     public void handle(DeleteFinancialEntityCommand command) {
         if (!financialEntityRepository.existsById(command.financialEntityId())) {
             throw new DomainValidationException("partners.error.financialEntityNotFound");
