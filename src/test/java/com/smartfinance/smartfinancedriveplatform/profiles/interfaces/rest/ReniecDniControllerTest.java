@@ -83,4 +83,25 @@ class ReniecDniControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNull(response.getBody());
     }
+
+    @Test
+    @DisplayName("Should validate DNI parameter format using @Pattern constraint")
+    void shouldRejectInvalidDniFormat() throws NoSuchMethodException {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        var method = ReniecDniController.class.getMethod("getDniInfo", String.class);
+
+        var violationsShort = validator.forExecutables().validateParameters(
+                reniecDniController, method, new Object[]{"1234"}
+        );
+        var violationsAlpha = validator.forExecutables().validateParameters(
+                reniecDniController, method, new Object[]{"ABCDEFGH"}
+        );
+        var violationsValid = validator.forExecutables().validateParameters(
+                reniecDniController, method, new Object[]{"27427864"}
+        );
+
+        assertFalse(violationsShort.isEmpty());
+        assertFalse(violationsAlpha.isEmpty());
+        assertTrue(violationsValid.isEmpty());
+    }
 }

@@ -52,10 +52,10 @@ public class FactilizaDniVerifierServiceImpl implements ReniecDniVerifierService
     }
 
     @Override
-    @Cacheable(value = "reniecDniCache", key = "#dni", unless = "#result == null")
+    @Cacheable(value = "reniecDniCache", key = "#dni", unless = "#result == null || #result.isEmpty()")
     public Optional<ReniecDniInfo> verifyDni(String dni) {
         if (dni == null || !dni.matches("\\d{8}")) {
-            LOGGER.warn("Invalid DNI format supplied: {}", dni);
+            LOGGER.warn("Invalid DNI format supplied: {}", maskDni(dni));
             return Optional.empty();
         }
 
@@ -91,15 +91,22 @@ public class FactilizaDniVerifierServiceImpl implements ReniecDniVerifierService
                     data.sexo()
             ));
         } catch (HttpClientErrorException.NotFound e) {
-            LOGGER.info("DNI {} not found in RENIEC/Factiliza database", dni);
+            LOGGER.info("DNI {} not found in RENIEC/Factiliza database", maskDni(dni));
             return Optional.empty();
         } catch (HttpClientErrorException e) {
-            LOGGER.warn("Client error when querying Factiliza for DNI {}: Status {}", dni, e.getStatusCode());
+            LOGGER.warn("Client error when querying Factiliza for DNI {}: Status {}", maskDni(dni), e.getStatusCode());
             return Optional.empty();
         } catch (Exception e) {
-            LOGGER.error("External Factiliza API service failure for DNI {}: {}", dni, e.getMessage());
+            LOGGER.error("External Factiliza API service failure for DNI {}: {}", maskDni(dni), e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private static String maskDni(String dni) {
+        if (dni == null || dni.length() < 4) {
+            return "****";
+        }
+        return dni.substring(0, 2) + "****" + dni.substring(dni.length() - 2);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Tag(name = "Profiles", description = "Customer Profile Management & Identity Verification")
 public class ReniecDniController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReniecDniController.class);
 
     private final ReniecDniVerifierService reniecDniVerifierService;
 
@@ -53,9 +57,20 @@ public class ReniecDniController {
             @PathVariable
             @Pattern(regexp = "^\\d{8}$", message = "DNI must consist of exactly 8 numeric digits")
             String dni) {
+        String authUserId = com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils
+                .getCurrentUserId().orElse("anonymous");
+        LOGGER.info("Audit: User [{}] queried RENIEC identity for DNI [{}]", authUserId, maskDni(dni));
+
         var dniInfoOpt = reniecDniVerifierService.verifyDni(dni);
         return dniInfoOpt
                 .map(info -> ResponseEntity.ok(ReniecDniResourceFromInfoAssembler.toResourceFromInfo(info)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    private static String maskDni(String dni) {
+        if (dni == null || dni.length() < 4) {
+            return "****";
+        }
+        return dni.substring(0, 2) + "****" + dni.substring(dni.length() - 2);
     }
 }
