@@ -25,7 +25,7 @@ Authorization: Bearer <tu_access_token_jwt>
 ## Índice de Bounded Contexts
 
 1. [IAM - Autenticación, Usuarios y Asesores de Ventas (20 Endpoints)](#1-iam---autenticación-usuarios-y-asesores-de-ventas)
-2. [Profiles - Perfiles de Cliente (5 Endpoints)](#2-profiles---perfiles-de-cliente)
+2. [Profiles - Perfiles de Cliente (6 Endpoints)](#2-profiles---perfiles-de-cliente)
 3. [Catalog - Catálogo de Vehículos, Especificaciones y Marcas (11 Endpoints)](#3-catalog---catálogo-de-vehículos-especificaciones-y-marcas)
 4. [Partners - Entidades Financieras, Directorio B2B y SUNAT (16 Endpoints)](#4-partners---entidades-financieras-directorio-b2b-y-sunat)
 5. [Financing - Simulaciones de Crédito y Solicitudes Bancarias (9 Endpoints)](#5-financing---simulaciones-de-crédito-y-solicitudes-bancarias)
@@ -338,6 +338,42 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ### 2.5 Eliminar Perfil
 * **Método**: `DELETE` | **Ruta**: `/api/v1/profiles/{profileId}` | **Acceso**: Propietario o `ROLE_ADMIN`
+
+---
+
+### 2.6 Consultar Datos de Identidad RENIEC por DNI (Factiliza)
+* **Método**: `GET` | **Ruta**: `/api/v1/profiles/reniec/dni/{dni}` | **Acceso**: Autenticado
+* **Descripción**: Invoca la API de Factiliza para consultar los datos oficiales de identidad del ciudadano registrados en RENIEC a partir de su DNI (8 dígitos numéricos). Retorna nombres, apellidos, nombre completo oficial, ubicación geográfica y dirección para el autocompletado instantáneo de formularios de perfil de cliente.
+* **Seguridad y Control de Abuso**:
+  * **Rate Limiter de Red**: Protegido por `RateLimitingFilter` (máximo 10 peticiones por minuto por IP; exceso retorna `429 Too Many Requests`).
+  * **Caché en Memoria**: `@Cacheable(value = "reniecDniCache")` para optimizar latencia y consumo de cuota de la API externa.
+  * **Validación de Formato**: Requiere exactamente 8 dígitos numéricos (`^\d{8}$`), retornando `400 Bad Request` en caso contrario.
+
+```json
+// Response (HTTP 200 OK)
+{
+  "dni": "27427864",
+  "verificationDigit": "7",
+  "firstNames": "JOSE PEDRO",
+  "paternalSurname": "CASTILLO",
+  "maternalSurname": "TERRONES",
+  "fullLegalName": "CASTILLO TERRONES, JOSE PEDRO",
+  "department": "CAJAMARCA",
+  "province": "CHOTA",
+  "district": "TACABAMBA",
+  "address": "CASERIO PUÑA",
+  "fullAddress": "CASERIO PUÑA, CAJAMARCA - CHOTA - TACABAMBA",
+  "ubigeoReniec": "060615",
+  "ubigeoSunat": "060417",
+  "ubigeo": [
+    "06",
+    "0604",
+    "060417"
+  ],
+  "birthDate": "",
+  "gender": ""
+}
+```
 
 ---
 
