@@ -1,6 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.shared.interfaces.rest.setup;
 
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
+import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.ExternalServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -87,6 +88,20 @@ public class GlobalExceptionHandler {
         logger.warn("Authentication failed: {}", ex.getMessage());
         var body = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Unauthorized", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleExternalServiceUnavailableException(ExternalServiceUnavailableException ex) {
+        logger.error("External service unavailable: {}", ex.getMessage());
+        String userMessage = ex.getUserMessage() != null && !ex.getUserMessage().isBlank()
+                ? ex.getUserMessage()
+                : "El servicio externo no se encuentra disponible temporalmente. Por favor, inténtelo más tarde.";
+        var body = new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                userMessage
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})

@@ -191,4 +191,28 @@ class RateLimitingFilterTest {
 
         assertEquals(429, blockedResponse.getStatus());
     }
+
+    @Test
+    @DisplayName("Should rate limit /api/v1/auth/phone-verification/send endpoint")
+    void shouldRateLimitPhoneVerificationEndpoint() throws ServletException, IOException {
+        String path = "/api/v1/auth/phone-verification/send";
+
+        for (int i = 1; i <= 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+            request.setRemoteAddr("192.168.1.190");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            rateLimitingFilter.doFilterInternal(request, response, filterChain);
+            assertEquals(200, response.getStatus());
+        }
+
+        MockHttpServletRequest blockedRequest = new MockHttpServletRequest("POST", path);
+        blockedRequest.setRemoteAddr("192.168.1.190");
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+
+        rateLimitingFilter.doFilterInternal(blockedRequest, blockedResponse, filterChain);
+
+        assertEquals(429, blockedResponse.getStatus());
+    }
 }
+
