@@ -17,9 +17,11 @@ public record CreateFinancialEntityResource(
     @Size(max = 100, message = "Name cannot exceed 100 characters")
     String name,
 
+    @Pattern(regexp = "^(https?://.+)?$", message = "Logo URL must be a valid HTTP or HTTPS URL")
     @Size(max = 1000, message = "Logo URL cannot exceed 1000 characters")
     String logoUrl,
 
+    @Pattern(regexp = "^(https?://.+)?$", message = "Banner URL must be a valid HTTP or HTTPS URL")
     @Size(max = 1000, message = "Banner URL cannot exceed 1000 characters")
     String bannerUrl
 ) {
