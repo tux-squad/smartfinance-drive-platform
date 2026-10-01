@@ -145,4 +145,27 @@ class RateLimitingFilterTest {
 
         assertEquals(429, blockedResponse.getStatus());
     }
+
+    @Test
+    @DisplayName("Should rate limit image and gallery upload endpoints (/logo, /banner, /image, /images)")
+    void shouldRateLimitImageAndGalleryUploadEndpoints() throws ServletException, IOException {
+        String galleryPath = "/api/v1/vehicles/123/images";
+
+        for (int i = 1; i <= 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", galleryPath);
+            request.setRemoteAddr("192.168.1.170");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            rateLimitingFilter.doFilterInternal(request, response, filterChain);
+            assertEquals(200, response.getStatus());
+        }
+
+        MockHttpServletRequest blockedRequest = new MockHttpServletRequest("POST", galleryPath);
+        blockedRequest.setRemoteAddr("192.168.1.170");
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+
+        rateLimitingFilter.doFilterInternal(blockedRequest, blockedResponse, filterChain);
+
+        assertEquals(429, blockedResponse.getStatus());
+    }
 }

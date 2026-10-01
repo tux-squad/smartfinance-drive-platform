@@ -47,6 +47,24 @@ public interface FinancialEntityCommandService {
     FinancialEntity handle(LinkFinancialEntityToUserCommand command);
 
     /**
+     * Updates the logo URL of a financial entity.
+     *
+     * @param financialEntityId The financial entity ID.
+     * @param logoUrl           The uploaded logo URL.
+     * @return An Optional containing the updated financial entity if found.
+     */
+    Optional<FinancialEntity> updateLogo(com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId financialEntityId, String logoUrl);
+
+    /**
+     * Updates the banner URL of a financial entity.
+     *
+     * @param financialEntityId The financial entity ID.
+     * @param bannerUrl         The uploaded banner URL.
+     * @return An Optional containing the updated financial entity if found.
+     */
+    Optional<FinancialEntity> updateBanner(com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId financialEntityId, String bannerUrl);
+
+    /**
      * Handles deleting a financial entity.
      *
      * @param command The deletion command.

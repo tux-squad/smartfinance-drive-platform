@@ -122,12 +122,15 @@ public class DealershipsController {
         }
 
         var dealership = dealershipOpt.get();
-        if (dealership.getLogoUrl() != null && !dealership.getLogoUrl().isBlank()) {
-            imageStorageService.deleteDealershipImage(dealership.getLogoUrl());
-        }
+        String oldLogoUrl = dealership.getLogoUrl();
 
         String logoUrl = imageStorageService.uploadDealershipImage(file, "logos");
         var updatedOpt = dealershipCommandService.updateLogo(dealership.getId(), logoUrl);
+
+        if (updatedOpt.isPresent() && oldLogoUrl != null && !oldLogoUrl.isBlank()) {
+            imageStorageService.deleteDealershipImage(oldLogoUrl);
+        }
+
         return updatedOpt
                 .map(d -> ResponseEntity.ok(DealershipResourceFromEntityAssembler.toResourceFromEntity(d)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
@@ -147,12 +150,15 @@ public class DealershipsController {
         }
 
         var dealership = dealershipOpt.get();
-        if (dealership.getBannerUrl() != null && !dealership.getBannerUrl().isBlank()) {
-            imageStorageService.deleteDealershipImage(dealership.getBannerUrl());
-        }
+        String oldBannerUrl = dealership.getBannerUrl();
 
         String bannerUrl = imageStorageService.uploadDealershipImage(file, "banners");
         var updatedOpt = dealershipCommandService.updateBanner(dealership.getId(), bannerUrl);
+
+        if (updatedOpt.isPresent() && oldBannerUrl != null && !oldBannerUrl.isBlank()) {
+            imageStorageService.deleteDealershipImage(oldBannerUrl);
+        }
+
         return updatedOpt
                 .map(d -> ResponseEntity.ok(DealershipResourceFromEntityAssembler.toResourceFromEntity(d)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
