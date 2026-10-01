@@ -441,6 +441,7 @@ Authorization: Bearer <tu_access_token_jwt>
 * **Seguridad y Restricciones**:
   * Para usuarios con rol `FINANCIAL_INSTITUTION`, el campo `userId` se enlaza automáticamente al usuario autenticado. Si el cliente envía un `userId` ajeno al del token JWT, la solicitud es rechazada de inmediato con `403 Forbidden` (`partners.error.accessDenied.cannotImpersonateUserId`). Solo `ROLE_ADMIN` puede asociar un `userId` explícito arbitrario.
   * El campo `ruc` (opcional si se crea sin RUC inicial, ej. plantilla institucional) debe tener exactamente 11 dígitos numéricos y ser único en el sistema.
+  * Los campos `logoUrl` y `bannerUrl` (opcionales) exigen formato de URL HTTP o HTTPS válido (`^(https?://.+)?$`). Alternativamente, se recomienda emplear los endpoints de subida multipart `/me/logo` y `/me/banner`.
 
 ```json
 // Input Body
@@ -475,6 +476,7 @@ Authorization: Bearer <tu_access_token_jwt>
   * Requiere autorización estricta: evaluada mediante SpEL `@PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")` y verificación defensiva interna.
   * Si un usuario con rol `FINANCIAL_INSTITUTION` intenta modificar una entidad que no le pertenece, se rechaza con `403 Forbidden` (`partners.error.accessDenied.notOwner`), neutralizando cualquier intento de secuestro de entidad o bypass de analytics.
   * Los usuarios `FINANCIAL_INSTITUTION` tienen prohibido transferir o alterar el campo `userId`; cualquier intento de enviar un `userId` en el payload genera `403 Forbidden` (`partners.error.accessDenied.cannotTransferOwnership`). Solo `ROLE_ADMIN` puede reasignar la titularidad de una entidad bancaria.
+  * Los campos `logoUrl` y `bannerUrl` validan formato de URL HTTP o HTTPS (`^(https?://.+)?$`). Para subir imágenes binarias de forma segura, use los endpoints multipart `/me/logo` y `/me/banner`.
 
 ```json
 // Input Body
@@ -519,16 +521,62 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.7 Eliminar Entidad Financiera
+### 4.7 Cargar Logo de Entidad Financiera
+* **Método**: `POST` | **Rutas**: 
+  * `/api/v1/financial-entities/me/logo` (Para la entidad vinculada al usuario autenticado)
+  * `/api/v1/financial-entities/{id}/logo` (Por ID, protegido por `@ownershipChecker` para propietario o `ROLE_ADMIN`)
+* **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN` (Multipart `file`)
+* **Content-Type**: `multipart/form-data`
+* **Parámetros**: `file` (MultipartFile)
+* **Validaciones**: Formatos permitidos (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/svg+xml`), tamaño máximo de 10 MB.
+* **Comportamiento**: Carga la imagen en Cloudinary en `smartfinance/financial-entities/logos`, elimina el logo anterior si existía y actualiza el campo `logoUrl`.
+
+```json
+// Output Response (200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "ruc": "20100047218",
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/smartfinance/financial-entities/logos/bcp-logo.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/banks/banners/bcp-banner.png",
+  "rateBenchmarks": []
+}
+```
+
+### 4.8 Cargar Banner de Entidad Financiera
+* **Método**: `POST` | **Rutas**: 
+  * `/api/v1/financial-entities/me/banner` (Para la entidad vinculada al usuario autenticado)
+  * `/api/v1/financial-entities/{id}/banner` (Por ID, protegido por `@ownershipChecker` para propietario o `ROLE_ADMIN`)
+* **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN` (Multipart `file`)
+* **Content-Type**: `multipart/form-data`
+* **Parámetros**: `file` (MultipartFile)
+* **Validaciones**: Formatos permitidos (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/svg+xml`), tamaño máximo de 10 MB.
+* **Comportamiento**: Carga la imagen en Cloudinary en `smartfinance/financial-entities/banners`, elimina el banner anterior si existía y actualiza el campo `bannerUrl`.
+
+```json
+// Output Response (200 OK)
+{
+  "id": "b1c2d3e4-f5a6-7b8c-9d0e-112233445566",
+  "userId": "15",
+  "ruc": "20100047218",
+  "name": "Banco de Credito BCP",
+  "logoUrl": "https://res.cloudinary.com/demo/image/upload/v1/smartfinance/financial-entities/logos/bcp-logo.png",
+  "bannerUrl": "https://res.cloudinary.com/demo/image/upload/v1/smartfinance/financial-entities/banners/bcp-banner.png",
+  "rateBenchmarks": []
+}
+```
+
+### 4.9 Eliminar Entidad Financiera
 * **Método**: `DELETE` | **Ruta**: `/api/v1/financial-entities/{id}` | **Acceso**: `ROLE_ADMIN`
 
-### 4.8 Consulta SUNAT RUC
+### 4.10 Consulta SUNAT RUC
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/sunat/ruc/{ruc}` | **Acceso**: Autenticado
 
-### 4.9 Directorio Público de Concesionarias (Paginado & Búsqueda)
+### 4.11 Directorio Público de Concesionarias (Paginado & Búsqueda)
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships` | **Acceso**: Público
 
-### 4.10 Obtener Mi Concesionaria B2B
+### 4.12 Obtener Mi Concesionaria B2B
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -551,7 +599,7 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.11 Crear o Actualizar Mi Concesionaria B2B
+### 4.13 Crear o Actualizar Mi Concesionaria B2B
 * **Método**: `PUT` | **Ruta**: `/api/v1/dealerships/me` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -590,19 +638,19 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 4.12 Cargar Logo de Concesionaria
+### 4.14 Cargar Logo de Concesionaria
 * **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/logo` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
-### 4.13 Cargar Banner de Concesionaria
+### 4.15 Cargar Banner de Concesionaria
 * **Método**: `POST` | **Ruta**: `/api/v1/dealerships/me/banner` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN` (Multipart `file`)
 
-### 4.14 Obtener Concesionaria por ID
+### 4.16 Obtener Concesionaria por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/{id}` | **Acceso**: Público
 
-### 4.15 Obtener Vehículos de una Concesionaria Específica
+### 4.17 Obtener Vehículos de una Concesionaria Específica
 * **Método**: `GET` | **Ruta**: `/api/v1/dealerships/{id}/vehicles` | **Acceso**: Público
 
-### 4.16 Consulta SUNAT para Autocompletado de Perfil Corporativo y Dominios Autorizados
+### 4.18 Consulta SUNAT para Autocompletado de Perfil Corporativo y Dominios Autorizados
 * **Método**: `GET` | **Ruta**: `/api/v1/partners/corporate-verification/lookup/{ruc}` | **Acceso**: Autenticado
 * **Descripción**: Valida el RUC peruano de 11 dígitos contra el servicio oficial de SUNAT, detecta automáticamente si corresponde a una **Entidad Financiera** (`ROLE_FINANCIAL_INSTITUTION`) o a una **Concesionaria** (`ROLE_DEALER`), y retorna la información oficial requerida para rellenar automáticamente los campos del perfil corporativo (Razón Social, Dirección Fiscal, Ubigeo, Logo) junto con la lista blanca de dominios de correo institucional autorizados para verificación OTP (ej. `@viabcp.com`, `@interbank.pe`, `@autoland.com.pe`, `@derco.pe`).
 * **Seguridad y Validación**:
