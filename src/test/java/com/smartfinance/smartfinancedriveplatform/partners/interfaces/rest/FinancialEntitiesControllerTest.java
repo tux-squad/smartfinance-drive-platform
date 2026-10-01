@@ -11,7 +11,9 @@ import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.resou
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -173,7 +175,11 @@ class FinancialEntitiesControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
             assertEquals("https://cdn.example.com/new-logo.png", response.getBody().logoUrl());
-            verify(imageStorageService, times(1)).deleteFinancialEntityImage("old-logo.png");
+
+            var inOrder = Mockito.inOrder(imageStorageService, financialEntityCommandService);
+            inOrder.verify(imageStorageService).uploadFinancialEntityImage(eq(file), eq("logos"));
+            inOrder.verify(financialEntityCommandService).updateLogo(eq(entityId), eq("https://cdn.example.com/new-logo.png"));
+            inOrder.verify(imageStorageService).deleteFinancialEntityImage("old-logo.png");
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }
@@ -207,7 +213,11 @@ class FinancialEntitiesControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
             assertEquals("https://cdn.example.com/new-banner.png", response.getBody().bannerUrl());
-            verify(imageStorageService, times(1)).deleteFinancialEntityImage("old-banner.png");
+
+            var inOrder = Mockito.inOrder(imageStorageService, financialEntityCommandService);
+            inOrder.verify(imageStorageService).uploadFinancialEntityImage(eq(file), eq("banners"));
+            inOrder.verify(financialEntityCommandService).updateBanner(eq(entityId), eq("https://cdn.example.com/new-banner.png"));
+            inOrder.verify(imageStorageService).deleteFinancialEntityImage("old-banner.png");
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }
@@ -217,7 +227,7 @@ class FinancialEntitiesControllerTest {
     void testUploadLogoByIdSuccess() {
         UUID entityUuid = UUID.randomUUID();
         var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
-        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, null, Collections.emptyList());
+        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", "old-logo.png", null, Collections.emptyList());
         FinancialEntity updatedEntity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", "https://cdn.example.com/new-logo.png", null, Collections.emptyList());
 
         var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
@@ -236,6 +246,11 @@ class FinancialEntitiesControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
             assertEquals("https://cdn.example.com/new-logo.png", response.getBody().logoUrl());
+
+            var inOrder = Mockito.inOrder(imageStorageService, financialEntityCommandService);
+            inOrder.verify(imageStorageService).uploadFinancialEntityImage(eq(file), eq("logos"));
+            inOrder.verify(financialEntityCommandService).updateLogo(eq(entityId), eq("https://cdn.example.com/new-logo.png"));
+            inOrder.verify(imageStorageService).deleteFinancialEntityImage("old-logo.png");
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }
@@ -245,7 +260,7 @@ class FinancialEntitiesControllerTest {
     void testUploadBannerByIdSuccess() {
         UUID entityUuid = UUID.randomUUID();
         var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
-        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, null, Collections.emptyList());
+        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, "old-banner.png", Collections.emptyList());
         FinancialEntity updatedEntity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, "https://cdn.example.com/new-banner.png", Collections.emptyList());
 
         var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
@@ -264,6 +279,11 @@ class FinancialEntitiesControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
             assertEquals("https://cdn.example.com/new-banner.png", response.getBody().bannerUrl());
+
+            var inOrder = Mockito.inOrder(imageStorageService, financialEntityCommandService);
+            inOrder.verify(imageStorageService).uploadFinancialEntityImage(eq(file), eq("banners"));
+            inOrder.verify(financialEntityCommandService).updateBanner(eq(entityId), eq("https://cdn.example.com/new-banner.png"));
+            inOrder.verify(imageStorageService).deleteFinancialEntityImage("old-banner.png");
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }

@@ -143,4 +143,125 @@ class DealershipsControllerTest {
         assertThat(response.getBody().logoUrl()).isEqualTo("https://cdn.example.com/logo.png");
         assertThat(response.getBody().bannerUrl()).isEqualTo("https://cdn.example.com/banner.png");
     }
+
+    @Test
+    @DisplayName("Should upload logo and delete old one in correct order")
+    void shouldUploadLogoSuccessfullyAfterDeletingOldOne() {
+        Dealership dealership = new Dealership(
+                "dealer-user-1",
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Desc",
+                "Hours",
+                "https://cdn.example.com/old-logo.png",
+                null
+        );
+        Dealership updated = new Dealership(
+                "dealer-user-1",
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Desc",
+                "Hours",
+                "https://cdn.example.com/new-logo.png",
+                null
+        );
+
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        when(queryService.handle(any(GetDealershipByUserIdQuery.class))).thenReturn(Optional.of(dealership));
+        when(imageStorageService.uploadDealershipImage(file, "logos")).thenReturn("https://cdn.example.com/new-logo.png");
+        when(commandService.updateLogo(dealership.getId(), "https://cdn.example.com/new-logo.png")).thenReturn(Optional.of(updated));
+
+        var response = controller.uploadLogo(file);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().logoUrl()).isEqualTo("https://cdn.example.com/new-logo.png");
+
+        var inOrder = Mockito.inOrder(imageStorageService, commandService);
+        inOrder.verify(imageStorageService).uploadDealershipImage(file, "logos");
+        inOrder.verify(commandService).updateLogo(dealership.getId(), "https://cdn.example.com/new-logo.png");
+        inOrder.verify(imageStorageService).deleteDealershipImage("https://cdn.example.com/old-logo.png");
+    }
+
+    @Test
+    @DisplayName("Should upload banner and delete old one in correct order")
+    void shouldUploadBannerSuccessfullyAfterDeletingOldOne() {
+        Dealership dealership = new Dealership(
+                "dealer-user-1",
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Desc",
+                "Hours",
+                null,
+                "https://cdn.example.com/old-banner.png"
+        );
+        Dealership updated = new Dealership(
+                "dealer-user-1",
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Desc",
+                "Hours",
+                null,
+                "https://cdn.example.com/new-banner.png"
+        );
+
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile("file", "banner.png", "image/png", "sample".getBytes());
+
+        when(queryService.handle(any(GetDealershipByUserIdQuery.class))).thenReturn(Optional.of(dealership));
+        when(imageStorageService.uploadDealershipImage(file, "banners")).thenReturn("https://cdn.example.com/new-banner.png");
+        when(commandService.updateBanner(dealership.getId(), "https://cdn.example.com/new-banner.png")).thenReturn(Optional.of(updated));
+
+        var response = controller.uploadBanner(file);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().bannerUrl()).isEqualTo("https://cdn.example.com/new-banner.png");
+
+        var inOrder = Mockito.inOrder(imageStorageService, commandService);
+        inOrder.verify(imageStorageService).uploadDealershipImage(file, "banners");
+        inOrder.verify(commandService).updateBanner(dealership.getId(), "https://cdn.example.com/new-banner.png");
+        inOrder.verify(imageStorageService).deleteDealershipImage("https://cdn.example.com/old-banner.png");
+    }
+
+    @Test
+    @DisplayName("Should reject invalid logoUrl and bannerUrl formats in CreateUpdateDealershipResource")
+    void shouldRejectInvalidUrlsInDealershipResource() {
+        var validator = jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator();
+        var resource = new CreateUpdateDealershipResource(
+                "20601234567",
+                "Autoland Peru",
+                "Av. Javier Prado 1234",
+                "+51987654321",
+                "contacto@autoland.pe",
+                "https://autoland.pe",
+                "Desc",
+                "Hours",
+                "ftp://invalid-logo",
+                "javascript:void(0)"
+        );
+
+        var violations = validator.validate(resource);
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("logoUrl"));
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("bannerUrl"));
+    }
 }

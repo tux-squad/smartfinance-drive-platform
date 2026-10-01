@@ -86,6 +86,14 @@ class FinancialEntityCloudinaryStorageAdapterTest {
     }
 
     @Test
+    @DisplayName("Should throw exception when uploading SVG file to prevent XSS")
+    void testUploadSvgThrowsException() {
+        MockMultipartFile svgFile = new MockMultipartFile("file", "vector.svg", "image/svg+xml", "<svg></svg>".getBytes());
+
+        assertThrows(DomainValidationException.class, () -> storageAdapter.uploadFinancialEntityImage(svgFile, "logos"));
+    }
+
+    @Test
     @DisplayName("Should throw exception when file size exceeds 10MB limit")
     void testUploadExceedsSizeThrowsException() {
         byte[] largeBytes = new byte[11 * 1024 * 1024]; // 11MB

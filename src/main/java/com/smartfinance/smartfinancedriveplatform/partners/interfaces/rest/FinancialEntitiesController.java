@@ -55,13 +55,7 @@ public class FinancialEntitiesController {
         this.financialEntityCommandService = financialEntityCommandService;
         this.financialEntityQueryService = financialEntityQueryService;
         this.ownershipChecker = ownershipChecker;
-        this.imageStorageService = imageStorageService;
-    }
-
-    public FinancialEntitiesController(FinancialEntityCommandService financialEntityCommandService, 
-                                       FinancialEntityQueryService financialEntityQueryService,
-                                       OwnershipChecker ownershipChecker) {
-        this(financialEntityCommandService, financialEntityQueryService, ownershipChecker, null);
+        this.imageStorageService = java.util.Objects.requireNonNull(imageStorageService, "imageStorageService must not be null");
     }
 
     /**
@@ -252,12 +246,15 @@ public class FinancialEntitiesController {
         }
 
         var entity = entityOpt.get();
-        if (entity.getLogoUrl() != null && !entity.getLogoUrl().isBlank() && imageStorageService != null) {
-            imageStorageService.deleteFinancialEntityImage(entity.getLogoUrl());
+        String oldLogoUrl = entity.getLogoUrl();
+
+        String logoUrl = imageStorageService.uploadFinancialEntityImage(file, "logos");
+        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
+
+        if (updatedOpt.isPresent() && oldLogoUrl != null && !oldLogoUrl.isBlank()) {
+            imageStorageService.deleteFinancialEntityImage(oldLogoUrl);
         }
 
-        String logoUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "logos") : null;
-        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
         return updatedOpt
                 .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
@@ -277,12 +274,15 @@ public class FinancialEntitiesController {
         }
 
         var entity = entityOpt.get();
-        if (entity.getBannerUrl() != null && !entity.getBannerUrl().isBlank() && imageStorageService != null) {
-            imageStorageService.deleteFinancialEntityImage(entity.getBannerUrl());
+        String oldBannerUrl = entity.getBannerUrl();
+
+        String bannerUrl = imageStorageService.uploadFinancialEntityImage(file, "banners");
+        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
+
+        if (updatedOpt.isPresent() && oldBannerUrl != null && !oldBannerUrl.isBlank()) {
+            imageStorageService.deleteFinancialEntityImage(oldBannerUrl);
         }
 
-        String bannerUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "banners") : null;
-        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
         return updatedOpt
                 .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
@@ -309,12 +309,15 @@ public class FinancialEntitiesController {
         }
 
         var entity = entityOpt.get();
-        if (entity.getLogoUrl() != null && !entity.getLogoUrl().isBlank() && imageStorageService != null) {
-            imageStorageService.deleteFinancialEntityImage(entity.getLogoUrl());
+        String oldLogoUrl = entity.getLogoUrl();
+
+        String logoUrl = imageStorageService.uploadFinancialEntityImage(file, "logos");
+        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
+
+        if (updatedOpt.isPresent() && oldLogoUrl != null && !oldLogoUrl.isBlank()) {
+            imageStorageService.deleteFinancialEntityImage(oldLogoUrl);
         }
 
-        String logoUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "logos") : null;
-        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
         return updatedOpt
                 .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
@@ -341,12 +344,15 @@ public class FinancialEntitiesController {
         }
 
         var entity = entityOpt.get();
-        if (entity.getBannerUrl() != null && !entity.getBannerUrl().isBlank() && imageStorageService != null) {
-            imageStorageService.deleteFinancialEntityImage(entity.getBannerUrl());
+        String oldBannerUrl = entity.getBannerUrl();
+
+        String bannerUrl = imageStorageService.uploadFinancialEntityImage(file, "banners");
+        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
+
+        if (updatedOpt.isPresent() && oldBannerUrl != null && !oldBannerUrl.isBlank()) {
+            imageStorageService.deleteFinancialEntityImage(oldBannerUrl);
         }
 
-        String bannerUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "banners") : null;
-        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
         return updatedOpt
                 .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());

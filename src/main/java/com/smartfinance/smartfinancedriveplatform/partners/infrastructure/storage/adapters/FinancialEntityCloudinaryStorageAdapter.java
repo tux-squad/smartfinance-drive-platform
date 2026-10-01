@@ -26,8 +26,7 @@ public class FinancialEntityCloudinaryStorageAdapter implements FinancialEntityI
             "image/jpeg",
             "image/png",
             "image/webp",
-            "image/gif",
-            "image/svg+xml"
+            "image/gif"
     );
 
     private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
