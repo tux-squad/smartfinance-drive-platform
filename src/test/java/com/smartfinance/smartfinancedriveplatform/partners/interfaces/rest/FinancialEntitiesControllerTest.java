@@ -41,11 +41,14 @@ class FinancialEntitiesControllerTest {
     @Mock
     private com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker ownershipChecker;
 
+    @Mock
+    private com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.storage.FinancialEntityImageStorageService imageStorageService;
+
     private FinancialEntitiesController financialEntitiesController;
 
     @BeforeEach
     void setUp() {
-        financialEntitiesController = new FinancialEntitiesController(financialEntityCommandService, financialEntityQueryService, ownershipChecker);
+        financialEntitiesController = new FinancialEntitiesController(financialEntityCommandService, financialEntityQueryService, ownershipChecker, imageStorageService);
     }
 
     @Test
@@ -76,6 +79,16 @@ class FinancialEntitiesControllerTest {
         assertEquals("BBVA", response.getBody().name());
         assertEquals("https://cdn.example.com/bbva-logo.png", response.getBody().logoUrl());
         assertEquals("https://cdn.example.com/bbva-banner.png", response.getBody().bannerUrl());
+    }
+
+    @Test
+    void testCreateFinancialEntityResourceInvalidUrlValidation() {
+        var validator = jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator();
+        CreateFinancialEntityResource resource = new CreateFinancialEntityResource(null, "20100047218", "Banco BCP", "invalid-url", "ftp://invalid-banner");
+        var violations = validator.validate(resource);
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("logoUrl")));
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("bannerUrl")));
     }
 
     @Test
@@ -127,6 +140,130 @@ class FinancialEntitiesControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
             assertEquals("Mi Banco", response.getBody().name());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void testUploadMyLogoSuccess() {
+        String authUserId = "bank-user-99";
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                authUserId, "pwd", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_FINANCIAL_INSTITUTION"))
+        );
+        auth.setDetails(new com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.AuthenticatedUserDetails(authUserId, authUserId));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UUID entityUuid = UUID.randomUUID();
+        var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
+        FinancialEntity entity = new FinancialEntity(entityId, authUserId, "20100047218", "Banco BCP", "old-logo.png", null, Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(entityId, authUserId, "20100047218", "Banco BCP", "https://cdn.example.com/new-logo.png", null, Collections.emptyList());
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("logos")))
+                .thenReturn("https://cdn.example.com/new-logo.png");
+        when(financialEntityCommandService.updateLogo(eq(entityId), eq("https://cdn.example.com/new-logo.png")))
+                .thenReturn(Optional.of(updatedEntity));
+
+        try {
+            ResponseEntity<FinancialEntityResource> response = financialEntitiesController.uploadMyLogo(file);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals("https://cdn.example.com/new-logo.png", response.getBody().logoUrl());
+            verify(imageStorageService, times(1)).deleteFinancialEntityImage("old-logo.png");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void testUploadMyBannerSuccess() {
+        String authUserId = "bank-user-99";
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                authUserId, "pwd", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_FINANCIAL_INSTITUTION"))
+        );
+        auth.setDetails(new com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.AuthenticatedUserDetails(authUserId, authUserId));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UUID entityUuid = UUID.randomUUID();
+        var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
+        FinancialEntity entity = new FinancialEntity(entityId, authUserId, "20100047218", "Banco BCP", null, "old-banner.png", Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(entityId, authUserId, "20100047218", "Banco BCP", null, "https://cdn.example.com/new-banner.png", Collections.emptyList());
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "banner.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("banners")))
+                .thenReturn("https://cdn.example.com/new-banner.png");
+        when(financialEntityCommandService.updateBanner(eq(entityId), eq("https://cdn.example.com/new-banner.png")))
+                .thenReturn(Optional.of(updatedEntity));
+
+        try {
+            ResponseEntity<FinancialEntityResource> response = financialEntitiesController.uploadMyBanner(file);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals("https://cdn.example.com/new-banner.png", response.getBody().bannerUrl());
+            verify(imageStorageService, times(1)).deleteFinancialEntityImage("old-banner.png");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void testUploadLogoByIdSuccess() {
+        UUID entityUuid = UUID.randomUUID();
+        var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
+        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, null, Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", "https://cdn.example.com/new-logo.png", null, Collections.emptyList());
+
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "admin-user", "pwd", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(GetFinancialEntityByIdQuery.class))).thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("logos"))).thenReturn("https://cdn.example.com/new-logo.png");
+        when(financialEntityCommandService.updateLogo(eq(entityId), eq("https://cdn.example.com/new-logo.png"))).thenReturn(Optional.of(updatedEntity));
+
+        try {
+            ResponseEntity<FinancialEntityResource> response = financialEntitiesController.uploadLogo(entityUuid, file);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals("https://cdn.example.com/new-logo.png", response.getBody().logoUrl());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void testUploadBannerByIdSuccess() {
+        UUID entityUuid = UUID.randomUUID();
+        var entityId = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityUuid);
+        FinancialEntity entity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, null, Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(entityId, "bank-user-99", "20100047218", "Banco BCP", null, "https://cdn.example.com/new-banner.png", Collections.emptyList());
+
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "admin-user", "pwd", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "banner.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(GetFinancialEntityByIdQuery.class))).thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("banners"))).thenReturn("https://cdn.example.com/new-banner.png");
+        when(financialEntityCommandService.updateBanner(eq(entityId), eq("https://cdn.example.com/new-banner.png"))).thenReturn(Optional.of(updatedEntity));
+
+        try {
+            ResponseEntity<FinancialEntityResource> response = financialEntitiesController.uploadBanner(entityUuid, file);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals("https://cdn.example.com/new-banner.png", response.getBody().bannerUrl());
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }

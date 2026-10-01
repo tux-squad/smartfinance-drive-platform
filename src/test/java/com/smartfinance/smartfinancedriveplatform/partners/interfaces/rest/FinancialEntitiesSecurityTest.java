@@ -52,6 +52,9 @@ class FinancialEntitiesSecurityTest {
     @Mock
     private OwnershipChecker ownershipChecker;
 
+    @Mock
+    private com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.storage.FinancialEntityImageStorageService imageStorageService;
+
     @InjectMocks
     private FinancialEntitiesController controller;
 
@@ -322,5 +325,74 @@ class FinancialEntitiesSecurityTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("internal-bank-owner-id", response.getBody().userId());
+    }
+
+    @Test
+    @DisplayName("POST /{id}/logo: FI cannot upload logo for entity they do not own")
+    void uploadLogoForbiddenIfNotOwner() {
+        authenticateAs(authUserId, "FINANCIAL_INSTITUTION");
+        when(ownershipChecker.isFinancialEntityOwner(eq(entityId), any())).thenReturn(false);
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        var ex = assertThrows(AccessDeniedException.class, () -> controller.uploadLogo(entityId, file));
+        assertEquals("partners.error.accessDenied.notOwner", ex.getMessage());
+        verifyNoInteractions(imageStorageService);
+    }
+
+    @Test
+    @DisplayName("POST /{id}/banner: FI cannot upload banner for entity they do not own")
+    void uploadBannerForbiddenIfNotOwner() {
+        authenticateAs(authUserId, "FINANCIAL_INSTITUTION");
+        when(ownershipChecker.isFinancialEntityOwner(eq(entityId), any())).thenReturn(false);
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "banner.png", "image/png", "sample".getBytes());
+
+        var ex = assertThrows(AccessDeniedException.class, () -> controller.uploadBanner(entityId, file));
+        assertEquals("partners.error.accessDenied.notOwner", ex.getMessage());
+        verifyNoInteractions(imageStorageService);
+    }
+
+    @Test
+    @DisplayName("POST /{id}/logo: FI owner can upload logo")
+    void uploadLogoAllowedIfOwner() {
+        authenticateAs(authUserId, "FINANCIAL_INSTITUTION");
+        when(ownershipChecker.isFinancialEntityOwner(eq(entityId), any())).thenReturn(true);
+
+        FinancialEntity entity = new FinancialEntity(new FinancialEntityId(entityId), authUserId, "20100047218", "My Bank", null, null, Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(new FinancialEntityId(entityId), authUserId, "20100047218", "My Bank", "https://cdn.example.com/logo.png", null, Collections.emptyList());
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("logos"))).thenReturn("https://cdn.example.com/logo.png");
+        when(financialEntityCommandService.updateLogo(eq(new FinancialEntityId(entityId)), eq("https://cdn.example.com/logo.png")))
+                .thenReturn(Optional.of(updatedEntity));
+
+        var response = controller.uploadLogo(entityId, file);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("https://cdn.example.com/logo.png", response.getBody().logoUrl());
+    }
+
+    @Test
+    @DisplayName("POST /{id}/banner: ADMIN can upload banner even if not owner")
+    void uploadBannerAllowedIfAdmin() {
+        authenticateAs("admin-user-1", "ADMIN");
+
+        FinancialEntity entity = new FinancialEntity(new FinancialEntityId(entityId), authUserId, "20100047218", "Any Bank", null, null, Collections.emptyList());
+        FinancialEntity updatedEntity = new FinancialEntity(new FinancialEntityId(entityId), authUserId, "20100047218", "Any Bank", null, "https://cdn.example.com/banner.png", Collections.emptyList());
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile("file", "banner.png", "image/png", "sample".getBytes());
+
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByIdQuery.class)))
+                .thenReturn(Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(eq(file), eq("banners"))).thenReturn("https://cdn.example.com/banner.png");
+        when(financialEntityCommandService.updateBanner(eq(new FinancialEntityId(entityId)), eq("https://cdn.example.com/banner.png")))
+                .thenReturn(Optional.of(updatedEntity));
+
+        var response = controller.uploadBanner(entityId, file);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("https://cdn.example.com/banner.png", response.getBody().bannerUrl());
     }
 }

@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -58,6 +59,15 @@ class FinancialEntitiesWebMvcSecurityTest {
     @TestConfiguration
     @EnableMethodSecurity
     static class SecurityTestConfig {
+        @org.springframework.context.annotation.Bean
+        public org.springframework.security.web.SecurityFilterChain testSecurityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
+            http
+                    .csrf(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable)
+                    .sessionManagement(s -> s.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                    .exceptionHandling(e -> e.authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED)))
+                    .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+            return http.build();
+        }
     }
 
     @BeforeEach
@@ -132,5 +142,54 @@ class FinancialEntitiesWebMvcSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /me/logo should return 403 Forbidden for USER role")
+    @WithMockUser(username = "regular-user", roles = {"USER"})
+    void postMyLogoForbiddenForUserRole() throws Exception {
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/financial-entities/me/logo").file(file))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /{id}/logo should return 403 Forbidden when FI is not owner")
+    @WithMockUser(username = "attacker-fi", roles = {"FINANCIAL_INSTITUTION"})
+    void postLogoByIdForbiddenWhenNotOwner() throws Exception {
+        UUID entityId = UUID.randomUUID();
+        when(ownershipChecker.isFinancialEntityOwner(eq(entityId), any())).thenReturn(false);
+
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/financial-entities/" + entityId + "/logo").file(file))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /me/logo should succeed for authenticated FINANCIAL_INSTITUTION")
+    @WithMockUser(username = "bank-owner", roles = {"FINANCIAL_INSTITUTION"})
+    void postMyLogoAllowedForFinancialInstitution() throws Exception {
+        UUID entityId = UUID.randomUUID();
+        var entity = new com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity(
+                new com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId(entityId),
+                "bank-owner", "20100047218", "Banco BCP", null, null, java.util.Collections.emptyList()
+        );
+
+        when(financialEntityQueryService.handle(any(com.smartfinance.smartfinancedriveplatform.partners.domain.model.queries.GetFinancialEntityByUserIdQuery.class)))
+                .thenReturn(java.util.Optional.of(entity));
+        when(imageStorageService.uploadFinancialEntityImage(any(), eq("logos")))
+                .thenReturn("https://cdn.example.com/logo.png");
+        when(financialEntityCommandService.updateLogo(any(), any()))
+                .thenReturn(java.util.Optional.of(entity));
+
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile("file", "logo.png", "image/png", "sample".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/financial-entities/me/logo").file(file))
+                .andExpect(status().isOk());
     }
 }

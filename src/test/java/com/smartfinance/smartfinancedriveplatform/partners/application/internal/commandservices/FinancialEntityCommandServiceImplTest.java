@@ -128,4 +128,58 @@ class FinancialEntityCommandServiceImplTest {
 
         assertEquals("partners.error.financialEntityRucAlreadyExists", ex.getMessage());
     }
+
+    @Test
+    @DisplayName("UpdateLogo: successfully updates and persists logo URL")
+    void updateLogoSuccess() {
+        UUID id = UUID.randomUUID();
+        FinancialEntity entity = new FinancialEntity(new FinancialEntityId(id), "user-1", "20100047218", "Banco BCP", "old-logo.png", null, new ArrayList<>());
+        when(financialEntityRepository.findById(new FinancialEntityId(id))).thenReturn(Optional.of(entity));
+        when(financialEntityRepository.save(any(FinancialEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var resultOpt = commandService.updateLogo(new FinancialEntityId(id), "https://cdn.example.com/new-logo.png");
+
+        assertTrue(resultOpt.isPresent());
+        assertEquals("https://cdn.example.com/new-logo.png", resultOpt.get().getLogoUrl());
+        verify(financialEntityRepository, times(1)).save(entity);
+    }
+
+    @Test
+    @DisplayName("UpdateLogo: returns empty Optional when entity not found")
+    void updateLogoNotFound() {
+        UUID id = UUID.randomUUID();
+        when(financialEntityRepository.findById(new FinancialEntityId(id))).thenReturn(Optional.empty());
+
+        var resultOpt = commandService.updateLogo(new FinancialEntityId(id), "https://cdn.example.com/new-logo.png");
+
+        assertTrue(resultOpt.isEmpty());
+        verify(financialEntityRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("UpdateBanner: successfully updates and persists banner URL")
+    void updateBannerSuccess() {
+        UUID id = UUID.randomUUID();
+        FinancialEntity entity = new FinancialEntity(new FinancialEntityId(id), "user-1", "20100047218", "Banco BCP", null, "old-banner.png", new ArrayList<>());
+        when(financialEntityRepository.findById(new FinancialEntityId(id))).thenReturn(Optional.of(entity));
+        when(financialEntityRepository.save(any(FinancialEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var resultOpt = commandService.updateBanner(new FinancialEntityId(id), "https://cdn.example.com/new-banner.png");
+
+        assertTrue(resultOpt.isPresent());
+        assertEquals("https://cdn.example.com/new-banner.png", resultOpt.get().getBannerUrl());
+        verify(financialEntityRepository, times(1)).save(entity);
+    }
+
+    @Test
+    @DisplayName("UpdateBanner: returns empty Optional when entity not found")
+    void updateBannerNotFound() {
+        UUID id = UUID.randomUUID();
+        when(financialEntityRepository.findById(new FinancialEntityId(id))).thenReturn(Optional.empty());
+
+        var resultOpt = commandService.updateBanner(new FinancialEntityId(id), "https://cdn.example.com/new-banner.png");
+
+        assertTrue(resultOpt.isEmpty());
+        verify(financialEntityRepository, never()).save(any());
+    }
 }
