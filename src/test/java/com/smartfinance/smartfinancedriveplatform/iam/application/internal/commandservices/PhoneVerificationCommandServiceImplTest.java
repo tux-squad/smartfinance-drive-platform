@@ -39,11 +39,15 @@ class PhoneVerificationCommandServiceImplTest {
     @Mock
     private PhoneVerificationSenderService phoneVerificationSenderService;
 
-    @InjectMocks
     private PhoneVerificationCommandServiceImpl commandService;
 
     private final String rawPhone = "+51 993913924";
     private final String normalizedPhone = "51993913924";
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        commandService = new PhoneVerificationCommandServiceImpl(sessionRepository, otpGeneratorService, phoneVerificationSenderService, 5);
+    }
 
     @Test
     @DisplayName("Should successfully handle SendPhoneVerificationCodeCommand")
@@ -100,6 +104,7 @@ class PhoneVerificationCommandServiceImplTest {
         assertTrue(result.verified());
         assertEquals(PhoneVerificationStatus.VERIFIED, result.status());
         assertEquals(normalizedPhone, result.phoneNumber());
+        assertNotNull(result.verificationToken());
     }
 
     @Test

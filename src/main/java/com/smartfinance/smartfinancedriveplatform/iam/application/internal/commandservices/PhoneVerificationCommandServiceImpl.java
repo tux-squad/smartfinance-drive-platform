@@ -12,6 +12,8 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.repositories.PhoneV
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,13 +32,25 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
     private final PhoneVerificationSessionRepository sessionRepository;
     private final OtpGeneratorService otpGeneratorService;
     private final PhoneVerificationSenderService phoneVerificationSenderService;
+    private final int otpTtlMinutes;
 
-    public PhoneVerificationCommandServiceImpl(PhoneVerificationSessionRepository sessionRepository,
-                                              OtpGeneratorService otpGeneratorService,
-                                              PhoneVerificationSenderService phoneVerificationSenderService) {
+    @Autowired
+    public PhoneVerificationCommandServiceImpl(
+            PhoneVerificationSessionRepository sessionRepository,
+            OtpGeneratorService otpGeneratorService,
+            PhoneVerificationSenderService phoneVerificationSenderService,
+            @Value("${factiliza.whatsapp.otp-ttl-minutes:5}") int otpTtlMinutes) {
         this.sessionRepository = sessionRepository;
         this.otpGeneratorService = otpGeneratorService;
         this.phoneVerificationSenderService = phoneVerificationSenderService;
+        this.otpTtlMinutes = otpTtlMinutes > 0 ? otpTtlMinutes : 5;
+    }
+
+    public PhoneVerificationCommandServiceImpl(
+            PhoneVerificationSessionRepository sessionRepository,
+            OtpGeneratorService otpGeneratorService,
+            PhoneVerificationSenderService phoneVerificationSenderService) {
+        this(sessionRepository, otpGeneratorService, phoneVerificationSenderService, 5);
     }
 
     @Override
@@ -45,7 +59,10 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
         PhoneNumber phone = new PhoneNumber(command.phoneNumber());
         Instant now = Instant.now();
 
-        // 1. Check rate-limit / hourly limit
+        // 1. Periodic cleanup of expired sessions older than 7 days
+        sessionRepository.deleteExpiredSessionsBefore(now.minus(Duration.ofDays(7)));
+
+        // 2. Check rate-limit / hourly limit
         long recentSessions = sessionRepository.countRecentSessionsByPhoneNumber(
                 phone.fullNumber(), now.minus(Duration.ofHours(1)));
         if (recentSessions >= MAX_HOURLY_DISPATCHES) {
@@ -53,7 +70,7 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
             throw new DomainValidationException("iam.error.phoneVerification.hourlyLimitExceeded");
         }
 
-        // 2. Check cooldown with latest session
+        // 3. Check cooldown with latest session
         var latestOpt = sessionRepository.findLatestActiveSession(phone.fullNumber());
         if (latestOpt.isPresent()) {
             PhoneVerificationSession latest = latestOpt.get();
@@ -63,23 +80,24 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
             }
         }
 
-        // 3. Invalidate previous pending sessions
+        // 4. Invalidate previous pending sessions
         sessionRepository.expirePendingSessions(phone.fullNumber());
 
-        // 4. Generate new OTP and SHA-256 hash
+        // 5. Generate new OTP and SHA-256 hash
         String rawOtp = otpGeneratorService.generateOtp();
         String codeHash = otpGeneratorService.hashOtp(rawOtp);
 
         PhoneVerificationSession newSession = new PhoneVerificationSession(
+                command.userId(),
                 phone,
                 codeHash,
                 now,
-                now.plus(PhoneVerificationSession.OTP_TTL)
+                now.plus(Duration.ofMinutes(otpTtlMinutes))
         );
 
         PhoneVerificationSession savedSession = sessionRepository.save(newSession);
 
-        // 5. Dispatch via WhatsApp outbound service (safe logging internally)
+        // 6. Dispatch via WhatsApp outbound service (safe logging internally)
         phoneVerificationSenderService.sendVerificationCode(phone.fullNumber(), rawOtp);
 
         LOGGER.info("Phone verification session [{}] initiated for recipient [{}]", savedSession.getId(), phone.getMasked());
@@ -110,7 +128,7 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
         }
 
         if (session.getStatus() == PhoneVerificationStatus.VERIFIED) {
-            return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, session.getVerifiedAt(), "Phone number is already verified");
+            return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, session.getVerifiedAt(), session.getId().toString(), "Phone number is already verified");
         }
 
         boolean isValidCode = otpGeneratorService.verifyOtp(command.code(), session.getCodeHash());
@@ -128,6 +146,6 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
         PhoneVerificationSession verifiedSession = sessionRepository.save(session);
 
         LOGGER.info("Phone number [{}] successfully verified via session [{}]", phone.getMasked(), verifiedSession.getId());
-        return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, verifiedSession.getVerifiedAt(), "Phone number successfully verified");
+        return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, verifiedSession.getVerifiedAt(), verifiedSession.getId().toString(), "Phone number successfully verified");
     }
 }

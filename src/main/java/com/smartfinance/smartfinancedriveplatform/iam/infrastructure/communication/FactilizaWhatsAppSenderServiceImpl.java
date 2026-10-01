@@ -27,14 +27,20 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
     private final RestClient restClient;
     private final String instanceName;
     private final String apiKey;
+    private final boolean allowEmulated;
+    private final int otpTtlMinutes;
 
     @Autowired
     public FactilizaWhatsAppSenderServiceImpl(
             @Value("${factiliza.whatsapp.base-url:https://apiwsp.factiliza.com}") String baseUrl,
             @Value("${factiliza.whatsapp.instance-name:smartfinance}") String instanceName,
-            @Value("${factiliza.whatsapp.api-key:${factiliza.api-key:}}") String apiKey) {
+            @Value("${factiliza.whatsapp.api-key:${factiliza.api-key:}}") String apiKey,
+            @Value("${app.whatsapp.allow-emulated:false}") boolean allowEmulated,
+            @Value("${factiliza.whatsapp.otp-ttl-minutes:5}") int otpTtlMinutes) {
         this.instanceName = (instanceName != null && !instanceName.isBlank()) ? instanceName.trim() : "smartfinance";
         this.apiKey = apiKey != null ? apiKey.trim() : "";
+        this.allowEmulated = allowEmulated;
+        this.otpTtlMinutes = otpTtlMinutes > 0 ? otpTtlMinutes : 5;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(4000);
@@ -50,10 +56,16 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
     }
 
     // Constructor for testing with custom or mocked RestClient
-    public FactilizaWhatsAppSenderServiceImpl(RestClient restClient, String instanceName) {
+    public FactilizaWhatsAppSenderServiceImpl(RestClient restClient, String instanceName, boolean allowEmulated, int otpTtlMinutes) {
         this.restClient = restClient;
         this.instanceName = instanceName != null ? instanceName : "smartfinance";
         this.apiKey = "test-key";
+        this.allowEmulated = allowEmulated;
+        this.otpTtlMinutes = otpTtlMinutes > 0 ? otpTtlMinutes : 5;
+    }
+
+    public FactilizaWhatsAppSenderServiceImpl(RestClient restClient, String instanceName) {
+        this(restClient, instanceName, false, 5);
     }
 
     @Override
@@ -68,13 +80,18 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
         String maskedPhone = maskPhoneNumber(fullPhoneNumber);
 
         if (apiKey.isBlank()) {
-            LOGGER.warn("Factiliza WhatsApp API key is not configured. Emulating dispatch for [{}]", maskedPhone);
-            return;
+            if (allowEmulated) {
+                LOGGER.info("Factiliza WhatsApp API key is not configured. Emulated WhatsApp OTP dispatch for [{}]", maskedPhone);
+                return;
+            }
+            LOGGER.error("Factiliza WhatsApp API key is not configured and WhatsApp emulation is disabled. Failed to dispatch OTP to [{}]", maskedPhone);
+            throw new IllegalStateException("iam.error.phoneVerification.serviceUnavailable");
         }
 
         String messageText = String.format(
-                "🚗 *SmartFinance Drive*\n\nTu código de verificación es: *%s*\n\n(Válido por 5 minutos. No compartas este código con nadie por seguridad).",
-                code
+                "🚗 *SmartFinance Drive*\n\nTu código de verificación es: *%s*\n\n(Válido por %d minutos. No compartas este código con nadie por seguridad).",
+                code,
+                otpTtlMinutes
         );
 
         FactilizaSendTextRequest requestPayload = new FactilizaSendTextRequest(fullPhoneNumber, messageText);
@@ -99,7 +116,7 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
             LOGGER.error("HTTP error response from Factiliza WhatsApp API for recipient [{}]: Status {} Body {}",
                     maskedPhone, e.getStatusCode(), e.getResponseBodyAsString());
             throw new DomainValidationException("iam.error.phoneVerification.dispatchFailed");
-        } catch (DomainValidationException e) {
+        } catch (DomainValidationException | IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             LOGGER.error("Unexpected failure connecting to Factiliza WhatsApp API for recipient [{}]: {}",

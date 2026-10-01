@@ -52,7 +52,8 @@ public class PhoneVerificationController {
     })
     public ResponseEntity<PhoneVerificationSessionResource> sendVerificationCode(
             @Valid @RequestBody SendPhoneVerificationResource resource) {
-        SendPhoneVerificationCodeCommand command = new SendPhoneVerificationCodeCommand(resource.phoneNumber());
+        String userId = com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.getCurrentUserId().orElse(null);
+        SendPhoneVerificationCodeCommand command = new SendPhoneVerificationCodeCommand(resource.phoneNumber(), userId);
         PhoneVerificationSession session = phoneVerificationCommandService.handle(command);
 
         long expiresInSeconds = Math.max(0, Duration.between(Instant.now(), session.getExpiresAt()).getSeconds());
@@ -89,6 +90,7 @@ public class PhoneVerificationController {
                 result.phoneNumber(),
                 result.status().name(),
                 result.verifiedAt(),
+                result.verificationToken(),
                 result.message()
         );
         return ResponseEntity.ok(response);

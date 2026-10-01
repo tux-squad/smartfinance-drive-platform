@@ -16,6 +16,7 @@ public final class PhoneVerificationSessionPersistenceAssembler {
             entity = new PhoneVerificationSessionPersistenceEntity();
         }
         entity.setId(domain.getId());
+        entity.setUserId(domain.getUserId());
         entity.setPhoneNumber(domain.getPhoneNumber().fullNumber());
         entity.setCodeHash(domain.getCodeHash());
         entity.setAttempts(domain.getAttempts());
@@ -28,6 +29,7 @@ public final class PhoneVerificationSessionPersistenceAssembler {
     public static PhoneVerificationSession toDomain(PhoneVerificationSessionPersistenceEntity entity) {
         return new PhoneVerificationSession(
                 entity.getId(),
+                entity.getUserId(),
                 new PhoneNumber(entity.getPhoneNumber()),
                 entity.getCodeHash(),
                 entity.getAttempts(),

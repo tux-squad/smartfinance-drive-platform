@@ -10,6 +10,7 @@ public record PhoneVerificationConfirmationResource(
         String phoneNumber,
         String status,
         Instant verifiedAt,
+        String verificationToken,
         String message
 ) {
 }

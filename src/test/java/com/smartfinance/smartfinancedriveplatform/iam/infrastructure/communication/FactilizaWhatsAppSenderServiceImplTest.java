@@ -80,13 +80,23 @@ class FactilizaWhatsAppSenderServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should emulate dispatch without calling network when apiKey is blank")
-    void shouldEmulateWhenApiKeyIsBlank() {
+    @DisplayName("Should fail-closed and throw IllegalStateException in production when apiKey is blank and allowEmulated is false")
+    void shouldFailClosedWhenApiKeyIsBlankAndEmulationDisabled() {
         FactilizaWhatsAppSenderServiceImpl unconfiguredService = new FactilizaWhatsAppSenderServiceImpl(
-                "https://apiwsp.factiliza.com", "smartfinance-test", ""
+                "https://apiwsp.factiliza.com", "smartfinance-test", "", false, 5
         );
 
-        assertDoesNotThrow(() -> unconfiguredService.sendVerificationCode("51993913924", "123456"));
+        assertThrows(IllegalStateException.class, () -> unconfiguredService.sendVerificationCode("51993913924", "123456"));
+    }
+
+    @Test
+    @DisplayName("Should emulate dispatch without calling network when apiKey is blank and allowEmulated is true")
+    void shouldEmulateWhenApiKeyIsBlankAndEmulationAllowed() {
+        FactilizaWhatsAppSenderServiceImpl emulatedService = new FactilizaWhatsAppSenderServiceImpl(
+                "https://apiwsp.factiliza.com", "smartfinance-test", "", true, 5
+        );
+
+        assertDoesNotThrow(() -> emulatedService.sendVerificationCode("51993913924", "123456"));
     }
 
     @Test

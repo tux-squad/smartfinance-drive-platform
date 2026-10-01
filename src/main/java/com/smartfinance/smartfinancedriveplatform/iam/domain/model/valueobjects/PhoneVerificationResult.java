@@ -10,6 +10,7 @@ public record PhoneVerificationResult(
         String phoneNumber,
         PhoneVerificationStatus status,
         Instant verifiedAt,
+        String verificationToken,
         String message
 ) {
 }

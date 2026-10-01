@@ -59,7 +59,7 @@ class PhoneVerificationControllerTest {
     @DisplayName("Should return 200 OK with confirmation resource when verifying code")
     void shouldReturnOkWhenVerifyingCode() {
         VerifyPhoneCodeResource resource = new VerifyPhoneCodeResource("+51 993913924", "123456");
-        PhoneVerificationResult result = new PhoneVerificationResult(true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), "Phone number successfully verified");
+        PhoneVerificationResult result = new PhoneVerificationResult(true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), "token-123", "Phone number successfully verified");
 
         when(phoneVerificationCommandService.handle(any(VerifyPhoneCodeCommand.class))).thenReturn(result);
 

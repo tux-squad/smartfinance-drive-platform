@@ -15,12 +15,16 @@ import java.time.Instant;
 @Entity
 @Table(name = "phone_verification_sessions", indexes = {
         @Index(name = "idx_phone_verif_number", columnList = "phone_number"),
-        @Index(name = "idx_phone_verif_status", columnList = "status")
+        @Index(name = "idx_phone_verif_status", columnList = "status"),
+        @Index(name = "idx_phone_verif_user_id", columnList = "user_id")
 })
 @Getter
 @Setter
 @NoArgsConstructor
 public class PhoneVerificationSessionPersistenceEntity extends AuditableAbstractPersistenceEntity {
+
+    @Column(name = "user_id")
+    private String userId;
 
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
