@@ -70,13 +70,13 @@ class FactilizaWhatsAppSenderServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should throw DomainValidationException on HTTP 500 server error")
+    @DisplayName("Should throw ExternalServiceUnavailableException on HTTP 500 server error")
     void shouldThrowExceptionOnServerError() {
         mockServer.expect(requestTo("https://apiwsp.factiliza.com/v1/message/sendtext/smartfinance-test"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withServerError());
 
-        assertThrows(DomainValidationException.class, () -> service.sendVerificationCode("51993913924", "123456"));
+        assertThrows(ExternalServiceUnavailableException.class, () -> service.sendVerificationCode("51993913924", "123456"));
         mockServer.verify();
     }
 

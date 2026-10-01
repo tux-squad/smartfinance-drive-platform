@@ -116,13 +116,21 @@ public class FactilizaWhatsAppSenderServiceImpl implements PhoneVerificationSend
         } catch (RestClientResponseException e) {
             LOGGER.error("HTTP error response from Factiliza WhatsApp API for recipient [{}]: Status {} Body {}",
                     maskedPhone, e.getStatusCode(), e.getResponseBodyAsString());
-            throw new DomainValidationException("iam.error.phoneVerification.dispatchFailed");
+            throw new ExternalServiceUnavailableException(
+                    "iam.error.phoneVerification.gatewayError",
+                    "El servicio de mensajería no pudo completar el envío del código. Inténtelo más tarde.",
+                    e
+            );
         } catch (DomainValidationException | ExternalServiceUnavailableException e) {
             throw e;
         } catch (Exception e) {
             LOGGER.error("Unexpected failure connecting to Factiliza WhatsApp API for recipient [{}]: {}",
                     maskedPhone, e.getMessage());
-            throw new DomainValidationException("iam.error.phoneVerification.dispatchFailed");
+            throw new ExternalServiceUnavailableException(
+                    "iam.error.phoneVerification.serviceUnavailable",
+                    "Error de conexión con la pasarela de verificación. Inténtelo más tarde.",
+                    e
+            );
         }
     }
 

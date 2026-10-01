@@ -6,22 +6,29 @@ package com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions;
  */
 public class ExternalServiceUnavailableException extends RuntimeException {
 
-    /**
-     * Constructs a new ExternalServiceUnavailableException with the specified detail message.
-     *
-     * @param message the detail message key or description.
-     */
+    private final String userMessage;
+
     public ExternalServiceUnavailableException(String message) {
         super(message);
+        this.userMessage = null;
     }
 
-    /**
-     * Constructs a new ExternalServiceUnavailableException with the specified detail message and cause.
-     *
-     * @param message the detail message key or description.
-     * @param cause   the cause of the exception.
-     */
+    public ExternalServiceUnavailableException(String message, String userMessage) {
+        super(message);
+        this.userMessage = userMessage;
+    }
+
     public ExternalServiceUnavailableException(String message, Throwable cause) {
         super(message, cause);
+        this.userMessage = null;
+    }
+
+    public ExternalServiceUnavailableException(String message, String userMessage, Throwable cause) {
+        super(message, cause);
+        this.userMessage = userMessage;
+    }
+
+    public String getUserMessage() {
+        return userMessage;
     }
 }

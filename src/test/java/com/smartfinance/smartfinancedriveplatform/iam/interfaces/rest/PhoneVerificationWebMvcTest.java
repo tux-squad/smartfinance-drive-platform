@@ -187,6 +187,7 @@ class PhoneVerificationWebMvcTest {
                         .content(payload))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value(503))
-                .andExpect(jsonPath("$.error").value("Service Unavailable"));
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message").value("El servicio externo no se encuentra disponible temporalmente. Por favor, inténtelo más tarde."));
     }
 }

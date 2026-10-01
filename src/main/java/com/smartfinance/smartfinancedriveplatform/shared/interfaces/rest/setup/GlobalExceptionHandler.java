@@ -93,10 +93,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ExternalServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleExternalServiceUnavailableException(ExternalServiceUnavailableException ex) {
         logger.error("External service unavailable: {}", ex.getMessage());
+        String userMessage = ex.getUserMessage() != null && !ex.getUserMessage().isBlank()
+                ? ex.getUserMessage()
+                : "El servicio externo no se encuentra disponible temporalmente. Por favor, inténtelo más tarde.";
         var body = new ErrorResponse(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 "Service Unavailable",
-                "El servicio de verificación por WhatsApp no está disponible en este momento. Inténtelo más tarde."
+                userMessage
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
