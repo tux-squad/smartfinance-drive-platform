@@ -117,6 +117,14 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
 
         PhoneVerificationSession session = sessionOpt.get();
 
+        if (session.getUserId() != null) {
+            if (command.callerUserId() == null || !session.getUserId().equals(command.callerUserId())) {
+                LOGGER.warn("Verification caller mismatch for recipient [{}] - session bound to [{}] but caller was [{}]",
+                        phone.getMasked(), session.getUserId(), command.callerUserId());
+                throw new DomainValidationException("iam.error.phoneVerification.callerMismatch");
+            }
+        }
+
         if (session.isBlocked()) {
             LOGGER.warn("Verification attempted on blocked session for recipient [{}]", phone.getMasked());
             throw new DomainValidationException("iam.error.phoneVerification.sessionBlocked");
@@ -128,7 +136,8 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
         }
 
         if (session.getStatus() == PhoneVerificationStatus.VERIFIED) {
-            return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, session.getVerifiedAt(), session.getId().toString(), "Phone number is already verified");
+            String token = session.getVerificationToken() != null ? session.getVerificationToken() : session.getId().toString();
+            return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, session.getVerifiedAt(), token, "Phone number is already verified");
         }
 
         boolean isValidCode = otpGeneratorService.verifyOtp(command.code(), session.getCodeHash());
@@ -146,6 +155,6 @@ public class PhoneVerificationCommandServiceImpl implements PhoneVerificationCom
         PhoneVerificationSession verifiedSession = sessionRepository.save(session);
 
         LOGGER.info("Phone number [{}] successfully verified via session [{}]", phone.getMasked(), verifiedSession.getId());
-        return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, verifiedSession.getVerifiedAt(), verifiedSession.getId().toString(), "Phone number successfully verified");
+        return new PhoneVerificationResult(true, phone.fullNumber(), PhoneVerificationStatus.VERIFIED, verifiedSession.getVerifiedAt(), verifiedSession.getVerificationToken(), "Phone number successfully verified");
     }
 }

@@ -29,13 +29,15 @@ public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneV
     private final Instant createdAt;
     private final Instant expiresAt;
     private Instant verifiedAt;
+    private String verificationToken;
 
     /**
-     * Constructor for reconstituting from persistence with userId.
+     * Constructor for reconstituting from persistence with userId and verificationToken.
      */
     public PhoneVerificationSession(UUID id, String userId, PhoneNumber phoneNumber, String codeHash,
                                    int attempts, PhoneVerificationStatus status,
-                                   Instant createdAt, Instant expiresAt, Instant verifiedAt) {
+                                   Instant createdAt, Instant expiresAt, Instant verifiedAt,
+                                   String verificationToken) {
         this.id = id;
         this.userId = userId != null && !userId.isBlank() ? userId.trim() : null;
         this.phoneNumber = phoneNumber;
@@ -45,6 +47,16 @@ public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneV
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.verifiedAt = verifiedAt;
+        this.verificationToken = verificationToken;
+    }
+
+    /**
+     * Constructor for reconstituting from persistence with userId without explicit verificationToken.
+     */
+    public PhoneVerificationSession(UUID id, String userId, PhoneNumber phoneNumber, String codeHash,
+                                   int attempts, PhoneVerificationStatus status,
+                                   Instant createdAt, Instant expiresAt, Instant verifiedAt) {
+        this(id, userId, phoneNumber, codeHash, attempts, status, createdAt, expiresAt, verifiedAt, null);
     }
 
     /**
@@ -117,6 +129,7 @@ public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneV
         }
         this.status = PhoneVerificationStatus.VERIFIED;
         this.verifiedAt = Instant.now();
+        this.verificationToken = UUID.randomUUID().toString();
     }
 
     public void markExpired() {

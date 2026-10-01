@@ -18,6 +18,8 @@ public interface SpringDataPhoneVerificationSessionRepository extends JpaReposit
     @Query("SELECT s FROM PhoneVerificationSessionPersistenceEntity s WHERE s.phoneNumber = :phoneNumber ORDER BY s.createdAt DESC LIMIT 1")
     Optional<PhoneVerificationSessionPersistenceEntity> findLatestSession(@Param("phoneNumber") String phoneNumber);
 
+    Optional<PhoneVerificationSessionPersistenceEntity> findByVerificationToken(String verificationToken);
+
     @Query("SELECT COUNT(s) FROM PhoneVerificationSessionPersistenceEntity s WHERE s.phoneNumber = :phoneNumber AND s.createdAt >= :since")
     long countRecentSessionsByPhoneNumber(@Param("phoneNumber") String phoneNumber, @Param("since") Instant since);
 

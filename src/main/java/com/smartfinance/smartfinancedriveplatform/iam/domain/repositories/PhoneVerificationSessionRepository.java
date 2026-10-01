@@ -15,6 +15,8 @@ public interface PhoneVerificationSessionRepository {
 
     Optional<PhoneVerificationSession> findById(UUID id);
 
+    Optional<PhoneVerificationSession> findByVerificationToken(String verificationToken);
+
     Optional<PhoneVerificationSession> findLatestActiveSession(String phoneNumber);
 
     long countRecentSessionsByPhoneNumber(String phoneNumber, Instant since);

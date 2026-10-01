@@ -56,7 +56,7 @@ class PhoneVerificationSessionTest {
     }
 
     @Test
-    @DisplayName("Should mark session as VERIFIED when valid")
+    @DisplayName("Should mark session as VERIFIED and generate distinct verificationToken when valid")
     void shouldMarkSessionAsVerified() {
         PhoneNumber phone = new PhoneNumber("51993913924");
         PhoneVerificationSession session = new PhoneVerificationSession(phone, "hash", Instant.now(), Instant.now().plus(Duration.ofMinutes(5)));
@@ -65,6 +65,8 @@ class PhoneVerificationSessionTest {
 
         assertEquals(PhoneVerificationStatus.VERIFIED, session.getStatus());
         assertNotNull(session.getVerifiedAt());
+        assertNotNull(session.getVerificationToken());
+        assertNotEquals(session.getId().toString(), session.getVerificationToken());
         assertFalse(session.isPending());
     }
 

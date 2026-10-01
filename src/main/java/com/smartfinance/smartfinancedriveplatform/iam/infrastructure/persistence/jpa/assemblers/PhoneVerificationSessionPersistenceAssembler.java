@@ -21,6 +21,7 @@ public final class PhoneVerificationSessionPersistenceAssembler {
         entity.setCodeHash(domain.getCodeHash());
         entity.setAttempts(domain.getAttempts());
         entity.setStatus(domain.getStatus());
+        entity.setVerificationToken(domain.getVerificationToken());
         entity.setExpiresAt(domain.getExpiresAt());
         entity.setVerifiedAt(domain.getVerifiedAt());
         return entity;
@@ -36,7 +37,8 @@ public final class PhoneVerificationSessionPersistenceAssembler {
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getExpiresAt(),
-                entity.getVerifiedAt()
+                entity.getVerifiedAt(),
+                entity.getVerificationToken()
         );
     }
 }

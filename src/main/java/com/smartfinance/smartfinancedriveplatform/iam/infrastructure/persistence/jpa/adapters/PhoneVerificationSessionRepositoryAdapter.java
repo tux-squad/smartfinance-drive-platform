@@ -37,6 +37,15 @@ public class PhoneVerificationSessionRepositoryAdapter implements PhoneVerificat
     }
 
     @Override
+    public Optional<PhoneVerificationSession> findByVerificationToken(String verificationToken) {
+        if (verificationToken == null || verificationToken.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findByVerificationToken(verificationToken.trim())
+                .map(PhoneVerificationSessionPersistenceAssembler::toDomain);
+    }
+
+    @Override
     public Optional<PhoneVerificationSession> findLatestActiveSession(String phoneNumber) {
         return repository.findLatestSession(phoneNumber).map(PhoneVerificationSessionPersistenceAssembler::toDomain);
     }

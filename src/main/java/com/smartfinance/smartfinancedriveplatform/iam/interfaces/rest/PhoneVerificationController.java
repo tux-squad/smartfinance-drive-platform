@@ -82,7 +82,8 @@ public class PhoneVerificationController {
     })
     public ResponseEntity<PhoneVerificationConfirmationResource> verifyCode(
             @Valid @RequestBody VerifyPhoneCodeResource resource) {
-        VerifyPhoneCodeCommand command = new VerifyPhoneCodeCommand(resource.phoneNumber(), resource.code());
+        String callerUserId = com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils.getCurrentUserId().orElse(null);
+        VerifyPhoneCodeCommand command = new VerifyPhoneCodeCommand(resource.phoneNumber(), resource.code(), callerUserId);
         PhoneVerificationResult result = phoneVerificationCommandService.handle(command);
 
         PhoneVerificationConfirmationResource response = new PhoneVerificationConfirmationResource(

@@ -126,9 +126,9 @@ class PhoneVerificationWebMvcTest {
     @Test
     @DisplayName("POST /api/v1/auth/phone-verification/verify should return 200 OK on successful verification")
     void verifyPhoneCodeSuccess() throws Exception {
-        UUID sessionId = UUID.randomUUID();
+        String verificationToken = UUID.randomUUID().toString();
         PhoneVerificationResult result = new PhoneVerificationResult(
-                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), sessionId.toString(), "Phone number successfully verified"
+                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), verificationToken, "Phone number successfully verified"
         );
 
         when(commandService.handle(any(VerifyPhoneCodeCommand.class))).thenReturn(result);
@@ -147,7 +147,7 @@ class PhoneVerificationWebMvcTest {
                 .andExpect(jsonPath("$.verified").value(true))
                 .andExpect(jsonPath("$.phoneNumber").value("51993913924"))
                 .andExpect(jsonPath("$.status").value("VERIFIED"))
-                .andExpect(jsonPath("$.verificationToken").value(sessionId.toString()));
+                .andExpect(jsonPath("$.verificationToken").value(verificationToken));
     }
 
     @Test

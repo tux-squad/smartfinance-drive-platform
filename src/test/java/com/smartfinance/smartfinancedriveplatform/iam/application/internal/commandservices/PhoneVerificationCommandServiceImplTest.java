@@ -90,7 +90,7 @@ class PhoneVerificationCommandServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should successfully verify correct OTP code")
+    @DisplayName("Should successfully verify correct OTP code and issue distinct verificationToken")
     void shouldSuccessfullyVerifyValidCode() {
         PhoneNumber phone = new PhoneNumber(normalizedPhone);
         PhoneVerificationSession session = new PhoneVerificationSession(phone, "valid-hash", Instant.now(), Instant.now().plus(Duration.ofMinutes(5)));
@@ -105,6 +105,7 @@ class PhoneVerificationCommandServiceImplTest {
         assertEquals(PhoneVerificationStatus.VERIFIED, result.status());
         assertEquals(normalizedPhone, result.phoneNumber());
         assertNotNull(result.verificationToken());
+        assertNotEquals(session.getId().toString(), result.verificationToken());
     }
 
     @Test
@@ -119,5 +120,49 @@ class PhoneVerificationCommandServiceImplTest {
         assertThrows(DomainValidationException.class, () -> commandService.handle(new VerifyPhoneCodeCommand(rawPhone, "999999")));
         assertEquals(1, session.getAttempts());
         verify(sessionRepository).save(session);
+    }
+
+    @Test
+    @DisplayName("Should reject verification when callerUserId does not match session userId")
+    void shouldRejectVerificationWhenCallerUserIdMismatches() {
+        PhoneNumber phone = new PhoneNumber(normalizedPhone);
+        PhoneVerificationSession session = new PhoneVerificationSession("user-123", phone, "valid-hash", Instant.now(), Instant.now().plus(Duration.ofMinutes(5)));
+
+        when(sessionRepository.findLatestActiveSession(normalizedPhone)).thenReturn(Optional.of(session));
+
+        DomainValidationException ex = assertThrows(DomainValidationException.class, () ->
+                commandService.handle(new VerifyPhoneCodeCommand(rawPhone, "123456", "different-user")));
+        assertEquals("iam.error.phoneVerification.callerMismatch", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should reject verification when session is bound to user but caller is unauthenticated")
+    void shouldRejectVerificationWhenSessionBoundToUserButCallerIsAnonymous() {
+        PhoneNumber phone = new PhoneNumber(normalizedPhone);
+        PhoneVerificationSession session = new PhoneVerificationSession("user-123", phone, "valid-hash", Instant.now(), Instant.now().plus(Duration.ofMinutes(5)));
+
+        when(sessionRepository.findLatestActiveSession(normalizedPhone)).thenReturn(Optional.of(session));
+
+        DomainValidationException ex = assertThrows(DomainValidationException.class, () ->
+                commandService.handle(new VerifyPhoneCodeCommand(rawPhone, "123456", null)));
+        assertEquals("iam.error.phoneVerification.callerMismatch", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should allow verification when callerUserId matches session userId")
+    void shouldAllowVerificationWhenCallerUserIdMatchesSessionUserId() {
+        PhoneNumber phone = new PhoneNumber(normalizedPhone);
+        PhoneVerificationSession session = new PhoneVerificationSession("user-123", phone, "valid-hash", Instant.now(), Instant.now().plus(Duration.ofMinutes(5)));
+
+        when(sessionRepository.findLatestActiveSession(normalizedPhone)).thenReturn(Optional.of(session));
+        when(otpGeneratorService.verifyOtp("123456", "valid-hash")).thenReturn(true);
+        when(sessionRepository.save(any(PhoneVerificationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PhoneVerificationResult result = commandService.handle(new VerifyPhoneCodeCommand(rawPhone, "123456", "user-123"));
+
+        assertTrue(result.verified());
+        assertEquals(PhoneVerificationStatus.VERIFIED, result.status());
+        assertNotNull(result.verificationToken());
+        assertNotEquals(session.getId().toString(), result.verificationToken());
     }
 }

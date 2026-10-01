@@ -89,9 +89,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(RuntimeException ex) {
-        logger.warn("Invalid argument/state: {}", ex.getMessage());
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex) {
+        if ("iam.error.phoneVerification.serviceUnavailable".equals(ex.getMessage())) {
+            logger.error("Phone verification service unavailable: {}", ex.getMessage());
+            var body = new ErrorResponse(
+                    HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    "Service Unavailable",
+                    "El servicio de verificación por WhatsApp no está disponible en este momento. Inténtelo más tarde."
+            );
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+        }
+        logger.warn("Invalid state: {}", ex.getMessage());
+        var body = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        logger.warn("Invalid argument: {}", ex.getMessage());
         var body = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }

@@ -16,7 +16,8 @@ import java.time.Instant;
 @Table(name = "phone_verification_sessions", indexes = {
         @Index(name = "idx_phone_verif_number", columnList = "phone_number"),
         @Index(name = "idx_phone_verif_status", columnList = "status"),
-        @Index(name = "idx_phone_verif_user_id", columnList = "user_id")
+        @Index(name = "idx_phone_verif_user_id", columnList = "user_id"),
+        @Index(name = "idx_phone_verif_token", columnList = "verification_token")
 })
 @Getter
 @Setter
@@ -25,6 +26,9 @@ public class PhoneVerificationSessionPersistenceEntity extends AuditableAbstract
 
     @Column(name = "user_id")
     private String userId;
+
+    @Column(name = "verification_token")
+    private String verificationToken;
 
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;

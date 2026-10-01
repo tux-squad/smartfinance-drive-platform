@@ -5,6 +5,10 @@ package com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands;
  */
 public record VerifyPhoneCodeCommand(
         String phoneNumber,
-        String code
+        String code,
+        String callerUserId
 ) {
+    public VerifyPhoneCodeCommand(String phoneNumber, String code) {
+        this(phoneNumber, code, null);
+    }
 }
