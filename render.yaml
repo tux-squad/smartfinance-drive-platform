@@ -56,6 +56,10 @@ services:
         sync: false
       - key: FACTILIZA_API_KEY
         sync: false
+      - key: FACTILIZA_WHATSAPP_INSTANCE_NAME
+        value: "smartfinance"
+      - key: FACTILIZA_WHATSAPP_API_KEY
+        sync: false
 
 databases:
   - name: smartfinance-db

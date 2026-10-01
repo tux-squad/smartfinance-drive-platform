@@ -262,3 +262,60 @@ sequenceDiagram
 | **Partners** | Consulta de RUC SUNAT (`GET /api/v1/sunat/ruc/{ruc}`) | SI | SI | SI | SI |
 | **Billing** | Suscribirse a Plan Premium (`POST /api/v1/billing/subscriptions`) | SI | SI | SI | SI |
 | **IAM** | Modificar Roles de Usuario (`PUT /api/v1/users/{id}/roles`) | NO | NO | NO | SI |
+| **IAM** | Solicitar OTP WhatsApp (`POST /api/v1/auth/phone-verification/send`) | Público | Público | Público | SI |
+| **IAM** | Confirmar OTP WhatsApp (`POST /api/v1/auth/phone-verification/verify`) | Público | Público | Público | SI |
+
+---
+
+## 6. Verificación de Teléfono Móvil vía WhatsApp (Factiliza API)
+
+Para garantizar que el número móvil ingresado durante el onboarding pertenece al usuario y se encuentra activo, SmartFinance integra la **API de WhatsApp de Factiliza**.
+
+### Flujo Operativo:
+1. **Solicitud de Código**:
+   * **Endpoint**: `POST /api/v1/auth/phone-verification/send`
+   * **Request Body**:
+     ```json
+     {
+       "phoneNumber": "+51 993913924"
+     }
+     ```
+   * **Lógica**: Normaliza automáticamente el número al estándar `519XXXXXXXX`, verifica que no haya un cooldown activo (60s), genera un OTP de 6 dígitos con `SecureRandom`, persiste su hash SHA-256 con TTL de 5 minutos y lo envía a través de `POST https://apiwsp.factiliza.com/v1/message/sendtext/{instancia}`.
+   * **Response Body (HTTP 200 OK)**:
+     ```json
+     {
+       "sessionId": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
+       "phoneNumber": "51993****24",
+       "status": "PENDING",
+       "expiresAt": "2026-10-01T13:30:00Z",
+       "expiresInSeconds": 300,
+       "message": "Código de verificación enviado exitosamente por WhatsApp"
+     }
+     ```
+
+2. **Confirmación del Código**:
+   * **Endpoint**: `POST /api/v1/auth/phone-verification/verify`
+   * **Request Body**:
+     ```json
+     {
+       "phoneNumber": "+51 993913924",
+       "code": "123456"
+     }
+     ```
+   * **Lógica**: Compara el hash SHA-256 en tiempo constante. Si es correcto, marca la sesión como `VERIFIED`. Si el código es incorrecto, incrementa el contador de intentos; tras 3 fallos consecutivos, la sesión queda automáticamente `BLOCKED`.
+   * **Response Body (HTTP 200 OK)**:
+     ```json
+     {
+       "verified": true,
+       "phoneNumber": "51993913924",
+       "status": "VERIFIED",
+       "verifiedAt": "2026-10-01T13:26:15Z",
+       "message": "Phone number successfully verified"
+     }
+     ```
+
+### Parámetros de Configuración y Entorno:
+* `factiliza.whatsapp.base-url`: URL base de la API de mensajería (default: `https://apiwsp.factiliza.com`).
+* `factiliza.whatsapp.instance-name`: Nombre de la instancia WhatsApp vinculada en Factiliza (default: `smartfinance`).
+* `factiliza.whatsapp.api-key`: Token Bearer provisto por Factiliza.
+* `factiliza.whatsapp.otp-ttl-minutes`: Tiempo de expiración del código OTP (default: `5`).
