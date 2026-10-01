@@ -15,15 +15,19 @@ import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.trans
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.CreateFinancialEntityCommandFromResourceAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.FinancialEntityResourceFromEntityAssembler;
 import com.smartfinance.smartfinancedriveplatform.partners.interfaces.rest.transform.UpdateFinancialEntityCommandFromResourceAssembler;
+import com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.storage.FinancialEntityImageStorageService;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.OwnershipChecker;
 import com.smartfinance.smartfinancedriveplatform.shared.infrastructure.security.SecurityUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,13 +45,23 @@ public class FinancialEntitiesController {
     private final FinancialEntityCommandService financialEntityCommandService;
     private final FinancialEntityQueryService financialEntityQueryService;
     private final OwnershipChecker ownershipChecker;
+    private final FinancialEntityImageStorageService imageStorageService;
+
+    @Autowired
+    public FinancialEntitiesController(FinancialEntityCommandService financialEntityCommandService, 
+                                       FinancialEntityQueryService financialEntityQueryService,
+                                       OwnershipChecker ownershipChecker,
+                                       FinancialEntityImageStorageService imageStorageService) {
+        this.financialEntityCommandService = financialEntityCommandService;
+        this.financialEntityQueryService = financialEntityQueryService;
+        this.ownershipChecker = ownershipChecker;
+        this.imageStorageService = imageStorageService;
+    }
 
     public FinancialEntitiesController(FinancialEntityCommandService financialEntityCommandService, 
                                        FinancialEntityQueryService financialEntityQueryService,
                                        OwnershipChecker ownershipChecker) {
-        this.financialEntityCommandService = financialEntityCommandService;
-        this.financialEntityQueryService = financialEntityQueryService;
-        this.ownershipChecker = ownershipChecker;
+        this(financialEntityCommandService, financialEntityQueryService, ownershipChecker, null);
     }
 
     /**
@@ -222,5 +236,119 @@ public class FinancialEntitiesController {
         var command = new DeleteFinancialEntityCommand(new FinancialEntityId(id));
         financialEntityCommandService.handle(command);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/v1/financial-entities/me/logo
+     * Uploads logo image for current authenticated financial entity.
+     */
+    @PostMapping(value = "/me/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('FINANCIAL_INSTITUTION', 'ADMIN')")
+    public ResponseEntity<FinancialEntityResource> uploadMyLogo(@RequestParam("file") MultipartFile file) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var entityOpt = financialEntityQueryService.handle(new GetFinancialEntityByUserIdQuery(authUserId));
+        if (entityOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var entity = entityOpt.get();
+        if (entity.getLogoUrl() != null && !entity.getLogoUrl().isBlank() && imageStorageService != null) {
+            imageStorageService.deleteFinancialEntityImage(entity.getLogoUrl());
+        }
+
+        String logoUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "logos") : null;
+        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
+        return updatedOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * POST /api/v1/financial-entities/me/banner
+     * Uploads banner image for current authenticated financial entity.
+     */
+    @PostMapping(value = "/me/banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('FINANCIAL_INSTITUTION', 'ADMIN')")
+    public ResponseEntity<FinancialEntityResource> uploadMyBanner(@RequestParam("file") MultipartFile file) {
+        String authUserId = SecurityUtils.getRequiredCurrentUserId();
+        var entityOpt = financialEntityQueryService.handle(new GetFinancialEntityByUserIdQuery(authUserId));
+        if (entityOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var entity = entityOpt.get();
+        if (entity.getBannerUrl() != null && !entity.getBannerUrl().isBlank() && imageStorageService != null) {
+            imageStorageService.deleteFinancialEntityImage(entity.getBannerUrl());
+        }
+
+        String bannerUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "banners") : null;
+        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
+        return updatedOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * POST /api/v1/financial-entities/{id}/logo
+     * Uploads logo image for a specific financial entity by ID.
+     */
+    @PostMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")
+    public ResponseEntity<FinancialEntityResource> uploadLogo(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !ownershipChecker.isFinancialEntityOwner(id, auth)) {
+            throw new AccessDeniedException("partners.error.accessDenied.notOwner");
+        }
+
+        var entityOpt = financialEntityQueryService.handle(new GetFinancialEntityByIdQuery(new FinancialEntityId(id)));
+        if (entityOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var entity = entityOpt.get();
+        if (entity.getLogoUrl() != null && !entity.getLogoUrl().isBlank() && imageStorageService != null) {
+            imageStorageService.deleteFinancialEntityImage(entity.getLogoUrl());
+        }
+
+        String logoUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "logos") : null;
+        var updatedOpt = financialEntityCommandService.updateLogo(entity.getId(), logoUrl);
+        return updatedOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
+    }
+
+    /**
+     * POST /api/v1/financial-entities/{id}/banner
+     * Uploads banner image for a specific financial entity by ID.
+     */
+    @PostMapping(value = "/{id}/banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('FINANCIAL_INSTITUTION') and @ownershipChecker.isFinancialEntityOwner(#id, authentication))")
+    public ResponseEntity<FinancialEntityResource> uploadBanner(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !ownershipChecker.isFinancialEntityOwner(id, auth)) {
+            throw new AccessDeniedException("partners.error.accessDenied.notOwner");
+        }
+
+        var entityOpt = financialEntityQueryService.handle(new GetFinancialEntityByIdQuery(new FinancialEntityId(id)));
+        if (entityOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var entity = entityOpt.get();
+        if (entity.getBannerUrl() != null && !entity.getBannerUrl().isBlank() && imageStorageService != null) {
+            imageStorageService.deleteFinancialEntityImage(entity.getBannerUrl());
+        }
+
+        String bannerUrl = (imageStorageService != null) ? imageStorageService.uploadFinancialEntityImage(file, "banners") : null;
+        var updatedOpt = financialEntityCommandService.updateBanner(entity.getId(), bannerUrl);
+        return updatedOpt
+                .map(e -> ResponseEntity.ok(FinancialEntityResourceFromEntityAssembler.toResourceFromEntity(e, true)))
+                .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 }

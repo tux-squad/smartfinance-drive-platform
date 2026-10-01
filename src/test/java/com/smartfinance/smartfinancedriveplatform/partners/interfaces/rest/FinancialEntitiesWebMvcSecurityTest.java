@@ -44,6 +44,9 @@ class FinancialEntitiesWebMvcSecurityTest {
     private OwnershipChecker ownershipChecker;
 
     @MockitoBean
+    private com.smartfinance.smartfinancedriveplatform.partners.application.outboundservices.storage.FinancialEntityImageStorageService imageStorageService;
+
+    @MockitoBean
     private com.smartfinance.smartfinancedriveplatform.iam.infrastructure.authorization.sbc.pipeline.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockitoBean
