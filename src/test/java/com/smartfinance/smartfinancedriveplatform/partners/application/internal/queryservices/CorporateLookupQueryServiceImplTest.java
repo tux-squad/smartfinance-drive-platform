@@ -4,7 +4,6 @@ import com.smartfinance.smartfinancedriveplatform.partners.application.outbounds
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.Dealership;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.aggregates.FinancialEntity;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.CorporateEntityType;
-import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.DealershipId;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.FinancialEntityId;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.model.valueobjects.SunatRucInfo;
 import com.smartfinance.smartfinancedriveplatform.partners.domain.repositories.DealershipRepository;
@@ -21,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
