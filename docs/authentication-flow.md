@@ -262,60 +262,45 @@ sequenceDiagram
 | **Partners** | Consulta de RUC SUNAT (`GET /api/v1/sunat/ruc/{ruc}`) | SI | SI | SI | SI |
 | **Billing** | Suscribirse a Plan Premium (`POST /api/v1/billing/subscriptions`) | SI | SI | SI | SI |
 | **IAM** | Modificar Roles de Usuario (`PUT /api/v1/users/{id}/roles`) | NO | NO | NO | SI |
-| **IAM** | Solicitar OTP WhatsApp (`POST /api/v1/auth/phone-verification/send`) | Público | Público | Público | SI |
-| **IAM** | Confirmar OTP WhatsApp (`POST /api/v1/auth/phone-verification/verify`) | Público | Público | Público | SI |
+| **IAM** | Verificar Teléfono vía Firebase (`POST /api/v1/auth/phone-verification/firebase`) | Público | Público | Público | SI |
 
 ---
 
-## 6. Verificación de Teléfono Móvil vía WhatsApp (Factiliza API)
+## 6. Verificación de Teléfono Móvil (Firebase Phone Auth)
 
-Para garantizar que el número móvil ingresado durante el onboarding pertenece al usuario y se encuentra activo, SmartFinance integra la **API de WhatsApp de Factiliza**.
+SmartFinance Drive utiliza **Firebase Phone Authentication** para garantizar que el número móvil ingresado durante el onboarding pertenece al usuario y se encuentra activo.
 
 ### Flujo Operativo:
-1. **Solicitud de Código**:
-   * **Endpoint**: `POST /api/v1/auth/phone-verification/send`
-   * **Request Body**:
-     ```json
-     {
-       "phoneNumber": "+51 993913924"
-     }
-     ```
-   * **Lógica**: Normaliza automáticamente el número al estándar `519XXXXXXXX`, verifica que no haya un cooldown activo (60s), genera un OTP de 6 dígitos con `SecureRandom`, persiste su hash SHA-256 con TTL de 5 minutos y lo envía a través de `POST https://apiwsp.factiliza.com/v1/message/sendtext/{instancia}`.
-   * **Response Body (HTTP 200 OK)**:
-     ```json
-     {
-       "sessionId": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
-       "phoneNumber": "51993****24",
-       "status": "PENDING",
-       "expiresAt": "2026-10-01T13:30:00Z",
-       "expiresInSeconds": 300,
-       "message": "Código de verificación enviado exitosamente por WhatsApp"
-     }
-     ```
+1. **Frontend (Cliente)**:
+   * El cliente utiliza el SDK de Firebase Web/Mobile (`signInWithPhoneNumber`) con `RecaptchaVerifier` para mitigar bots.
+   * Google despacha el SMS con código OTP al usuario en Perú (Claro, Movistar, Entel, Bitel).
+   * El usuario ingresa el código y resuelve la promesa `confirmationResult.confirm(code)`.
+   * El SDK de Firebase emite un **ID Token (JWT)** firmado por Google.
 
-2. **Confirmación del Código**:
-   * **Endpoint**: `POST /api/v1/auth/phone-verification/verify`
+2. **Backend (Servidor)**:
+   * **Endpoint**: `POST /api/v1/auth/phone-verification/firebase`
    * **Request Body**:
      ```json
      {
-       "phoneNumber": "+51 993913924",
-       "code": "123456"
+       "firebaseIdToken": "eyJhbGciOiJSUzI1NiIs..."
      }
      ```
-   * **Lógica**: Compara el hash SHA-256 en tiempo constante. Si es correcto, marca la sesión como `VERIFIED`. Si el código es incorrecto, incrementa el contador de intentos; tras 3 fallos consecutivos, la sesión queda automáticamente `BLOCKED`.
+   * **Lógica**: El backend valida el token JWT con **Firebase Admin SDK** (`FirebaseAuth.verifyIdToken`), verifica emisor, firma y expiración, extrae el claim `phone_number`, invalida sesiones pendientes anteriores y genera un token de verificación firmado para completar el registro.
    * **Response Body (HTTP 200 OK)**:
      ```json
      {
        "verified": true,
        "phoneNumber": "51993913924",
        "status": "VERIFIED",
-       "verifiedAt": "2026-10-01T13:26:15Z",
-       "message": "Phone number successfully verified"
+       "verifiedAt": "2026-10-03T16:00:00Z",
+       "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
+       "message": "Número de teléfono verificado exitosamente mediante Firebase"
      }
      ```
 
-### Parámetros de Configuración y Entorno:
-* `factiliza.whatsapp.base-url`: URL base de la API de mensajería (default: `https://apiwsp.factiliza.com`).
-* `factiliza.whatsapp.instance-name`: Nombre de la instancia WhatsApp vinculada en Factiliza (default: `smartfinance`).
-* `factiliza.whatsapp.api-key`: Token Bearer provisto por Factiliza.
-* `factiliza.whatsapp.otp-ttl-minutes`: Tiempo de expiración del código OTP (default: `5`).
+### Parámetros de Configuración y Entorno (Firebase):
+* `firebase.project-id` (`FIREBASE_PROJECT_ID`): ID del proyecto de Firebase en Google Cloud.
+* `firebase.credentials.base64` (`FIREBASE_CREDENTIALS_BASE64`): Contenido en Base64 del JSON de Service Account (ideal para Render sin archivos físicos).
+* `firebase.credentials.path` (`FIREBASE_CREDENTIALS_PATH`): Ruta física al archivo de credenciales de Google Service Account (`serviceAccountKey.json`).
+
+

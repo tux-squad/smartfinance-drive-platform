@@ -35,9 +35,11 @@ services:
       # Override to "true" only for demo environments without an SMTP provider.
       - key: APP_MAIL_ALLOW_EMULATED
         value: "false"
-      # WhatsApp OTP fails closed in production when Factiliza API key is unconfigured.
-      - key: APP_WHATSAPP_ALLOW_EMULATED
-        value: "false"
+      # Firebase Phone Authentication configuration
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CREDENTIALS_BASE64
+        sync: false
       # Populate third-party service credentials in Render Dashboard Environment settings
       - key: SPRING_MAIL_HOST
         sync: false
@@ -58,10 +60,6 @@ services:
       - key: CHEQUEA_API_KEY
         sync: false
       - key: FACTILIZA_API_KEY
-        sync: false
-      - key: FACTILIZA_WHATSAPP_INSTANCE_NAME
-        value: "smartfinance"
-      - key: FACTILIZA_WHATSAPP_API_KEY
         sync: false
 
 databases:

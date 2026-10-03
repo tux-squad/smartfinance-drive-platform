@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Aggregate Root representing a mobile phone verification session using OTP over WhatsApp.
+ * Aggregate Root representing a mobile phone verification session using Firebase Phone Authentication.
  */
 @Getter
 public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneVerificationSession> {
@@ -95,6 +95,28 @@ public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneV
      */
     public PhoneVerificationSession(PhoneNumber phoneNumber, String codeHash, Instant createdAt, Instant expiresAt) {
         this(null, phoneNumber, codeHash, createdAt, expiresAt);
+    }
+
+    /**
+     * Factory method for creating a pre-verified session originating from Firebase Phone Auth.
+     */
+    public static PhoneVerificationSession createVerifiedFromFirebase(String userId, PhoneNumber phoneNumber) {
+        if (phoneNumber == null) {
+            throw new DomainValidationException("iam.error.phoneNumber.required");
+        }
+        Instant now = Instant.now();
+        return new PhoneVerificationSession(
+                UUID.randomUUID(),
+                userId != null && !userId.isBlank() ? userId.trim() : null,
+                phoneNumber,
+                "FIREBASE_VERIFIED",
+                0,
+                PhoneVerificationStatus.VERIFIED,
+                now,
+                now.plus(Duration.ofMinutes(60)),
+                now,
+                UUID.randomUUID().toString()
+        );
     }
 
     public boolean isExpired() {

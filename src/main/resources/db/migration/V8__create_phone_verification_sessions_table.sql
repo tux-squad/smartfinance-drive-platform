@@ -1,4 +1,4 @@
--- Migration Script to create phone_verification_sessions table for WhatsApp OTP validation
+-- Migration Script to create phone_verification_sessions table for phone verification
 
 CREATE TABLE IF NOT EXISTS phone_verification_sessions (
     id UUID PRIMARY KEY,

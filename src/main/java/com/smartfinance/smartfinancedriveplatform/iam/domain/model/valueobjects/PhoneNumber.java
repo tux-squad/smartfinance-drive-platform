@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 /**
  * Value Object representing a validated and normalized Peruvian mobile phone number.
  * Accepts formats such as "+51 993913924", "+51993913924", "993913924", or "51993913924"
- * and normalizes to the 11-digit format without plus "519XXXXXXXX" required by Factiliza WhatsApp API.
+ * and normalizes to the 11-digit format without plus "519XXXXXXXX" used in phone verification.
  */
 public record PhoneNumber(String fullNumber) {
 
