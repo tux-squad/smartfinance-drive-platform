@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,7 +43,7 @@ class PhoneVerificationCommandServiceImplTest {
     private final String rawPhone = "+51 993913924";
     private final String normalizedPhone = "51993913924";
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         commandService = new PhoneVerificationCommandServiceImpl(sessionRepository, otpGeneratorService, phoneVerificationSenderService, 5);
     }
