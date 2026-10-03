@@ -3,6 +3,7 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.PhoneVerificationCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.PhoneVerificationSession;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SendPhoneVerificationCodeCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyFirebasePhoneTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyPhoneCodeCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneNumber;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationResult;
@@ -10,6 +11,7 @@ import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.PhoneVerificationConfirmationResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.PhoneVerificationSessionResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.SendPhoneVerificationResource;
+import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.VerifyFirebaseTokenResource;
 import com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest.resources.VerifyPhoneCodeResource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,5 +71,23 @@ class PhoneVerificationControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getBody().verified());
         assertEquals("VERIFIED", response.getBody().status());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK with confirmation resource when verifying Firebase token")
+    void shouldReturnOkWhenVerifyingFirebaseToken() {
+        VerifyFirebaseTokenResource resource = new VerifyFirebaseTokenResource("sample-firebase-id-token");
+        PhoneVerificationResult result = new PhoneVerificationResult(
+                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), "firebase-verified-token-abc", "Verified via Firebase");
+
+        when(phoneVerificationCommandService.handle(any(VerifyFirebasePhoneTokenCommand.class))).thenReturn(result);
+
+        ResponseEntity<PhoneVerificationConfirmationResource> response = controller.verifyFirebaseToken(resource);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().verified());
+        assertEquals("51993913924", response.getBody().phoneNumber());
+        assertEquals("firebase-verified-token-abc", response.getBody().verificationToken());
     }
 }

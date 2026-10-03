@@ -3,6 +3,7 @@ package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.PhoneVerificationCommandService;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.PhoneVerificationSession;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SendPhoneVerificationCodeCommand;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyFirebasePhoneTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyPhoneCodeCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneNumber;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationResult;
@@ -189,5 +190,63 @@ class PhoneVerificationWebMvcTest {
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.error").value("Service Unavailable"))
                 .andExpect(jsonPath("$.message").value("El servicio externo no se encuentra disponible temporalmente. Por favor, inténtelo más tarde."));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 200 OK when Firebase token is valid")
+    void verifyFirebaseTokenSuccess() throws Exception {
+        String verificationToken = UUID.randomUUID().toString();
+        PhoneVerificationResult result = new PhoneVerificationResult(
+                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), verificationToken, "Verified via Firebase");
+
+        when(commandService.handle(any(VerifyFirebasePhoneTokenCommand.class))).thenReturn(result);
+
+        String payload = """
+                {
+                    "firebaseIdToken": "valid-firebase-jwt-token"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verified").value(true))
+                .andExpect(jsonPath("$.phoneNumber").value("51993913924"))
+                .andExpect(jsonPath("$.status").value("VERIFIED"))
+                .andExpect(jsonPath("$.verificationToken").value(verificationToken));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 400 Bad Request when token is invalid")
+    void verifyFirebaseTokenInvalid() throws Exception {
+        when(commandService.handle(any(VerifyFirebasePhoneTokenCommand.class)))
+                .thenThrow(new DomainValidationException("iam.error.firebaseToken.invalid"));
+
+        String payload = """
+                {
+                    "firebaseIdToken": "invalid-token"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 400 Bad Request when token is blank")
+    void verifyFirebaseTokenBlank() throws Exception {
+        String payload = """
+                {
+                    "firebaseIdToken": ""
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest());
     }
 }
