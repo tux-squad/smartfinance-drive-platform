@@ -1,6 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.iam.infrastructure.tokens.firebase;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
@@ -10,14 +11,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Base64;
 
 /**
  * Spring configuration for initializing FirebaseApp and FirebaseAuth beans.
- * Supports credentials supplied via Base64 environment variable, file path, or Project ID.
+ * Supports credentials supplied via Base64 environment variable, file/classpath path, or Project ID.
  */
 @Configuration
 public class FirebaseConfiguration {
@@ -32,6 +37,9 @@ public class FirebaseConfiguration {
 
     @Value("${firebase.credentials.path:}")
     private String credentialsPath;
+
+    @Autowired(required = false)
+    private ResourceLoader resourceLoader;
 
     @Bean
     public FirebaseApp firebaseApp() {
@@ -48,19 +56,28 @@ public class FirebaseConfiguration {
                 credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(decoded));
                 log.info("Loaded Firebase credentials from Base64 configuration");
             } else if (credentialsPath != null && !credentialsPath.isBlank()) {
-                credentials = GoogleCredentials.fromStream(new FileInputStream(credentialsPath.trim()));
-                log.info("Loaded Firebase credentials from file path: [{}]", credentialsPath);
+                credentials = loadCredentialsFromPath(credentialsPath.trim());
             } else {
-                try {
-                    credentials = GoogleCredentials.getApplicationDefault();
-                    log.info("Loaded Firebase credentials from Google Application Default Credentials");
-                } catch (Exception e) {
-                    log.debug("No ApplicationDefaultCredentials available for Firebase: {}", e.getMessage());
+                // Check candidate classpath / file locations for service account credentials
+                credentials = findDefaultServiceAccount();
+                if (credentials == null) {
+                    try {
+                        credentials = GoogleCredentials.getApplicationDefault();
+                        log.info("Loaded Firebase credentials from Google Application Default Credentials");
+                    } catch (Exception e) {
+                        log.debug("No ApplicationDefaultCredentials available for Firebase: {}", e.getMessage());
+                    }
                 }
             }
 
             if (credentials != null) {
                 optionsBuilder.setCredentials(credentials);
+                if ((projectId == null || projectId.isBlank()) && credentials instanceof ServiceAccountCredentials sac) {
+                    if (sac.getProjectId() != null && !sac.getProjectId().isBlank()) {
+                        projectId = sac.getProjectId();
+                        log.info("Inferred Firebase Project ID [{}] from service account credentials", projectId);
+                    }
+                }
             }
 
             if (projectId != null && !projectId.isBlank()) {
@@ -79,6 +96,46 @@ public class FirebaseConfiguration {
             log.error("Failed to initialize FirebaseApp: {}", e.getMessage());
             return null;
         }
+    }
+
+    private GoogleCredentials loadCredentialsFromPath(String path) {
+        try {
+            if (resourceLoader != null) {
+                Resource resource = resourceLoader.getResource(path);
+                if (resource.exists()) {
+                    try (InputStream is = resource.getInputStream()) {
+                        log.info("Loaded Firebase credentials from Resource: [{}]", path);
+                        return GoogleCredentials.fromStream(is);
+                    }
+                }
+            }
+            File file = new File(path);
+            if (file.exists() && file.isFile()) {
+                try (InputStream is = new FileInputStream(file)) {
+                    log.info("Loaded Firebase credentials from file: [{}]", file.getAbsolutePath());
+                    return GoogleCredentials.fromStream(is);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load Firebase credentials from path [{}]: {}", path, e.getMessage());
+        }
+        return null;
+    }
+
+    private GoogleCredentials findDefaultServiceAccount() {
+        String[] candidatePaths = {
+                "classpath:smartfinance-28ec1-firebase-adminsdk-fbsvc-eeb85bf369.json",
+                "classpath:firebase-credentials.json",
+                "firebase-credentials.json"
+        };
+        for (String candidate : candidatePaths) {
+            GoogleCredentials creds = loadCredentialsFromPath(candidate);
+            if (creds != null) {
+                log.info("Discovered and loaded Firebase service account from candidate path [{}]", candidate);
+                return creds;
+            }
+        }
+        return null;
     }
 
     @Bean
