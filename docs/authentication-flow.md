@@ -262,6 +262,8 @@ sequenceDiagram
 | **Partners** | Consulta de RUC SUNAT (`GET /api/v1/sunat/ruc/{ruc}`) | SI | SI | SI | SI |
 | **Billing** | Suscribirse a Plan Premium (`POST /api/v1/billing/subscriptions`) | SI | SI | SI | SI |
 | **IAM** | Modificar Roles de Usuario (`PUT /api/v1/users/{id}/roles`) | NO | NO | NO | SI |
+| **IAM** | Enviar OTP Verificación Correo (`POST /api/v1/auth/email-verification/send`) | Público | Público | Público | SI |
+| **IAM** | Validar OTP Verificación Correo (`POST /api/v1/auth/email-verification/verify`) | Público | Público | Público | SI |
 | **IAM** | Verificar Teléfono vía Firebase (`POST /api/v1/auth/phone-verification/firebase`) | Público | Público | Público | SI |
 
 ---
@@ -278,7 +280,7 @@ SmartFinance Drive utiliza **Firebase Phone Authentication** para garantizar que
    * El SDK de Firebase emite un **ID Token (JWT)** firmado por Google.
 
 2. **Backend (Servidor)**:
-   * **Endpoint**: `POST /api/v1/auth/phone-verification/firebase`
+   * **Endpoint**: `POST /api/v1/auth/phone-verification/firebase` (o `/api/v1/auth/phone-verification`)
    * **Request Body**:
      ```json
      {
@@ -302,5 +304,76 @@ SmartFinance Drive utiliza **Firebase Phone Authentication** para garantizar que
 * `firebase.project-id` (`FIREBASE_PROJECT_ID`): ID del proyecto de Firebase en Google Cloud.
 * `firebase.credentials.base64` (`FIREBASE_CREDENTIALS_BASE64`): Contenido en Base64 del JSON de Service Account (ideal para Render sin archivos físicos).
 * `firebase.credentials.path` (`FIREBASE_CREDENTIALS_PATH`): Ruta física al archivo de credenciales de Google Service Account (`serviceAccountKey.json`).
+
+---
+
+## 7. Verificación de Correo Electrónico (Gmail SMTP OTP)
+
+SmartFinance Drive proporciona verificación de correo electrónico con códigos de un solo uso (OTP) de 6 dígitos numéricos despachados por **Gmail SMTP** (`smartfinancedrive@gmail.com`). Este flujo es de acceso público y aplica tanto a clientes particulares (`ROLE_USER`) como a representantes de concesionarias (`ROLE_DEALER`) y bancos (`ROLE_FINANCIAL_INSTITUTION`).
+
+### Flujo Operativo:
+
+1. **Despacho de Código OTP**:
+   * **Endpoint**: `POST /api/v1/auth/email-verification/send`
+   * **Acceso**: Público (protegido por `RateLimitingFilter`, máx. 10 req/min por IP).
+   * **Lógica Interna**:
+     * Valida formato RFC 5322 del correo electrónico.
+     * **Cooldown anti-spam**: Verifica que no exista una sesión para el correo emitida en los últimos 60 segundos (`iam.error.emailVerification.cooldownActive`).
+     * **Tope diario de envíos**: Máximo 5 solicitudes por correo en las últimas 24 horas (`iam.error.emailVerification.dailyLimitExceeded`).
+     * Genera un código OTP de 6 dígitos con generador criptográfico seguro (`SecureRandom`).
+     * Almacena el hash SHA-256 del código en la base de datos (con TTL de 10 minutos y límite de 3 intentos).
+     * Invalida cualquier sesión previa no confirmada para ese mismo correo a estado `EXPIRED`.
+     * Despacha un correo HTML responsive con plantilla oficial de SmartFinance Drive.
+   * **Request Body**:
+     ```json
+     {
+       "email": "aldospeedcuber@gmail.com"
+     }
+     ```
+   * **Response Body (HTTP 200 OK)**:
+     ```json
+     {
+       "email": "aldospeedcuber@gmail.com",
+       "maskedEmail": "a*************r@gmail.com",
+       "sessionActive": true,
+       "expiresInSeconds": 600,
+       "message": "Código de verificación enviado exitosamente a tu correo electrónico."
+     }
+     ```
+
+2. **Confirmación y Validación de Código OTP**:
+   * **Endpoint**: `POST /api/v1/auth/email-verification/verify`
+   * **Acceso**: Público (protegido por `RateLimitingFilter`).
+   * **Lógica Interna**:
+     * Busca la sesión activa más reciente para el correo especificado.
+     * Valida que la sesión no haya expirado (TTL de 10 minutos).
+     * Compara el hash SHA-256 del código provisto con el almacenado usando `MessageDigest.isEqual` en tiempo constante para evitar ataques de temporización.
+     * En caso de fallo: incrementa el contador de intentos fallidos. Al 3er intento, la sesión pasa irreversiblemente a `MAX_ATTEMPTS_EXCEEDED`.
+     * En caso de éxito: transiciona el estado a `VERIFIED`, sella la fecha `verifiedAt` y emite un `verificationToken` (UUIDv4) como prueba criptográfica inmutable.
+   * **Request Body**:
+     ```json
+     {
+       "email": "aldospeedcuber@gmail.com",
+       "code": "849201"
+     }
+     ```
+   * **Response Body (HTTP 200 OK)**:
+     ```json
+     {
+       "verified": true,
+       "email": "aldospeedcuber@gmail.com",
+       "status": "VERIFIED",
+       "verifiedAt": "2026-10-03T22:50:00Z",
+       "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
+       "message": "Correo electrónico verificado exitosamente."
+     }
+     ```
+
+### Parámetros de Configuración y Entorno (SMTP):
+* `spring.mail.host` (`SPRING_MAIL_HOST`): Host SMTP (`smtp.gmail.com`).
+* `spring.mail.port` (`SPRING_MAIL_PORT`): Puerto SMTP (`587`).
+* `spring.mail.username` (`SPRING_MAIL_USERNAME`): Cuenta de correo emisora (`smartfinancedrive@gmail.com`).
+* `spring.mail.password` (`SPRING_MAIL_PASSWORD`): Contraseña de aplicación de Google de 16 caracteres.
+
 
 
