@@ -267,11 +267,56 @@ sequenceDiagram
 
 ---
 
-## 6. Verificación de Teléfono Móvil vía WhatsApp (Factiliza API)
+## 6. Verificación de Teléfono Móvil
+
+SmartFinance Drive soporta dos mecanismos de verificación de identidad telefónica:
+1. **Firebase Phone Authentication (Recomendado)**: Flujo de SMS oficial de Google con reCAPTCHA antibots en el cliente y validación criptográfica en backend con Firebase Admin SDK.
+2. **WhatsApp OTP (Factiliza API)**: Despacho de código OTP de 6 dígitos mediante pasarela WhatsApp externa.
+
+---
+
+### 6.1. Verificación vía Firebase Phone Auth (Recomendado)
+
+#### Flujo Operativo:
+1. **Frontend (Cliente)**:
+   * El cliente utiliza el SDK de Firebase Web/Mobile (`signInWithPhoneNumber`) con `RecaptchaVerifier`.
+   * Google despacha el SMS con código OTP al usuario en Perú (Claro, Movistar, Entel, Bitel).
+   * El usuario ingresa el código y resuelve la promesa `confirmationResult.confirm(code)`.
+   * El SDK de Firebase emite un **ID Token (JWT)** firmado por Google.
+
+2. **Backend (Servidor)**:
+   * **Endpoint**: `POST /api/v1/auth/phone-verification/firebase`
+   * **Request Body**:
+     ```json
+     {
+       "firebaseIdToken": "eyJhbGciOiJSUzI1NiIs..."
+     }
+     ```
+   * **Lógica**: El backend valida el token JWT con **Firebase Admin SDK** (`FirebaseAuth.verifyIdToken`), verifica emisor, firma y expiración, extrae el claim `phone_number`, invalida sesiones pendientes anteriores y genera un token de verificación firmado para completar el registro.
+   * **Response Body (HTTP 200 OK)**:
+     ```json
+     {
+       "verified": true,
+       "phoneNumber": "51993913924",
+       "status": "VERIFIED",
+       "verifiedAt": "2026-10-03T16:00:00Z",
+       "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
+       "message": "Número de teléfono verificado exitosamente mediante Firebase"
+     }
+     ```
+
+#### Parámetros de Configuración y Entorno (Firebase):
+* `firebase.project-id` (`FIREBASE_PROJECT_ID`): ID del proyecto de Firebase en Google Cloud.
+* `firebase.credentials.base64` (`FIREBASE_CREDENTIALS_BASE64`): Contenido en Base64 del JSON de Service Account (ideal para Render sin archivos).
+* `firebase.credentials.path` (`FIREBASE_CREDENTIALS_PATH`): Ruta física al archivo de credenciales de Google Service Account.
+
+---
+
+### 6.2. Verificación de Teléfono Móvil vía WhatsApp (Factiliza API)
 
 Para garantizar que el número móvil ingresado durante el onboarding pertenece al usuario y se encuentra activo, SmartFinance integra la **API de WhatsApp de Factiliza**.
 
-### Flujo Operativo:
+#### Flujo Operativo:
 1. **Solicitud de Código**:
    * **Endpoint**: `POST /api/v1/auth/phone-verification/send`
    * **Request Body**:
@@ -314,8 +359,9 @@ Para garantizar que el número móvil ingresado durante el onboarding pertenece 
      }
      ```
 
-### Parámetros de Configuración y Entorno:
+#### Parámetros de Configuración y Entorno (Factiliza):
 * `factiliza.whatsapp.base-url`: URL base de la API de mensajería (default: `https://apiwsp.factiliza.com`).
 * `factiliza.whatsapp.instance-name`: Nombre de la instancia WhatsApp vinculada en Factiliza (default: `smartfinance`).
 * `factiliza.whatsapp.api-key`: Token Bearer provisto por Factiliza.
 * `factiliza.whatsapp.otp-ttl-minutes`: Tiempo de expiración del código OTP (default: `5`).
+
