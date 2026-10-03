@@ -37,3 +37,8 @@ build/
 .env.local
 .env.*.local
 
+### Firebase Service Account Credentials ###
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+firebase-credentials.json
+

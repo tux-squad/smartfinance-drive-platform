@@ -1,10 +1,7 @@
 package com.smartfinance.smartfinancedriveplatform.iam.interfaces.rest;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices.PhoneVerificationCommandService;
-import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.PhoneVerificationSession;
-import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SendPhoneVerificationCodeCommand;
-import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyPhoneCodeCommand;
-import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneNumber;
+import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyFirebasePhoneTokenCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationResult;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.valueobjects.PhoneVerificationStatus;
 import com.smartfinance.smartfinancedriveplatform.shared.domain.exceptions.DomainValidationException;
@@ -24,7 +21,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -62,7 +58,7 @@ class PhoneVerificationWebMvcTest {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
             chain.doFilter(req, res);
             return null;
-        }).when(jwtAuthenticationFilter).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
 
         org.mockito.Mockito.doAnswer(invocation -> {
             jakarta.servlet.ServletRequest req = invocation.getArgument(0);
@@ -70,7 +66,7 @@ class PhoneVerificationWebMvcTest {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
             chain.doFilter(req, res);
             return null;
-        }).when(rateLimitingFilter).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        }).when(rateLimitingFilter).doFilter(any(), any(), any());
     }
 
     @TestConfiguration
@@ -85,63 +81,21 @@ class PhoneVerificationWebMvcTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/phone-verification/send should return 200 OK for valid phone number")
-    void sendPhoneVerificationSuccess() throws Exception {
-        UUID sessionId = UUID.randomUUID();
-        PhoneNumber phone = new PhoneNumber("51993913924");
-        Instant now = Instant.now();
-        PhoneVerificationSession session = new PhoneVerificationSession(sessionId, null, phone, "hash", 0, PhoneVerificationStatus.PENDING, now, now.plus(Duration.ofMinutes(5)), null);
-
-        when(commandService.handle(any(SendPhoneVerificationCodeCommand.class))).thenReturn(session);
-
-        String payload = """
-                {
-                    "phoneNumber": "+51 993913924"
-                }
-                """;
-
-        mockMvc.perform(post("/api/v1/auth/phone-verification/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sessionId").value(sessionId.toString()))
-                .andExpect(jsonPath("$.phoneNumber").value("51993****24"))
-                .andExpect(jsonPath("$.status").value("PENDING"));
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/auth/phone-verification/send should return 400 Bad Request for invalid phone format")
-    void sendPhoneVerificationInvalidPhone() throws Exception {
-        String payload = """
-                {
-                    "phoneNumber": "12345"
-                }
-                """;
-
-        mockMvc.perform(post("/api/v1/auth/phone-verification/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/auth/phone-verification/verify should return 200 OK on successful verification")
-    void verifyPhoneCodeSuccess() throws Exception {
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 200 OK when Firebase token is valid")
+    void verifyFirebaseTokenSuccess() throws Exception {
         String verificationToken = UUID.randomUUID().toString();
         PhoneVerificationResult result = new PhoneVerificationResult(
-                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), verificationToken, "Phone number successfully verified"
-        );
+                true, "51993913924", PhoneVerificationStatus.VERIFIED, Instant.now(), verificationToken, "Verified via Firebase");
 
-        when(commandService.handle(any(VerifyPhoneCodeCommand.class))).thenReturn(result);
+        when(commandService.handle(any(VerifyFirebasePhoneTokenCommand.class))).thenReturn(result);
 
         String payload = """
                 {
-                    "phoneNumber": "+51 993913924",
-                    "code": "123456"
+                    "firebaseIdToken": "valid-firebase-jwt-token"
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/auth/phone-verification/verify")
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -152,42 +106,55 @@ class PhoneVerificationWebMvcTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/phone-verification/verify should return 400 Bad Request when code is wrong")
-    void verifyPhoneCodeWrongCode() throws Exception {
-        when(commandService.handle(any(VerifyPhoneCodeCommand.class)))
-                .thenThrow(new DomainValidationException("iam.error.phoneVerification.invalidCode"));
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 400 Bad Request when token is invalid")
+    void verifyFirebaseTokenInvalid() throws Exception {
+        when(commandService.handle(any(VerifyFirebasePhoneTokenCommand.class)))
+                .thenThrow(new DomainValidationException("iam.error.firebaseToken.invalid"));
 
         String payload = """
                 {
-                    "phoneNumber": "+51 993913924",
-                    "code": "999999"
+                    "firebaseIdToken": "invalid-token"
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/auth/phone-verification/verify")
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/phone-verification/send should return 503 Service Unavailable when external gateway is unavailable")
-    void sendPhoneVerificationServiceUnavailable() throws Exception {
-        when(commandService.handle(any(SendPhoneVerificationCodeCommand.class)))
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 400 Bad Request when token is blank")
+    void verifyFirebaseTokenBlank() throws Exception {
+        String payload = """
+                {
+                    "firebaseIdToken": ""
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/phone-verification/firebase should return 503 Service Unavailable when Firebase service is unavailable")
+    void verifyFirebaseTokenServiceUnavailable() throws Exception {
+        when(commandService.handle(any(VerifyFirebasePhoneTokenCommand.class)))
                 .thenThrow(new ExternalServiceUnavailableException("iam.error.phoneVerification.serviceUnavailable"));
 
         String payload = """
                 {
-                    "phoneNumber": "+51 993913924"
+                    "firebaseIdToken": "some-token"
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/auth/phone-verification/send")
+        mockMvc.perform(post("/api/v1/auth/phone-verification/firebase")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value(503))
-                .andExpect(jsonPath("$.error").value("Service Unavailable"))
-                .andExpect(jsonPath("$.message").value("El servicio externo no se encuentra disponible temporalmente. Por favor, inténtelo más tarde."));
+                .andExpect(jsonPath("$.error").value("Service Unavailable"));
     }
 }

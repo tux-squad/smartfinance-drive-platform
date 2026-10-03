@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartFinance - Firebase Phone Auth Tester</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; max-width: 600px; margin: auto; }
+    h1 { font-size: 1.5rem; color: #38bdf8; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+    label { display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: #94a3b8; }
+    input { width: 100%; box-sizing: border-box; padding: 0.75rem; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; margin-bottom: 1rem; }
+    button { background: #0284c7; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+    button:hover { background: #0369a1; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    pre { background: #0f172a; padding: 1rem; border-radius: 8px; font-size: 0.8rem; overflow-x: auto; color: #a7f3d0; word-break: break-all; white-space: pre-wrap; }
+    .status { padding: 0.75rem; border-radius: 8px; margin-top: 1rem; display: none; }
+    .status.info { background: #075985; display: block; }
+    .status.success { background: #065f46; display: block; }
+    .status.error { background: #991b1b; display: block; }
+  </style>
+  <!-- Firebase App & Auth SDK (Modular CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    let confirmationResult = null;
+    let auth = null;
+
+    window.initFirebase = () => {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const authDomain = document.getElementById("authDomain").value.trim();
+      const projectId = document.getElementById("projectId").value.trim();
+
+      if (!apiKey || !projectId) {
+        showStatus("Por favor ingresa tu apiKey y projectId de Firebase", "error");
+        return;
+      }
+
+      const firebaseConfig = { apiKey, authDomain, projectId };
+      const app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+
+      document.getElementById("configSection").style.display = "none";
+      document.getElementById("authSection").style.display = "block";
+      showStatus("Firebase inicializado correctamente. Ingresa tu número.", "info");
+    };
+
+    window.sendSmsCode = async () => {
+      const phone = document.getElementById("phone").value.trim();
+      if (!phone) {
+        showStatus("Ingresa un número (ej: +51993913924)", "error");
+        return;
+      }
+      try {
+        showStatus("Enviando SMS vía Google Firebase...", "info");
+        confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        document.getElementById("otpSection").style.display = "block";
+        showStatus("¡SMS enviado! Revisa tu celular e ingresa el código.", "success");
+      } catch (err) {
+        showStatus("Error al enviar SMS: " + err.message, "error");
+      }
+    };
+
+    window.verifyOtpCode = async () => {
+      const code = document.getElementById("otpCode").value.trim();
+      try {
+        showStatus("Verificando código con Google...", "info");
+        const userCredential = await confirmationResult.confirm(code);
+        const idToken = await userCredential.user.getIdToken();
+        
+        document.getElementById("tokenOutput").innerText = idToken;
+        document.getElementById("resultSection").style.display = "block";
+        showStatus("¡Autenticado con éxito! Token generado abajo listo para enviar al backend.", "success");
+      } catch (err) {
+        showStatus("Código inválido o error: " + err.message, "error");
+      }
+    };
+
+    window.testBackend = async () => {
+      const token = document.getElementById("tokenOutput").innerText.trim();
+      const backendUrl = document.getElementById("backendUrl").value.trim();
+      try {
+        showStatus("Enviando token al backend: " + backendUrl, "info");
+        const res = await fetch(backendUrl + "/api/v1/auth/phone-verification/firebase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firebaseIdToken: token })
+        });
+        const data = await res.json();
+        document.getElementById("backendResponse").innerText = JSON.stringify(data, null, 2);
+        showStatus("Respuesta recibida del backend (Status: " + res.status + ")", res.ok ? "success" : "error");
+      } catch (err) {
+        showStatus("Error al conectar con backend: " + err.message, "error");
+      }
+    };
+
+    function showStatus(msg, type) {
+      const el = document.getElementById("statusMsg");
+      el.className = "status " + type;
+      el.innerText = msg;
+    }
+  </script>
+</head>
+<body>
+  <h1>🔥 SmartFinance - Firebase Phone Auth Tester</h1>
+  <p style="color:#94a3b8; font-size: 0.9rem;">Prueba el flujo completo de SMS y validación de backend sin esperar a terminar la UI del Frontend.</p>
+
+  <div id="statusMsg" class="status"></div>
+
+  <!-- Paso 1: Configuración de Firebase -->
+  <div id="configSection" class="card">
+    <h3>1. Configuración de tu Proyecto Firebase</h3>
+    <label>API Key</label>
+    <input type="text" id="apiKey" placeholder="AIzaSy...">
+    <label>Auth Domain</label>
+    <input type="text" id="authDomain" placeholder="mi-proyecto.firebaseapp.com">
+    <label>Project ID</label>
+    <input type="text" id="projectId" placeholder="mi-proyecto">
+    <button onclick="window.initFirebase()">Conectar Firebase</button>
+  </div>
+
+  <!-- Paso 2: Envío de SMS -->
+  <div id="authSection" class="card" style="display:none;">
+    <h3>2. Enviar SMS con Código</h3>
+    <label>Número de Celular (con prefijo +51)</label>
+    <input type="text" id="phone" value="+51 993913924">
+    <div id="recaptcha-container"></div>
+    <button onclick="window.sendSmsCode()">Enviar SMS</button>
+
+    <!-- Paso 3: Confirmar OTP -->
+    <div id="otpSection" style="display:none; margin-top: 1.5rem;">
+      <h3>3. Ingresar Código de 6 dígitos</h3>
+      <input type="text" id="otpCode" placeholder="123456">
+      <button onclick="window.verifyOtpCode()">Confirmar Código</button>
+    </div>
+  </div>
+
+  <!-- Paso 4: Probar contra el Backend -->
+  <div id="resultSection" class="card" style="display:none;">
+    <h3>4. Token Firebase ID (JWT)</h3>
+    <pre id="tokenOutput"></pre>
+
+    <h3>5. Probar Backend</h3>
+    <label>URL del Backend</label>
+    <input type="text" id="backendUrl" value="https://smartfinance-drive-platform.onrender.com">
+    <button onclick="window.testBackend()">Probar POST /api/v1/auth/phone-verification/firebase</button>
+    
+    <label style="margin-top:1rem;">Respuesta del Backend:</label>
+    <pre id="backendResponse" style="color:#fde047;"></pre>
+  </div>
+</body>
+</html>
