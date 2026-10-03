@@ -19,4 +19,9 @@ public interface PhoneVerificationCommandService {
      * Verifies the submitted OTP code against the latest active session.
      */
     PhoneVerificationResult handle(VerifyPhoneCodeCommand command);
+
+    /**
+     * Verifies a Firebase Phone Authentication ID Token and creates a verified session.
+     */
+    PhoneVerificationResult handle(com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyFirebasePhoneTokenCommand command);
 }
