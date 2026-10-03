@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Aggregate Root representing a mobile phone verification session using OTP over WhatsApp.
+ * Aggregate Root representing a mobile phone verification session using Firebase Phone Authentication.
  */
 @Getter
 public class PhoneVerificationSession extends AbstractDomainAggregateRoot<PhoneVerificationSession> {
