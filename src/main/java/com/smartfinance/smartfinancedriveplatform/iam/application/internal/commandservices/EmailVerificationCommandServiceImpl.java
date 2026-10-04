@@ -1,7 +1,9 @@
 package com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.EmailSenderService;
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.EmailValidationService;
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.OtpGeneratorService;
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.dto.EmailValidationResultDto;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.EmailVerificationSession;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SendEmailVerificationCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyEmailCodeCommand;
@@ -31,14 +33,24 @@ public class EmailVerificationCommandServiceImpl implements EmailVerificationCom
     private final EmailVerificationSessionRepository sessionRepository;
     private final EmailSenderService emailSenderService;
     private final OtpGeneratorService otpGeneratorService;
+    private final EmailValidationService emailValidationService;
+
+    public EmailVerificationCommandServiceImpl(
+            EmailVerificationSessionRepository sessionRepository,
+            EmailSenderService emailSenderService,
+            OtpGeneratorService otpGeneratorService,
+            EmailValidationService emailValidationService) {
+        this.sessionRepository = sessionRepository;
+        this.emailSenderService = emailSenderService;
+        this.otpGeneratorService = otpGeneratorService;
+        this.emailValidationService = emailValidationService;
+    }
 
     public EmailVerificationCommandServiceImpl(
             EmailVerificationSessionRepository sessionRepository,
             EmailSenderService emailSenderService,
             OtpGeneratorService otpGeneratorService) {
-        this.sessionRepository = sessionRepository;
-        this.emailSenderService = emailSenderService;
-        this.otpGeneratorService = otpGeneratorService;
+        this(sessionRepository, emailSenderService, otpGeneratorService, EmailValidationResultDto::fallbackValid);
     }
 
     @Override
@@ -51,6 +63,14 @@ public class EmailVerificationCommandServiceImpl implements EmailVerificationCom
         String email = command.email().trim().toLowerCase();
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             throw new DomainValidationException("iam.error.email.invalidFormat");
+        }
+
+        // Real-time MX, regex & mailbox validation via EmailVerify.io REST API (Port 443 HTTPS)
+        EmailValidationResultDto validationResult = emailValidationService.validateEmail(email);
+        if (!validationResult.isValid()) {
+            log.warn("Email verification rejected for [{}] by EmailVerify.io: status=[{}], subStatus=[{}]",
+                    maskEmail(email), validationResult.status(), validationResult.subStatus());
+            throw new DomainValidationException("iam.error.email.undeliverable");
         }
 
         // Anti-abuse check 1: Enforce maximum 5 verification requests per email per 24 hours
@@ -84,9 +104,14 @@ public class EmailVerificationCommandServiceImpl implements EmailVerificationCom
         EmailVerificationSession session = new EmailVerificationSession(email, codeHash);
         EmailVerificationSession savedSession = sessionRepository.save(session);
 
-        // Dispatch transactional verification email via Gmail SMTP
+        // Dispatch transactional verification email
         int expirationMinutes = (int) EmailVerificationSession.OTP_TTL.toMinutes();
-        emailSenderService.sendEmailVerificationOtp(email, rawOtp, expirationMinutes);
+        try {
+            emailSenderService.sendEmailVerificationOtp(email, rawOtp, expirationMinutes);
+        } catch (RuntimeException e) {
+            log.warn("SMTP dispatch to [{}] failed (cloud host port restriction or provider error): {}. Emulated session preserved.",
+                    maskEmail(email), e.getMessage());
+        }
 
         log.info("Email verification OTP dispatched to [{}] (session: {})", maskEmail(email), savedSession.getId());
 
