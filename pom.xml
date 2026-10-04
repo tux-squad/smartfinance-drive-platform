@@ -112,13 +112,6 @@
             <version>9.4.3</version>
         </dependency>
 
-        <!-- Resend Email API SDK over HTTPS (Port 443) -->
-        <dependency>
-            <groupId>com.resend</groupId>
-            <artifactId>resend-java</artifactId>
-            <version>3.1.0</version>
-        </dependency>
-
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
