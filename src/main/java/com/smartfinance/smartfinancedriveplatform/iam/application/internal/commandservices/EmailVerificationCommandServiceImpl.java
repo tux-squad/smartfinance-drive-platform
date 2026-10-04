@@ -35,6 +35,7 @@ public class EmailVerificationCommandServiceImpl implements EmailVerificationCom
     private final OtpGeneratorService otpGeneratorService;
     private final EmailValidationService emailValidationService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public EmailVerificationCommandServiceImpl(
             EmailVerificationSessionRepository sessionRepository,
             EmailSenderService emailSenderService,
