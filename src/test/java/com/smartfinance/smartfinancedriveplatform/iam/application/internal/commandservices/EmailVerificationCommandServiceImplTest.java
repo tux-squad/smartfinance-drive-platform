@@ -1,7 +1,9 @@
 package com.smartfinance.smartfinancedriveplatform.iam.application.internal.commandservices;
 
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.EmailSenderService;
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.EmailValidationService;
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.OtpGeneratorService;
+import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.dto.EmailValidationResultDto;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.aggregates.EmailVerificationSession;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.SendEmailVerificationCommand;
 import com.smartfinance.smartfinancedriveplatform.iam.domain.model.commands.VerifyEmailCodeCommand;
@@ -37,14 +39,25 @@ class EmailVerificationCommandServiceImplTest {
     @Mock
     private OtpGeneratorService otpGeneratorService;
 
+    @Mock
+    private EmailValidationService emailValidationService;
+
     @InjectMocks
     private EmailVerificationCommandServiceImpl commandService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        lenient().when(emailValidationService.validateEmail(anyString()))
+                .thenAnswer(invocation -> EmailValidationResultDto.fallbackValid(invocation.getArgument(0)));
+    }
 
     @Test
     @DisplayName("Should dispatch email OTP verification successfully")
     void shouldDispatchEmailOtpVerificationSuccessfully() {
         SendEmailVerificationCommand command = new SendEmailVerificationCommand("aldospeedcuber@gmail.com");
 
+        when(emailValidationService.validateEmail("aldospeedcuber@gmail.com"))
+                .thenReturn(EmailValidationResultDto.valid("aldospeedcuber@gmail.com", "valid", "permitted"));
         when(sessionRepository.countRecentSessionsByEmail(eq("aldospeedcuber@gmail.com"), any(Instant.class))).thenReturn(0L);
         when(sessionRepository.findLatestActiveSession("aldospeedcuber@gmail.com")).thenReturn(Optional.empty());
         when(otpGeneratorService.generateOtp()).thenReturn("123456");
@@ -59,6 +72,18 @@ class EmailVerificationCommandServiceImplTest {
         assertEquals(600, result.expiresInSeconds());
         verify(emailSenderService, times(1)).sendEmailVerificationOtp(eq("aldospeedcuber@gmail.com"), eq("123456"), eq(10));
         verify(sessionRepository, times(1)).expirePendingSessions("aldospeedcuber@gmail.com");
+    }
+
+    @Test
+    @DisplayName("Should throw exception when email is rejected by EmailVerify.io")
+    void shouldThrowExceptionWhenEmailIsRejectedByEmailVerify() {
+        SendEmailVerificationCommand command = new SendEmailVerificationCommand("fake-nonexistent-123987@gmail.com");
+
+        when(emailValidationService.validateEmail("fake-nonexistent-123987@gmail.com"))
+                .thenReturn(new EmailValidationResultDto("fake-nonexistent-123987@gmail.com", "invalid", "mailbox_not_found", false));
+
+        DomainValidationException ex = assertThrows(DomainValidationException.class, () -> commandService.handle(command));
+        assertEquals("iam.error.email.undeliverable", ex.getMessage());
     }
 
     @Test
