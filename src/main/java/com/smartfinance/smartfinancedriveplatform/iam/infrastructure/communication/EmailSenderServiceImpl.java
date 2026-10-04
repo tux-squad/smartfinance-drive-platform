@@ -1,23 +1,25 @@
 package com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication;
 
-import com.resend.Resend;
-import com.resend.services.emails.model.CreateEmailOptions;
-import com.resend.services.emails.model.CreateEmailResponse;
 import com.smartfinance.smartfinancedriveplatform.iam.application.outboundservices.EmailSenderService;
+import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication.dto.BrevoEmailRequest;
+import com.smartfinance.smartfinancedriveplatform.iam.infrastructure.communication.dto.BrevoEmailResponse;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
- * Transactional email service implementation for dispatching OTP verification codes via Resend HTTPS API (Port 443)
+ * Transactional email service implementation for dispatching OTP verification codes via Brevo v3 HTTPS API (Port 443)
  * with graceful fallback to JavaMailSender SMTP and emulated dispatch.
  */
 @Service
@@ -26,39 +28,57 @@ public class EmailSenderServiceImpl implements EmailSenderService {
     private static final Logger log = LoggerFactory.getLogger(EmailSenderServiceImpl.class);
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-    private final String resendApiKey;
-    private final String resendFromEmail;
+    private final RestClient restClient;
+    private final String brevoApiKey;
+    private final String brevoSenderEmail;
+    private final String brevoSenderName;
     private final String fromEmail;
     private final boolean allowEmulated;
 
     @org.springframework.beans.factory.annotation.Autowired
     public EmailSenderServiceImpl(
             ObjectProvider<JavaMailSender> mailSenderProvider,
-            @Value("${resend.api-key:}") String resendApiKey,
-            @Value("${resend.from-email:onboarding@resend.dev}") String resendFromEmail,
+            ObjectProvider<RestClient.Builder> restClientBuilderProvider,
+            @Value("${brevo.api-key:}") String brevoApiKey,
+            @Value("${brevo.base-url:https://api.brevo.com}") String brevoBaseUrl,
+            @Value("${brevo.sender-email:aldomachaccasoto@gmail.com}") String brevoSenderEmail,
+            @Value("${brevo.sender-name:SmartFinance Drive}") String brevoSenderName,
             @Value("${app.mail.allow-emulated:true}") boolean allowEmulated,
             @Value("${spring.mail.username:no-reply@smartfinance.drive.pe}") String fromEmail) {
         this.mailSenderProvider = mailSenderProvider;
-        this.resendApiKey = resendApiKey != null ? resendApiKey.trim() : "";
-        this.resendFromEmail = resendFromEmail != null && !resendFromEmail.isBlank() ? resendFromEmail.trim() : "onboarding@resend.dev";
+        this.brevoApiKey = brevoApiKey != null ? brevoApiKey.trim() : "";
+        this.brevoSenderEmail = brevoSenderEmail != null && !brevoSenderEmail.isBlank() ? brevoSenderEmail.trim() : "aldomachaccasoto@gmail.com";
+        this.brevoSenderName = brevoSenderName != null && !brevoSenderName.isBlank() ? brevoSenderName.trim() : "SmartFinance Drive";
         this.allowEmulated = allowEmulated;
         this.fromEmail = fromEmail;
+
+        String baseUrl = brevoBaseUrl != null && !brevoBaseUrl.isBlank() ? brevoBaseUrl.trim() : "https://api.brevo.com";
+        RestClient.Builder builder = (restClientBuilderProvider != null && restClientBuilderProvider.getIfAvailable() != null)
+                ? restClientBuilderProvider.getIfAvailable()
+                : RestClient.builder();
+        this.restClient = builder.baseUrl(baseUrl).build();
     }
 
     public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider, boolean allowEmulated, String fromEmail) {
-        this(mailSenderProvider, "", "onboarding@resend.dev", allowEmulated, fromEmail);
+        this(mailSenderProvider, null, "", "https://api.brevo.com", "aldomachaccasoto@gmail.com", "SmartFinance Drive", allowEmulated, fromEmail);
     }
 
     public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider, boolean allowEmulated) {
-        this(mailSenderProvider, "", "onboarding@resend.dev", allowEmulated, "no-reply@smartfinance.drive.pe");
+        this(mailSenderProvider, allowEmulated, "no-reply@smartfinance.drive.pe");
     }
 
     public EmailSenderServiceImpl(ObjectProvider<JavaMailSender> mailSenderProvider) {
-        this(mailSenderProvider, "", "onboarding@resend.dev", true, "no-reply@smartfinance.drive.pe");
+        this(mailSenderProvider, true, "no-reply@smartfinance.drive.pe");
     }
 
-    public EmailSenderServiceImpl(String resendApiKey, String resendFromEmail) {
-        this(null, resendApiKey, resendFromEmail, true, "no-reply@smartfinance.drive.pe");
+    public EmailSenderServiceImpl(RestClient restClient, String brevoApiKey, String brevoSenderEmail, String brevoSenderName) {
+        this.mailSenderProvider = null;
+        this.restClient = restClient;
+        this.brevoApiKey = brevoApiKey != null ? brevoApiKey.trim() : "";
+        this.brevoSenderEmail = brevoSenderEmail != null ? brevoSenderEmail.trim() : "aldomachaccasoto@gmail.com";
+        this.brevoSenderName = brevoSenderName != null ? brevoSenderName.trim() : "SmartFinance Drive";
+        this.allowEmulated = true;
+        this.fromEmail = "no-reply@smartfinance.drive.pe";
     }
 
     @Override
@@ -69,7 +89,7 @@ public class EmailSenderServiceImpl implements EmailSenderService {
         String subject = "SmartFinance Drive - Código de Verificación Corporativa B2B";
         String htmlBody = buildHtmlBody(recipientName, entityName, otpCode, expirationMinutes);
 
-        if (dispatchViaResend(toEmail, subject, htmlBody)) {
+        if (dispatchViaBrevo(toEmail, recipientName, subject, htmlBody)) {
             return;
         }
 
@@ -83,33 +103,47 @@ public class EmailSenderServiceImpl implements EmailSenderService {
         String subject = "SmartFinance Drive - Código de Verificación de Correo";
         String htmlBody = buildHtmlBodyForEmailVerification(otpCode, expirationMinutes);
 
-        if (dispatchViaResend(toEmail, subject, htmlBody)) {
+        if (dispatchViaBrevo(toEmail, toEmail, subject, htmlBody)) {
             return;
         }
 
         dispatchViaSmtp(toEmail, subject, htmlBody);
     }
 
-    private boolean dispatchViaResend(String toEmail, String subject, String htmlBody) {
-        if (resendApiKey.isBlank()) {
+    private boolean dispatchViaBrevo(String toEmail, String recipientName, String subject, String htmlBody) {
+        if (brevoApiKey.isBlank()) {
             return false;
         }
 
         try {
-            Resend resend = new Resend(resendApiKey);
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(resendFromEmail)
-                    .to(toEmail)
-                    .subject(subject)
-                    .html(htmlBody)
-                    .build();
+            String targetName = recipientName != null && !recipientName.isBlank() ? recipientName : toEmail;
+            BrevoEmailRequest payload = new BrevoEmailRequest(
+                    new BrevoEmailRequest.BrevoSender(brevoSenderName, brevoSenderEmail),
+                    List.of(new BrevoEmailRequest.BrevoRecipient(toEmail, targetName)),
+                    subject,
+                    htmlBody
+            );
 
-            CreateEmailResponse response = resend.emails().send(params);
-            log.info("Email verification OTP successfully dispatched via Resend HTTPS API (id: {}) to [{}]",
-                    response.getId(), toEmail);
-            return true;
+            log.info("Dispatching email OTP to [{}] via Brevo HTTPS REST API", toEmail);
+
+            BrevoEmailResponse response = restClient.post()
+                    .uri("/v3/smtp/email")
+                    .header("api-key", brevoApiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .body(BrevoEmailResponse.class);
+
+            if (response != null && response.messageId() != null) {
+                log.info("Email verification OTP successfully dispatched via Brevo HTTPS API (messageId: {}) to [{}]",
+                        response.messageId(), toEmail);
+                return true;
+            }
+            log.warn("Received empty messageId from Brevo API for [{}]", toEmail);
+            return false;
         } catch (Exception e) {
-            log.error("Failed to dispatch email via Resend HTTPS API to [{}]: {}", toEmail, e.getMessage());
+            log.error("Failed to dispatch email via Brevo HTTPS API to [{}]: {}", toEmail, e.getMessage());
             return false;
         }
     }
