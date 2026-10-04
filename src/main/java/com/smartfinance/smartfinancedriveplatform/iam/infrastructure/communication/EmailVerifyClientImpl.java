@@ -23,6 +23,7 @@ public class EmailVerifyClientImpl implements EmailValidationService {
     private final String apiKey;
     private final String baseUrl;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public EmailVerifyClientImpl(
             RestClient.Builder restClientBuilder,
             @Value("${emailverify.api-key:}") String apiKey,
