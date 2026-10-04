@@ -15,4 +15,13 @@ public interface EmailSenderService {
      * @param expirationMinutes Minutes until the code expires.
      */
     void sendCorporateVerificationOtp(String toEmail, String recipientName, String entityName, String otpCode, int expirationMinutes);
+
+    /**
+     * Sends a 6-digit email OTP verification code to any user email address.
+     *
+     * @param toEmail           The destination email address.
+     * @param otpCode           The 6-digit verification code.
+     * @param expirationMinutes Minutes until the code expires.
+     */
+    void sendEmailVerificationOtp(String toEmail, String otpCode, int expirationMinutes);
 }

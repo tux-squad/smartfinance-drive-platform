@@ -24,7 +24,7 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ## Índice de Bounded Contexts
 
-1. [IAM - Autenticación, Usuarios y Asesores de Ventas (20 Endpoints)](#1-iam---autenticación-usuarios-y-asesores-de-ventas)
+1. [IAM - Autenticación, Usuarios, Verificación de Correo/Teléfono y Asesores de Ventas (23 Endpoints)](#1-iam---autenticación-usuarios-y-asesores-de-ventas)
 2. [Profiles - Perfiles de Cliente (6 Endpoints)](#2-profiles---perfiles-de-cliente)
 3. [Catalog - Catálogo de Vehículos, Especificaciones y Marcas (11 Endpoints)](#3-catalog---catálogo-de-vehículos-especificaciones-y-marcas)
 4. [Partners - Entidades Financieras, Directorio B2B y SUNAT (16 Endpoints)](#4-partners---entidades-financieras-directorio-b2b-y-sunat)
@@ -32,10 +32,9 @@ Authorization: Bearer <tu_access_token_jwt>
 6. [Scoring - Evaluación Crediticia (5 Endpoints)](#6-scoring---evaluación-crediticia)
 7. [Projections - Depreciación de Vehículos (5 Endpoints)](#7-projections---depreciación-de-vehículos)
 8. [Billing - Planes, Suscripciones, Facturas PDF, Stripe y Métricas ROI (12 Endpoints)](#8-billing---planes-suscripciones-facturas-pdf-stripe-y-métricas-roi)
-9. [Messaging - Mensajería y Chat en Tiempo Real (5 Endpoints + STOMP)](#9-messaging---mensajería-y-chat-en-tiempo-real)
-10. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#10-consultations---asesor-financiero-ia)
-11. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)](#11-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
-12. [Analytics - Métricas Consolidadas y Dashboards por Rol (3 Endpoints)](#12-analytics---métricas-consolidadas-y-dashboards-por-rol)
+9. [Consultations - Asesor Financiero IA Gemini (3 Endpoints con Soporte Dual Path)](#9-consultations---asesor-financiero-ia)
+10. [CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)](#10-crm---gestión-de-prospectos-timeline-y-pruebas-de-manejo)
+11. [Analytics - Métricas Consolidadas y Dashboards por Rol (3 Endpoints)](#11-analytics---métricas-consolidadas-y-dashboards-por-rol)
 
 ---
 
@@ -317,6 +316,90 @@ Authorization: Bearer <tu_access_token_jwt>
   "profileId": "c3d4e5f6-a7b8-9012-cdef-ab3456789012",
   "profileName": "AUTOLAND S.A.",
   "message": "Corporate identity verified successfully. Profile provisioned and linked."
+}
+```
+
+---
+
+### 1.21 Enviar Código OTP de Verificación de Correo Electrónico (Público)
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/email-verification/send` | **Acceso**: Público
+* **Descripción**: Inicia el flujo de verificación de correo electrónico para cualquier usuario (clientes particulares `ROLE_USER` o representantes corporativos `ROLE_DEALER` / `ROLE_FINANCIAL_INSTITUTION`). Genera un código OTP criptográfico de 6 dígitos numéricos con hash SHA-256 (TTL de 10 minutos, máx. 3 intentos de confirmación) y lo despacha de forma asíncrona mediante Gmail SMTP (`smartfinancedrive@gmail.com`) utilizando una plantilla HTML responsive con branding oficial.
+* **Seguridad y Protección Anti-Abuso**:
+  * **Rate Limiter de Red**: Protegido por `RateLimitingFilter` (máximo 10 peticiones por minuto por IP; exceso retorna `429 Too Many Requests`).
+  * **Cooldown Anti-Spam (60 segundos)**: Si ya existe una sesión pendiente para el mismo correo creada hace menos de 60 segundos, se rechaza la re-emisión para evitar saturación de buzón y abuso de cuota SMTP (`iam.error.emailVerification.cooldownActive`).
+  * **Tope Diario de Envíos**: Máximo 5 solicitudes de verificación por correo electrónico en una ventana de 24 horas (`iam.error.emailVerification.dailyLimitExceeded`).
+  * **Invalidación de Sesiones Previas**: Al emitir un nuevo código para el mismo correo, las sesiones pendientes previas se marcan de inmediato como `EXPIRED`.
+  * **Protección de Datos**: Las respuestas exponen el correo ofuscado (`maskedEmail`) para preservar privacidad.
+
+```json
+// Input Body
+{
+  "email": "aldospeedcuber@gmail.com"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "email": "aldospeedcuber@gmail.com",
+  "maskedEmail": "a*************r@gmail.com",
+  "sessionActive": true,
+  "expiresInSeconds": 600,
+  "message": "Código de verificación enviado exitosamente a tu correo electrónico."
+}
+```
+
+---
+
+### 1.22 Confirmar Código OTP de Verificación de Correo Electrónico (Público)
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/email-verification/verify` | **Acceso**: Público
+* **Descripción**: Valida el código OTP de 6 dígitos ingresado por el usuario con comparación en tiempo constante (`MessageDigest.isEqual`) para mitigar ataques de temporización. Al validarse exitosamente, marca la sesión como `VERIFIED` y emite un `verificationToken` criptográfico (UUIDv4) como prueba inmutable de validación para los flujos de registro y vinculación de cuenta.
+* **Manejo Defensivo**:
+  * Si el código es incorrecto, incrementa el contador de intentos fallidos. Al 3er intento fallido consecutivo, la sesión se invalida irreversiblemente a estado `MAX_ATTEMPTS_EXCEEDED`.
+  * Si la sesión expiró (mayor a 10 minutos), retorna `400 Bad Request` con `iam.error.emailVerification.sessionExpired`.
+
+```json
+// Input Body
+{
+  "email": "aldospeedcuber@gmail.com",
+  "code": "849201"
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "verified": true,
+  "email": "aldospeedcuber@gmail.com",
+  "status": "VERIFIED",
+  "verifiedAt": "2026-10-03T22:50:00Z",
+  "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
+  "message": "Correo electrónico verificado exitosamente."
+}
+```
+
+---
+
+### 1.23 Verificar Teléfono mediante Firebase Authentication Token (Público)
+* **Método**: `POST` | **Ruta**: `/api/v1/auth/phone-verification` (o `/api/v1/auth/phone-verification/firebase`) | **Acceso**: Público / Autenticado
+* **Descripción**: Valida criptográficamente del lado servidor el ID Token (JWT) generado por Firebase Phone Authentication en el cliente web/móvil contra las claves públicas de Google. Extrae el número de teléfono verificado en formato internacional E.164 (ej. `+51999888777`), registra la sesión verificada y emite un `verificationToken` que certifica la posesión del número telefónico.
+
+```json
+// Input Body
+{
+  "firebaseIdToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMz..."
+}
+```
+
+```json
+// Response (HTTP 200 OK)
+{
+  "verified": true,
+  "phoneNumber": "+51999888777",
+  "status": "VERIFIED",
+  "verifiedAt": "2026-10-03T22:55:00Z",
+  "verificationToken": "e7d1a2b3-c4d5-6789-ef01-23456789abcd",
+  "message": "Número de teléfono verificado exitosamente."
 }
 ```
 
@@ -854,72 +937,15 @@ Authorization: Bearer <tu_access_token_jwt>
 
 ---
 
-## 9. Messaging - Mensajería y Chat en Tiempo Real
-
-### 9.1 Listar Conversaciones Activas del Usuario
-* **Método**: `GET` | **Ruta**: `/api/v1/conversations` | **Acceso**: Autenticado
-
-```json
-// Response Payload Sample
-[
-  {
-    "id": "e1f2a3b4-5678-90ab-cdef-1234567890ab",
-    "buyerUserId": "buyer-user-123",
-    "dealerUserId": "dealer-user-777",
-    "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
-    "lastMessageContent": "Hola, ¿el vehículo está disponible para prueba de manejo?",
-    "lastMessageTimestamp": "2026-09-19T14:00:00Z",
-    "unreadBuyerCount": 0,
-    "unreadDealerCount": 1,
-    "active": true,
-    "createdAt": "2026-09-19T12:00:00Z"
-  }
-]
-```
-
-### 9.2 Historial de Mensajes de una Conversación
-* **Método**: `GET` | **Ruta**: `/api/v1/conversations/{id}/messages` | **Acceso**: Autenticado
-
-### 9.3 Iniciar Nueva Conversación
-* **Método**: `POST` | **Ruta**: `/api/v1/conversations` | **Acceso**: Autenticado
-
-```json
-// Input Body
-{
-  "dealerUserId": "dealer-user-777",
-  "vehicleId": "c9d8e7f6-5432-1098-7654-3210fe210987",
-  "initialMessage": "Hola, estoy interesado en este vehículo."
-}
-```
-
-### 9.4 Enviar Mensaje en Conversación Existente (REST Fallback)
-* **Método**: `POST` | **Ruta**: `/api/v1/conversations/{id}/messages` | **Acceso**: Autenticado
-
-### 9.5 WebSocket STOMP - Chat en Tiempo Real Dual
-* **Endpoint Handshake WebSocket**: `/ws/chat` (Soporta SockJS fallback)
-* **Destination Envío Mensaje**: `/app/chat.sendMessage`
-* **Topic Suscripción Broadcast**: `/topic/conversations/{conversationId}`
-
-```json
-// Payload enviado a /app/chat.sendMessage
-{
-  "conversationId": "e1f2a3b4-5678-90ab-cdef-1234567890ab",
-  "senderUserId": "buyer-user-123",
-  "content": "Hola, confirmo mi asistencia para la prueba de manejo."
-}
-```
-
----
-
-## 10. Consultations - Asesor Financiero IA
+## 9. Consultations - Asesor Financiero IA
 
 > **Soporte Dual Path**: Los endpoints del módulo de asesoría IA están mapeados de forma nativa tanto en `/api/v1/consultations` como en su alias `/api/v1/ai/consultations`.
 
-### 10.1 Obtener Recomendaciones de Vehículos Sugeridos por IA
+### 9.1 Obtener Recomendaciones de Vehículos Sugeridos por IA
 * **Método**: `GET` | **Rutas**: `/api/v1/consultations/recommendations` o `/api/v1/ai/consultations/recommendations` | **Acceso**: Autenticado
 * **Cuerpo de Solicitud**: N/A
 
-### 10.2 Enviar Consulta Interactiva al Asesor IA
+### 9.2 Enviar Consulta Interactiva al Asesor IA
 * **Método**: `POST` | **Rutas**: `/api/v1/consultations`, `/api/v1/consultations/chat` (y sus alias `/api/v1/ai/consultations`, `/api/v1/ai/consultations/chat`) | **Acceso**: Autenticado
 
 ```json
@@ -943,14 +969,14 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 10.3 Historial de Consultas IA del Usuario
+### 9.3 Historial de Consultas IA del Usuario
 * **Método**: `GET` | **Rutas**: `/api/v1/consultations/history` o `/api/v1/ai/consultations/history` | **Acceso**: Autenticado
 
 ---
 
-## 11. CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)
+## 10. CRM - Gestión de Prospectos, Timeline y Pruebas de Manejo (11 Endpoints)
 
-### 11.1 Crear Prospecto CRM
+### 10.1 Crear Prospecto CRM
 * **Método**: `POST` | **Rutas**: `/api/v1/dealers/me/prospects` o `/api/v1/prospects` | **Acceso**: Autenticado
 
 ```json
@@ -964,19 +990,19 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 11.2 Listar Prospectos del Concesionario
+### 10.2 Listar Prospectos del Concesionario
 * **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
-### 11.3 Obtener Detalle de Prospecto por ID
+### 10.3 Obtener Detalle de Prospecto por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/dealers/me/prospects/{id}` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
-### 11.4 Agregar Nota al Timeline del Prospecto
+### 10.4 Agregar Nota al Timeline del Prospecto
 * **Método**: `POST` | **Ruta**: `/api/v1/prospects/{id}/notes` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
-### 11.5 Obtener Timeline de Notas del Prospecto
+### 10.5 Obtener Timeline de Notas del Prospecto
 * **Método**: `GET` | **Ruta**: `/api/v1/prospects/{id}/timeline` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
-### 11.6 Actualizar Estado CRM del Prospecto
+### 10.6 Actualizar Estado CRM del Prospecto
 * **Método**: `PATCH` | **Ruta**: `/api/v1/prospects/{id}/status` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 
 ```json
@@ -986,7 +1012,7 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 11.7 Programar Cita de Prueba de Manejo (Test Drive)
+### 10.7 Programar Cita de Prueba de Manejo (Test Drive)
 * **Método**: `POST` | **Ruta**: `/api/v1/test-drives` | **Acceso**: Autenticado
 
 ```json
@@ -999,13 +1025,13 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 11.8 Listar Mis Pruebas de Manejo
+### 10.8 Listar Mis Pruebas de Manejo
 * **Método**: `GET` | **Ruta**: `/api/v1/test-drives/me` | **Acceso**: Autenticado
 
-### 11.9 Obtener Detalle de Prueba de Manejo por ID
+### 10.9 Obtener Detalle de Prueba de Manejo por ID
 * **Método**: `GET` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
 
-### 11.10 Actualizar Estado de Prueba de Manejo (SCHEDULED, COMPLETED, CANCELLED)
+### 10.10 Actualizar Estado de Prueba de Manejo (SCHEDULED, COMPLETED, CANCELLED)
 * **Método**: `PATCH` | **Ruta**: `/api/v1/test-drives/{id}/status` | **Acceso**: Autenticado
 
 ```json
@@ -1015,16 +1041,16 @@ Authorization: Bearer <tu_access_token_jwt>
 }
 ```
 
-### 11.11 Cancelar Cita de Prueba de Manejo
+### 10.11 Cancelar Cita de Prueba de Manejo
 * **Método**: `DELETE` | **Ruta**: `/api/v1/test-drives/{id}` | **Acceso**: Autenticado
 
 ---
 
-## 12. Analytics - Métricas Consolidadas y Dashboards por Rol
+## 11. Analytics - Métricas Consolidadas y Dashboards por Rol
 
 Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Financieras y Administradores de la plataforma con estricta validación de propiedad y protección contra IDOR.
 
-### 12.1 Obtener Métricas de Dashboard para Concesionario
+### 11.1 Obtener Métricas de Dashboard para Concesionario
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/dealer` | **Acceso**: `ROLE_DEALER`, `ROLE_ADMIN`
 * **Seguridad y Control de Propiedad**:
   * Un usuario con rol `DEALER` solo puede consultar sus propias métricas. Si omite el parámetro `dealerUserId` o lo envía vacío, se infiere automáticamente del JWT autenticado. Si especifica un `dealerUserId` correspondiente a otra concesionaria, la solicitud es rechazada con `403 Forbidden` tanto a nivel de SpEL `@PreAuthorize` como en la lógica defensiva del controlador.
@@ -1077,7 +1103,7 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 }
 ```
 
-### 12.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
+### 11.2 Obtener Métricas de Dashboard para Entidad Financiera (Banco)
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/financial-institution` | **Acceso**: `ROLE_FINANCIAL_INSTITUTION`, `ROLE_ADMIN`
 * **Seguridad y Control de Propiedad**:
   * Para usuarios con rol `FINANCIAL_INSTITUTION`, el parámetro `financialEntityId` es opcional: si se omite, se resuelve automáticamente la entidad financiera asociada a su cuenta de usuario (`userId`). Si el usuario aún no posee una entidad vinculada (ej. registro previo a la validación de RUC), recibe `403 Forbidden` con error `partners.error.financialEntity.notAssociated`.
@@ -1105,7 +1131,7 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
 }
 ```
 
-### 12.3 Obtener Métricas Globales para Administrador de la Plataforma
+### 11.3 Obtener Métricas Globales para Administrador de la Plataforma
 * **Método**: `GET` | **Ruta**: `/api/v1/analytics/admin` | **Acceso**: `ROLE_ADMIN`
 * **Notas de Cálculo y Configuración**:
   * `estimatedMonthlyRecurringRevenueUsd` (MRR): Ingresos recurrentes mensuales consolidados en USD calculados sobre todas las suscripciones de concesionarias activas. Los planes anuales se prorratean mensualmente dividiendo entre 12. Las tarifas contratadas en Soles (PEN) se normalizan a USD mediante la tasa de cambio configurable `analytics.fx.pen-to-usd` (por defecto `3.75`, configurable vía variable de entorno `ANALYTICS_FX_PEN_TO_USD`). El servicio valida estrictamente que la tasa sea un número estrictamente positivo (`> 0`); valores iguales a 0 o negativos son rechazados o protegidos con fallback automático a la tasa base `3.75`, blindando el cálculo de MRR contra excepciones de división por cero (`ArithmeticException`).
@@ -1124,5 +1150,3 @@ Métricas analíticas agregadas en tiempo real para Concesionarias, Entidades Fi
   "estimatedMonthlyRecurringRevenueUsd": 2400.00
 }
 ```
-
-
