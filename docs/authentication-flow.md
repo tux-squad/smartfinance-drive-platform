@@ -1,6 +1,6 @@
 # Flujo de Autenticación y Guía de Integración para Agentes y Frontend - SmartFinance Drive Platform
 
-Esta guía define de forma textual, estructurada y sin ambigüedades la secuencia exacta de llamadas HTTP, prerrequisitos, payloads y reglas de decisión para que un desarrollador o un **Agente IA / Cliente Frontend** pueda ejecutar e integrar la autenticación en la plataforma.
+Esta guía define de forma textual, estructurada y sin ambigüedades la secuencia exacta de llamadas HTTP, prerrequisitos, payloads, reglas de decisión y **guía de vistas/redirección para el Frontend**, para que un desarrollador o un **Agente IA / Cliente Frontend** pueda implementar las pantallas e integrar la autenticación en la plataforma.
 
 ---
 
@@ -121,7 +121,7 @@ Esta guía define de forma textual, estructurada y sin ambigüedades la secuenci
       }
     }
     ```
-* **Regra de Guardado:** Almacenar `token` en memoria/state y `refreshToken` en almacenamiento seguro.
+* **Regla de Guardado:** Almacenar `token` en memoria/state y `refreshToken` en almacenamiento seguro.
 
 ---
 
@@ -215,7 +215,7 @@ Este flujo se ejecuta cuando un Concesionario (`ROLE_DEALER`) da de alta a un ve
           │
           ├── ¿Desea iniciar sesión? 
           │     └── SI: Llama a POST /api/v1/auth/sessions
-          │           └── ¿Respuesta HTTP 200? -> Guarda token JWT y finaliza.
+          │           └── ¿Respuesta HTTP 200? -> Guarda token JWT y redirige según roles.
           │
           ├── ¿Desea registrarse?
           │     └── SI: 
@@ -249,6 +249,61 @@ Este flujo se ejecuta cuando un Concesionario (`ROLE_DEALER`) da de alta a un ve
 | Solicitar Banco | `POST` | `/api/v1/users/{userId}/financial-institution-role-requests` | **SÍ** | `ROLE_USER` |
 | Crear Agente Ventas | `POST` | `/api/v1/dealers/me/sales-agents` | **SÍ** | `ROLE_DEALER` |
 | Aprobar Empresa | `POST` | `/api/v1/partners/corporate-verifications/{requestId}/approve` | **SÍ** | `ROLE_ADMIN` |
+
+---
+
+## 8. Guía de Diseño de Vistas y Redirección para el Frontend (Para Agentes UI / Frontend)
+
+Para que el Agente Frontend construya la interfaz correctamente, debe seguir la siguiente arquitectura de componentes y reglas de navegación:
+
+### 8.1. Arquitectura de Vistas Públicas (Login y Registro)
+
+1. **Vista de Login (`/login`):**
+   * **Es ÚNICA para todos los usuarios** (Compradores, Concesionarios, Bancos, Agentes de Venta y Admins).
+   * Formulario: Email y Contraseña + Botón "Ingresar" + Botón "Continuar con Google".
+   * **Acción:** `POST /api/v1/auth/sessions`.
+   * **Lógica de Redirección según Roles del Payload retornado:**
+     * `user.roles` incluye `ROLE_ADMIN` -> Redirige a `/admin/dashboard`.
+     * `user.roles` incluye `ROLE_FINANCIAL_INSTITUTION` -> Redirige a `/bank/dashboard`.
+     * `user.roles` incluye `ROLE_DEALER` -> Redirige a `/dealer/dashboard`.
+     * `user.roles` incluye `ROLE_SALES_AGENT` -> Redirige a `/agent/dashboard`.
+     * `user.roles` incluye solo `ROLE_USER` -> Redirige a `/catalog` (Portal Comprador).
+
+2. **Vista de Registro (`/register`):**
+   * **Selector inicial de tipo de cuenta:**
+     * **Opción A: Comprador / Usuario Personal:** 
+       * Muestra formulario de Nombre, Apellido, Email y Contraseña.
+       * Invoca `POST /api/v1/auth/registrations`.
+       * Redirige al catálogo o solicitud de verificación OTP.
+     * **Opción B: Concesionario (Empresa):**
+       * Formulario de 2 pasos:
+         1. Datos de usuario creador (Nombre, Email, Clave).
+         2. Datos corporativos (RUC 20, Razón Social).
+       * Invoca `POST /api/v1/auth/registrations` y luego `POST /api/v1/users/{userId}/dealer-role-requests`.
+       * Redirige a `/dealer/onboarding-status` (esperando aprobación o confirmado por SUNAT).
+     * **Opción C: Entidad Financiera / Banco:**
+       * Formulario de 2 pasos:
+         1. Datos de usuario creador.
+         2. Datos institucionales (RUC 20, Nombre de la Institución).
+       * Invoca `POST /api/v1/auth/registrations` y luego `POST /api/v1/users/{userId}/financial-institution-role-requests`.
+       * Redirige a `/bank/onboarding-status`.
+
+3. **Vista de Activación de Agente de Ventas (`/set-password`):**
+   * **No hay registro público para vendedores.**
+   * El vendedor llega a esta vista mediante un enlace con token en su correo (generado cuando el Concesionario llama a `POST /api/v1/dealers/me/sales-agents`).
+   * Define su contraseña e inicia sesión por la pantalla común `/login`.
+
+---
+
+### 8.2. Matriz de Redirecciones del Frontend
+
+| Rol Retornado en JWT (`user.roles`) | Ruta de Redirección en Frontend | Vista / Módulo a Renderizar |
+| :--- | :--- | :--- |
+| `["ROLE_ADMIN"]` | `/admin/dashboard` | Gestión Global, Aprobaciones RUC, Usuarios |
+| `["ROLE_FINANCIAL_INSTITUTION"]` | `/bank/dashboard` | Evaluaciones Crediticias, Políticas de Crédito |
+| `["ROLE_DEALER"]` | `/dealer/dashboard` | Gestión de Catálogo de Vehículos, Alta de Agentes |
+| `["ROLE_SALES_AGENT"]` | `/agent/dashboard` | Cotizaciones Asignadas, Atencion de Citas |
+| `["ROLE_USER"]` | `/catalog` | Explorar Autos, Simular Crédito, Solicitar Evaluación |
 
 ---
 *Especificación textual de integración técnica para agentes de IA y aplicaciones cliente - SmartFinance Drive Platform.*
