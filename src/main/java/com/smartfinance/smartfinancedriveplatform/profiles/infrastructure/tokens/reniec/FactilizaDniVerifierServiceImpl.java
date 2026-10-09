@@ -52,7 +52,7 @@ public class FactilizaDniVerifierServiceImpl implements ReniecDniVerifierService
     }
 
     @Override
-    @Cacheable(value = "reniecDniCache", key = "#dni", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "reniecDniCache", key = "#dni", unless = "#result == null")
     public Optional<ReniecDniInfo> verifyDni(String dni) {
         if (dni == null || !dni.matches("\\d{8}")) {
             LOGGER.warn("Invalid DNI format supplied: {}", maskDni(dni));
