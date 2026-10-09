@@ -1,379 +1,309 @@
-# Guía de Flujo de Autenticación, Gestión de Usuarios y Elevación de Roles
+# Flujo de Autenticación y Guía de Integración para Agentes y Frontend - SmartFinance Drive Platform
 
-Este documento describe de manera detallada la arquitectura de autenticación, la gestión de usuarios, el control de acceso basado en roles (RBAC) y los mecanismos de elevación automática de privilegios en **SmartFinance Drive Platform**.
-
----
-
-## 1. Arquitectura General de Seguridad (IAM)
-
-La plataforma utiliza una arquitectura de seguridad basada en **JSON Web Tokens (JWT)** y **Spring Security**, complementada con verificación externa en tiempo real a través de la **SUNAT** para validar la identidad de concesionarios y entidades bancarias.
-
-### Principios Fundamentales
-1. **Asignación Mínima de Privilegios**: Todo usuario nuevo registrado a través del endpoint público recibe de forma estricta y exclusiva el rol `ROLE_USER`.
-2. **Sin Elevación Pública Directa**: No es posible registrarse directamente como `ROLE_ADMIN`, `ROLE_DEALER` o `ROLE_FINANCIAL_INSTITUTION` en el formulario inicial de registro.
-3. **Elevación Automatizada basada en SUNAT**: Los usuarios pueden solicitar la elevación de su cuenta a Concesionario (`ROLE_DEALER`) o Entidad Financiera (`ROLE_FINANCIAL_INSTITUTION`). El sistema valida inmediatamente con la SUNAT si el RUC ingresado existe, está en estado **ACTIVO**, condición **HABIDO** y posee la actividad económica (CIIU) correspondiente.
-4. **Control Jerárquico de Administrador**: Los administradores (`ROLE_ADMIN`) poseen la facultad de modificar manualmente el rol de cualquier usuario registrado.
+Esta guía define de forma textual, estructurada y sin ambigüedades la secuencia exacta de llamadas HTTP, prerrequisitos, payloads, reglas de decisión y **guía de vistas/redirección para el Frontend**, para que un desarrollador o un **Agente IA / Cliente Frontend** pueda implementar las pantallas e integrar la autenticación en la plataforma.
 
 ---
 
-## 2. Definición de Roles en la Plataforma
+## 1. Reglas Globales de Autenticación (Para Agentes y Clientes)
 
-| Rol | Código en Sistema | Descripción y Alcance | Método de Obtención |
-| :--- | :--- | :--- | :--- |
-| **Cliente / Usuario Base** | `ROLE_USER` | Usuario regular. Puede explorar el catálogo de vehículos, realizar simulaciones de crédito, consultar su scoring crediticio y ver proyecciones de depreciación. | Registro público inicial (`POST /api/v1/auth/registrations`). |
-| **Concesionario / Dealer** | `ROLE_DEALER` | Representante de una sucursal o automotriz. Puede publicar vehículos en el catálogo, actualizar precios, stock y gestionar su inventario. | Registro como `ROLE_USER` + Solicitud de Rol Dealer con RUC Automotriz (CIIU `451...`). |
-| **Banca / Entidad Financiera** | `ROLE_FINANCIAL_INSTITUTION` | Entidad bancaria o de crédito. Puede gestionar tasas de interés, configurar productos financieros y evaluar solicitudes de financiamiento. | Registro como `ROLE_USER` + Solicitud de Rol Financiero con RUC Financiero (CIIU `64...` o `66...`). |
-| **Analista Financiero** | `ROLE_FINANCIAL_ANALYST` | Perfil de auditoría y análisis de riesgo dentro de la plataforma. | Asignación manual por un `ROLE_ADMIN`. |
-| **Administrador** | `ROLE_ADMIN` | Control total del sistema, gestión global de usuarios, vehículos, entidades y configuraciones. | Asignación manual por la base de datos o por otro `ROLE_ADMIN`. |
-
----
-
-## 3. Flujo Paso a Paso de Autenticación y Elevación
-
-### Paso 1: Registro Inicial de Usuario
-Cualquier persona puede registrarse en la plataforma proporcionando sus credenciales básicas (correo electrónico y contraseña).
-
-* **Endpoint**: `POST /api/v1/auth/registrations`
-* **Lógica Interna**:
-  * Se encripta la contraseña utilizando `BCryptPasswordEncoder`.
-  * Se asigna automáticamente la lista `[ROLE_USER]`.
-  * Se persiste la cuenta de usuario en el Bounded Context de IAM.
-
-#### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "username": "juan.perez@concesionario.com",
-  "password": "Password123!"
-}
-```
-
-#### Ejemplo de Respuesta (HTTP 201 Created)
-```json
-{
-  "id": 105,
-  "username": "juan.perez@concesionario.com",
-  "roles": [
-    "ROLE_USER"
-  ]
-}
-```
+1. **URL Base:** `https://smartfinance-drive-platform.onrender.com` (o `http://localhost:8080` en desarrollo).
+2. **Endpoints Públicos (sin Token):** Todos los que inician con `/api/v1/auth/**`.
+3. **Endpoints Protegidos (con Token):** Requieren la cabecera HTTP:
+   ```http
+   Authorization: Bearer <accessToken>
+   ```
+4. **Manejo de Expiración:** Cuando una petición a un endpoint protegido retorna `HTTP 401 Unauthorized`, se debe invocar la renovación de token vía `POST /api/v1/auth/tokens` con el `refreshToken`.
 
 ---
 
-### Paso 2: Autenticación e Inicio de Sesión
-El usuario ingresa sus credenciales para obtener las fichas de acceso firmadas.
+## 2. Flujo 1: Registro e Inicio de Sesión de Usuario / Comprador (`ROLE_USER`)
 
-* **Endpoint**: `POST /api/v1/auth/sessions`
-* **Lógica Interna**:
-  * Valida las credenciales contra la base de datos.
-  * Genera un `token` de acceso JWT de corta duración firmado con clave secreta HMAC-SHA.
-  * Genera un `refreshToken` (UUID) para renovaciones futuras.
+### Secuencia de Ejecución Falsa/Real (Paso a Paso):
 
-#### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "username": "juan.perez@concesionario.com",
-  "password": "Password123!"
-}
-```
+#### **Paso 1.1: Verificación Previa de Correo por Código OTP (Brevo)**
+* **Objetivo:** Confirmar que la persona posee el correo indicado.
+* **Acción:** Enviar petición `POST /api/v1/auth/email-verification/send`
+  * **Input (JSON):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com"
+    }
+    ```
+  * **Output Esperado (HTTP 200 OK):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "status": "SENT",
+      "message": "Código OTP enviado exitosamente a usuario@ejemplo.com",
+      "expiresInSeconds": 900
+    }
+    ```
+* **Acción:** El usuario revisa su correo y el frontend llama a `POST /api/v1/auth/email-verification/verify`
+  * **Input (JSON):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "code": "123456"
+    }
+    ```
+  * **Output Esperado (HTTP 200 OK):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "verified": true,
+      "verificationToken": "evt_9a8b7c6d5e4f3a2b1c",
+      "message": "Correo electrónico verificado correctamente"
+    }
+    ```
 
-#### Ejemplo de Respuesta (HTTP 200 OK)
-```json
-{
-  "id": 105,
-  "username": "juan.perez@concesionario.com",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
-}
-```
+#### **Paso 1.2: Registro de Cuenta**
+* **Objetivo:** Crear el usuario en la base de datos con rol `ROLE_USER`.
+* **Opción A (Registro Tradicional):** Enviar petición `POST /api/v1/auth/registrations`
+  * **Input (JSON):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "password": "Password123!",
+      "firstName": "Juan",
+      "lastName": "Pérez"
+    }
+    ```
+  * **Output Esperado (HTTP 201 Created):**
+    ```json
+    {
+      "id": 1,
+      "email": "usuario@ejemplo.com",
+      "firstName": "Juan",
+      "lastName": "Pérez",
+      "roles": ["ROLE_USER"]
+    }
+    ```
+* **Opción B (Registro/Login con Google):** Enviar petición `POST /api/v1/auth/google`
+  * **Input (JSON):** `{"idToken": "<GOOGLE_ID_TOKEN>"}`
 
-El cliente debe almacenar el `token` e incluirlo en todas las solicitudes posteriores dentro del encabezado HTTP:
-```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+#### **Paso 1.3: Verificación de Teléfono Celular (SMS Firebase)**
+* **Objetivo:** Validar el número de celular para contacto o evaluación crediticia.
+* **Acción:** Tras validar el SMS mediante la SDK de Firebase en el cliente, enviar petición `POST /api/v1/auth/phone-verification/firebase`
+  * **Input (JSON):**
+    ```json
+    {
+      "firebaseIdToken": "<FIREBASE_SMS_ID_TOKEN>"
+    }
+    ```
+  * **Output Esperado (HTTP 200 OK):**
+    ```json
+    {
+      "verified": true,
+      "phoneNumber": "+51987654321",
+      "status": "VERIFIED",
+      "verificationToken": "pvt_3f2e1d0c9b8a7"
+    }
+    ```
 
----
-
-### Paso 3: Renovación de Token Expire (Refresh Token)
-Cuando el `token` JWT expira, el cliente puede solicitar un nuevo token sin requerir que el usuario vuelva a ingresar su contraseña.
-
-* **Endpoint**: `POST /api/v1/auth/tokens`
-
-#### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "refreshToken": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
-}
-```
-
-#### Ejemplo de Respuesta (HTTP 200 OK)
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_token...",
-  "refreshToken": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
-}
-```
-
----
-
-### Paso 4: Elevación de Rol mediante Validación Automatizada SUNAT
-
-Si el usuario registrado requiere operar como **Concesionario (Dealer)** o **Entidad Financiera (Banca)**, no necesita solicitar una aprobación manual a un administrador. Puede solicitar la elevación de su cuenta de forma automática mediante la integración con la SUNAT.
-
-#### Opción A: Elevación a Concesionario (`ROLE_DEALER`)
-* **Endpoint**: `POST /api/v1/users/{userId}/dealer-role-requests`
-* **Acceso**: El propio usuario (`userId`) o un `ROLE_ADMIN`.
-* **Proceso de Validación**:
-  1. El sistema realiza una llamada al servicio externo de consulta de RUC de la SUNAT.
-  2. Verifica que el RUC exista en la base de datos oficial.
-  3. Comprueba que el estado sea **ACTIVO** y la condición del contribuyente sea **HABIDO**.
-  4. Valida el código de actividad económica **CIIU**: debe comenzar con `451` (Venta de vehículos automotores).
-  5. Si todas las validaciones son exitosas, el sistema agrega automáticamente el rol `ROLE_DEALER` a la lista de roles del usuario y guarda los cambios.
-
-##### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "ruc": "20123456789"
-}
-```
-
-##### Ejemplo de Respuesta (HTTP 200 OK)
-```json
-{
-  "id": 105,
-  "username": "juan.perez@concesionario.com",
-  "roles": [
-    "ROLE_USER",
-    "ROLE_DEALER"
-  ]
-}
-```
-
----
-
-#### Opción B: Elevación a Entidad Financiera (`ROLE_FINANCIAL_INSTITUTION`)
-* **Endpoint**: `POST /api/v1/users/{userId}/financial-institution-role-requests`
-* **Acceso**: El propio usuario (`userId`) o un `ROLE_ADMIN`.
-* **Proceso de Validación**:
-  1. El servicio consulta los datos del RUC ingresado en la SUNAT.
-  2. Confirma que el estado sea **ACTIVO** y la condición sea **HABIDO**.
-  3. Valida el código de actividad económica **CIIU**: debe comenzar con `64` (Intermediación financiera) o `66` (Actividades auxiliares a la intermediación financiera).
-  4. Si cumple las condiciones, añade de forma automática el rol `ROLE_FINANCIAL_INSTITUTION` a la cuenta del usuario.
-
-##### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "ruc": "20987654321"
-}
-```
-
-##### Ejemplo de Respuesta (HTTP 200 OK)
-```json
-{
-  "id": 108,
-  "username": "contacto@banco-ejemplo.pe",
-  "roles": [
-    "ROLE_USER",
-    "ROLE_FINANCIAL_INSTITUTION"
-  ]
-}
-```
+#### **Paso 1.4: Inicio de Sesión (Login)**
+* **Acción:** Enviar petición `POST /api/v1/auth/sessions`
+  * **Input (JSON):**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "password": "Password123!"
+    }
+    ```
+  * **Output Esperado (HTTP 200 OK):**
+    ```json
+    {
+      "token": "eyJhbGciOi...",
+      "refreshToken": "4a7b9c1d-8eef-4123-90ab-cdef12345678",
+      "user": {
+        "id": 1,
+        "email": "usuario@ejemplo.com",
+        "roles": ["ROLE_USER"]
+      }
+    }
+    ```
+* **Regla de Guardado:** Almacenar `token` en memoria/state y `refreshToken` en almacenamiento seguro.
 
 ---
 
-### Paso 5: Modificación Manual de Roles por Administrador
-En casos especiales donde se requiera asignar perfiles como `ROLE_FINANCIAL_ANALYST` o `ROLE_ADMIN`, o remover roles a un usuario, un administrador puede actualizar directamente el rol asignado.
+## 3. Flujo 2: Elevación a Rol Concesionario (`ROLE_DEALER`)
 
-* **Endpoint**: `PUT /api/v1/users/{userId}/roles`
-* **Acceso**: Exclusivo para `ROLE_ADMIN`.
+Este flujo se ejecuta cuando un usuario con rol `ROLE_USER` desea convertirse en vendedor/concesionario de vehículos.
 
-#### Ejemplo de Solicitud (Request Body)
-```json
-{
-  "role": "ROLE_FINANCIAL_ANALYST"
-}
-```
+### Secuencia de Ejecución:
 
-#### Ejemplo de Respuesta (HTTP 200 OK)
-```json
-{
-  "id": 105,
-  "username": "juan.perez@concesionario.com",
-  "roles": [
-    "ROLE_USER",
-    "ROLE_FINANCIAL_ANALYST"
-  ]
-}
-```
+#### **Paso 2.1: Autenticación Previa**
+* El cliente DEBE estar autenticado con un token Bearer de `ROLE_USER`.
+
+#### **Paso 2.2: Enviar Solicitud de Elevación por RUC**
+* **Acción:** Enviar petición `POST /api/v1/users/{userId}/dealer-role-requests`
+  * **Header:** `Authorization: Bearer <accessToken>`
+  * **Input (JSON):**
+    ```json
+    {
+      "ruc": "20123456789",
+      "companyName": "Automotriz Lima SAC"
+    }
+    ```
+  * **Lógica Interna del Backend:**
+    1. El backend consulta SUNAT.
+    2. SI el RUC está **ACTIVO**, **HABIDO** y su actividad principal es **CIIU 451xx** (Venta de vehículos), la solicitud se aprueba INMEDIATAMENTE y el usuario recibe el rol `ROLE_DEALER`.
+    3. SI no cumple la regla automática, queda en estado `PENDIENTE` para revisión del administrador.
+
+#### **Paso 2.3: Actualización de Token de Sesión**
+* **Acción:** Invocar refresco de token vía `POST /api/v1/auth/tokens`
+  * **Input (JSON):** `{"refreshToken": "<refreshToken>"}`
+  * **Resultado:** El nuevo `token` de acceso contendrá el arreglo de roles `["ROLE_USER", "ROLE_DEALER"]`.
 
 ---
 
-## 4. Diagrama de Secuencia del Flujo Completo
+## 4. Flujo 3: Elevación a Rol Entidad Financiera (`ROLE_FINANCIAL_INSTITUTION`)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Usuario / Cliente
-    participant API as REST Controller (IAM)
-    participant SVC as UserCommandService
-    participant SUNAT as Servidor SUNAT (Partners)
-    participant DB as Base de Datos PostgreSQL
+Este flujo permite a un usuario registrar una entidad bancaria o financiera.
 
-    Note over U, DB: 1. Registro Público Inicial
-    U->>API: POST /api/v1/auth/registrations (email, password)
-    API->>SVC: SignUpCommand (roles = [ROLE_USER])
-    SVC->>DB: Persistir nuevo Usuario con ROLE_USER
-    DB-->>API: Usuario creado (id = 105)
-    API-->>U: HTTP 201 (id: 105, roles: ["ROLE_USER"])
+### Secuencia de Ejecución:
 
-    Note over U, DB: 2. Inicio de Sesión y Token JWT
-    U->>API: POST /api/v1/auth/sessions (email, password)
-    API->>SVC: AuthenticateUserCommand
-    SVC-->>API: Credenciales Válidas + JWT Token + Refresh Token
-    API-->>U: HTTP 200 (token: "eyJhbG...", refreshToken: "a1b2...")
+#### **Paso 3.1: Autenticación Previa**
+* El cliente DEBE estar autenticado con token Bearer de `ROLE_USER`.
 
-    Note over U, DB: 3. Solicitud de Elevación a Concesionario (Dealer)
-    U->>API: POST /api/v1/users/105/dealer-role-requests (ruc: "20123456789")
-    API->>SVC: RequestDealerRoleCommand(105, "20123456789")
-    SVC->>SUNAT: verifyRuc("20123456789")
-    SUNAT-->>SVC: SunatRucInfo (Estado: ACTIVO, Condición: HABIDO, CIIU: 45100)
-    
-    alt RUC Válido, Activo, Habido y CIIU Automotriz
-        SVC->>DB: user.addRole(ROLE_DEALER) & save()
-        DB-->>API: Usuario Actualizado
-        API-->>U: HTTP 200 (roles: ["ROLE_USER", "ROLE_DEALER"])
-    else RUC Inválido, Inactivo o CIIU no corresponde
-        SVC-->>API: DomainValidationException("RUC no cumple condiciones")
-        API-->>U: HTTP 400 Bad Request
-    end
+#### **Paso 3.2: Enviar Solicitud Institucional**
+* **Acción:** Enviar petición `POST /api/v1/users/{userId}/financial-institution-role-requests`
+  * **Header:** `Authorization: Bearer <accessToken>`
+  * **Input (JSON):**
+    ```json
+    {
+      "ruc": "20987654321",
+      "institutionName": "Banco CrediAuto SA"
+    }
+    ```
+* **Paso 3.3: Aprobación por Admin (si requiere revisión manual):**
+  * El Administrador ejecuta `POST /api/v1/partners/corporate-verifications/{requestId}/approve`.
+
+#### **Paso 3.4: Actualización de Token**
+* El usuario llama a `POST /api/v1/auth/tokens` para obtener su nuevo token con rol `ROLE_FINANCIAL_INSTITUTION`.
+
+---
+
+## 5. Flujo 4: Registro de Agente de Ventas (`ROLE_SALES_AGENT`)
+
+Este flujo se ejecuta cuando un Concesionario (`ROLE_DEALER`) da de alta a un vendedor.
+
+### Secuencia de Ejecución:
+
+#### **Paso 4.1: Creación del Agente por el Dealer**
+* **Header Required:** `Authorization: Bearer <dealerAccessToken>`
+* **Acción:** Enviar petición `POST /api/v1/dealers/me/sales-agents`
+  * **Input (JSON):**
+    ```json
+    {
+      "email": "agente@dealer.com",
+      "firstName": "Carlos",
+      "lastName": "Gómez"
+    }
+    ```
+  * **Efecto:** El sistema crea la cuenta con `ROLE_SALES_AGENT`, la vincula al `dealerId` y envía un correo vía Brevo para establecer la clave.
+
+#### **Paso 4.2: Primer Login del Agente**
+* Una vez establecida su clave, el agente realiza login en `POST /api/v1/auth/sessions`.
+* El JWT retornado contiene `roles: ["ROLE_SALES_AGENT"]`.
+
+---
+
+## 6. Diagrama de Decisiones del Agente Frontend / IA
+
+```
+[Inicio: Usuario llega a la App]
+          │
+          ├── ¿Desea iniciar sesión? 
+          │     └── SI: Llama a POST /api/v1/auth/sessions
+          │           └── ¿Respuesta HTTP 200? -> Guarda token JWT y redirige según roles.
+          │
+          ├── ¿Desea registrarse?
+          │     └── SI: 
+          │           1. (Opcional) POST /api/v1/auth/email-verification/send
+          │           2. (Opcional) POST /api/v1/auth/email-verification/verify
+          │           3. POST /api/v1/auth/registrations (o /api/v1/auth/google)
+          │           4. (Opcional) POST /api/v1/auth/phone-verification/firebase
+          │           5. POST /api/v1/auth/sessions -> Guarda token JWT.
+          │
+          └── ¿Es Usuario (ROLE_USER) y quiere ser Dealer o Banco?
+                ├── Para Dealer: POST /api/v1/users/{id}/dealer-role-requests
+                ├── Para Banco:  POST /api/v1/users/{id}/financial-institution-role-requests
+                └── Refresca sesión: POST /api/v1/auth/tokens -> Obtiene nuevo JWT con rol elevado.
 ```
 
 ---
 
-## 5. Matriz de Permisos por Endpoints
+## 7. Tabla Consolidada de Endpoints y Permisos Requeridos
 
-| Bounded Context | Operación / Endpoint | ROLE_USER | ROLE_DEALER | ROLE_FINANCIAL_INSTITUTION | ROLE_ADMIN |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **Catalog** | Consultar Vehículos (`GET /api/v1/vehicles`) | SI | SI | SI | SI |
-| **Catalog** | Crear / Modificar Vehículos (`POST/PUT /api/v1/vehicles`) | NO | SI | NO | SI |
-| **Financing** | Realizar Simulación (`POST /api/v1/financing/simulations`) | SI (Propietario) | NO | NO | SI |
-| **Financing** | Listar Simulaciones por Entidad | NO | NO | SI | SI |
-| **Partners** | Gestionar Entidades Financieras (`POST/PUT /api/v1/financial-entities`) | NO | NO | SI | SI |
-| **Partners** | Consulta de RUC SUNAT (`GET /api/v1/sunat/ruc/{ruc}`) | SI | SI | SI | SI |
-| **Billing** | Suscribirse a Plan Premium (`POST /api/v1/billing/subscriptions`) | SI | SI | SI | SI |
-| **IAM** | Modificar Roles de Usuario (`PUT /api/v1/users/{id}/roles`) | NO | NO | NO | SI |
-| **IAM** | Enviar OTP Verificación Correo (`POST /api/v1/auth/email-verification/send`) | Público | Público | Público | SI |
-| **IAM** | Validar OTP Verificación Correo (`POST /api/v1/auth/email-verification/verify`) | Público | Público | Público | SI |
-| **IAM** | Verificar Teléfono vía Firebase (`POST /api/v1/auth/phone-verification/firebase`) | Público | Público | Público | SI |
-
----
-
-## 6. Verificación de Teléfono Móvil (Firebase Phone Auth)
-
-SmartFinance Drive utiliza **Firebase Phone Authentication** para garantizar que el número móvil ingresado durante el onboarding pertenece al usuario y se encuentra activo.
-
-### Flujo Operativo:
-1. **Frontend (Cliente)**:
-   * El cliente utiliza el SDK de Firebase Web/Mobile (`signInWithPhoneNumber`) con `RecaptchaVerifier` para mitigar bots.
-   * Google despacha el SMS con código OTP al usuario en Perú (Claro, Movistar, Entel, Bitel).
-   * El usuario ingresa el código y resuelve la promesa `confirmationResult.confirm(code)`.
-   * El SDK de Firebase emite un **ID Token (JWT)** firmado por Google.
-
-2. **Backend (Servidor)**:
-   * **Endpoint**: `POST /api/v1/auth/phone-verification/firebase` (o `/api/v1/auth/phone-verification`)
-   * **Request Body**:
-     ```json
-     {
-       "firebaseIdToken": "eyJhbGciOiJSUzI1NiIs..."
-     }
-     ```
-   * **Lógica**: El backend valida el token JWT con **Firebase Admin SDK** (`FirebaseAuth.verifyIdToken`), verifica emisor, firma y expiración, extrae el claim `phone_number`, invalida sesiones pendientes anteriores y genera un token de verificación firmado para completar el registro.
-   * **Response Body (HTTP 200 OK)**:
-     ```json
-     {
-       "verified": true,
-       "phoneNumber": "51993913924",
-       "status": "VERIFIED",
-       "verifiedAt": "2026-10-03T16:00:00Z",
-       "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
-       "message": "Número de teléfono verificado exitosamente mediante Firebase"
-     }
-     ```
-
-### Parámetros de Configuración y Entorno (Firebase):
-* `firebase.project-id` (`FIREBASE_PROJECT_ID`): ID del proyecto de Firebase en Google Cloud.
-* `firebase.credentials.base64` (`FIREBASE_CREDENTIALS_BASE64`): Contenido en Base64 del JSON de Service Account (ideal para Render sin archivos físicos).
-* `firebase.credentials.path` (`FIREBASE_CREDENTIALS_PATH`): Ruta física al archivo de credenciales de Google Service Account (`serviceAccountKey.json`).
+| Operación | Método | Ruta Endpoint | Requiere Header Bearer? | Rol Necesario |
+| :--- | :--- | :--- | :--- | :--- |
+| Enviar OTP Email | `POST` | `/api/v1/auth/email-verification/send` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Verificar OTP Email | `POST` | `/api/v1/auth/email-verification/verify` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Validar SMS Firebase | `POST` | `/api/v1/auth/phone-verification/firebase` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Registrar Usuario | `POST` | `/api/v1/auth/registrations` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Iniciar Sesión | `POST` | `/api/v1/auth/sessions` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Auth con Google | `POST` | `/api/v1/auth/google` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Refrescar Token | `POST` | `/api/v1/auth/tokens` | **NO** (`permitAll`) | Cualquiera (Público) |
+| Cerrar Sesión | `DELETE`| `/api/v1/auth/sessions/current` | **SÍ** | Cualquiera autenticado |
+| Solicitar Dealer | `POST` | `/api/v1/users/{userId}/dealer-role-requests` | **SÍ** | `ROLE_USER` |
+| Solicitar Banco | `POST` | `/api/v1/users/{userId}/financial-institution-role-requests` | **SÍ** | `ROLE_USER` |
+| Crear Agente Ventas | `POST` | `/api/v1/dealers/me/sales-agents` | **SÍ** | `ROLE_DEALER` |
+| Aprobar Empresa | `POST` | `/api/v1/partners/corporate-verifications/{requestId}/approve` | **SÍ** | `ROLE_ADMIN` |
 
 ---
 
-## 7. Verificación de Correo Electrónico (Gmail SMTP OTP)
+## 8. Guía de Diseño de Vistas y Redirección para el Frontend (Para Agentes UI / Frontend)
 
-SmartFinance Drive proporciona verificación de correo electrónico con códigos de un solo uso (OTP) de 6 dígitos numéricos despachados por **Gmail SMTP** (`smartfinancedrive@gmail.com`). Este flujo es de acceso público y aplica tanto a clientes particulares (`ROLE_USER`) como a representantes de concesionarias (`ROLE_DEALER`) y bancos (`ROLE_FINANCIAL_INSTITUTION`).
+Para que el Agente Frontend construya la interfaz correctamente, debe seguir la siguiente arquitectura de componentes y reglas de navegación:
 
-### Flujo Operativo:
+### 8.1. Arquitectura de Vistas Públicas (Login y Registro)
 
-1. **Despacho de Código OTP**:
-   * **Endpoint**: `POST /api/v1/auth/email-verification/send`
-   * **Acceso**: Público (protegido por `RateLimitingFilter`, máx. 10 req/min por IP).
-   * **Lógica Interna**:
-     * Valida formato RFC 5322 del correo electrónico.
-     * **Cooldown anti-spam**: Verifica que no exista una sesión para el correo emitida en los últimos 60 segundos (`iam.error.emailVerification.cooldownActive`).
-     * **Tope diario de envíos**: Máximo 5 solicitudes por correo en las últimas 24 horas (`iam.error.emailVerification.dailyLimitExceeded`).
-     * Genera un código OTP de 6 dígitos con generador criptográfico seguro (`SecureRandom`).
-     * Almacena el hash SHA-256 del código en la base de datos (con TTL de 10 minutos y límite de 3 intentos).
-     * Invalida cualquier sesión previa no confirmada para ese mismo correo a estado `EXPIRED`.
-     * Despacha un correo HTML responsive con plantilla oficial de SmartFinance Drive.
-   * **Request Body**:
-     ```json
-     {
-       "email": "aldospeedcuber@gmail.com"
-     }
-     ```
-   * **Response Body (HTTP 200 OK)**:
-     ```json
-     {
-       "email": "aldospeedcuber@gmail.com",
-       "maskedEmail": "a*************r@gmail.com",
-       "sessionActive": true,
-       "expiresInSeconds": 600,
-       "message": "Código de verificación enviado exitosamente a tu correo electrónico."
-     }
-     ```
+1. **Vista de Login (`/login`):**
+   * **Es ÚNICA para todos los usuarios** (Compradores, Concesionarios, Bancos, Agentes de Venta y Admins).
+   * Formulario: Email y Contraseña + Botón "Ingresar" + Botón "Continuar con Google".
+   * **Acción:** `POST /api/v1/auth/sessions`.
+   * **Lógica de Redirección según Roles del Payload retornado:**
+     * `user.roles` incluye `ROLE_ADMIN` -> Redirige a `/admin/dashboard`.
+     * `user.roles` incluye `ROLE_FINANCIAL_INSTITUTION` -> Redirige a `/bank/dashboard`.
+     * `user.roles` incluye `ROLE_DEALER` -> Redirige a `/dealer/dashboard`.
+     * `user.roles` incluye `ROLE_SALES_AGENT` -> Redirige a `/agent/dashboard`.
+     * `user.roles` incluye solo `ROLE_USER` -> Redirige a `/catalog` (Portal Comprador).
 
-2. **Confirmación y Validación de Código OTP**:
-   * **Endpoint**: `POST /api/v1/auth/email-verification/verify`
-   * **Acceso**: Público (protegido por `RateLimitingFilter`).
-   * **Lógica Interna**:
-     * Busca la sesión activa más reciente para el correo especificado.
-     * Valida que la sesión no haya expirado (TTL de 10 minutos).
-     * Compara el hash SHA-256 del código provisto con el almacenado usando `MessageDigest.isEqual` en tiempo constante para evitar ataques de temporización.
-     * En caso de fallo: incrementa el contador de intentos fallidos. Al 3er intento, la sesión pasa irreversiblemente a `MAX_ATTEMPTS_EXCEEDED`.
-     * En caso de éxito: transiciona el estado a `VERIFIED`, sella la fecha `verifiedAt` y emite un `verificationToken` (UUIDv4) como prueba criptográfica inmutable.
-   * **Request Body**:
-     ```json
-     {
-       "email": "aldospeedcuber@gmail.com",
-       "code": "849201"
-     }
-     ```
-   * **Response Body (HTTP 200 OK)**:
-     ```json
-     {
-       "verified": true,
-       "email": "aldospeedcuber@gmail.com",
-       "status": "VERIFIED",
-       "verifiedAt": "2026-10-03T22:50:00Z",
-       "verificationToken": "b47c0b02-5e36-4c3e-8f24-9121a97d8b8a",
-       "message": "Correo electrónico verificado exitosamente."
-     }
-     ```
+2. **Vista de Registro (`/register`):**
+   * **Selector inicial de tipo de cuenta:**
+     * **Opción A: Comprador / Usuario Personal:** 
+       * Muestra formulario de Nombre, Apellido, Email y Contraseña.
+       * Invoca `POST /api/v1/auth/registrations`.
+       * Redirige al catálogo o solicitud de verificación OTP.
+     * **Opción B: Concesionario (Empresa):**
+       * Formulario de 2 pasos:
+         1. Datos de usuario creador (Nombre, Email, Clave).
+         2. Datos corporativos (RUC 20, Razón Social).
+       * Invoca `POST /api/v1/auth/registrations` y luego `POST /api/v1/users/{userId}/dealer-role-requests`.
+       * Redirige a `/dealer/onboarding-status` (esperando aprobación o confirmado por SUNAT).
+     * **Opción C: Entidad Financiera / Banco:**
+       * Formulario de 2 pasos:
+         1. Datos de usuario creador.
+         2. Datos institucionales (RUC 20, Nombre de la Institución).
+       * Invoca `POST /api/v1/auth/registrations` y luego `POST /api/v1/users/{userId}/financial-institution-role-requests`.
+       * Redirige a `/bank/onboarding-status`.
 
-### Parámetros de Configuración y Entorno (SMTP):
-* `spring.mail.host` (`SPRING_MAIL_HOST`): Host SMTP (`smtp.gmail.com`).
-* `spring.mail.port` (`SPRING_MAIL_PORT`): Puerto SMTP (`587`).
-* `spring.mail.username` (`SPRING_MAIL_USERNAME`): Cuenta de correo emisora (`smartfinancedrive@gmail.com`).
-* `spring.mail.password` (`SPRING_MAIL_PASSWORD`): Contraseña de aplicación de Google de 16 caracteres.
+3. **Vista de Activación de Agente de Ventas (`/set-password`):**
+   * **No hay registro público para vendedores.**
+   * El vendedor llega a esta vista mediante un enlace con token en su correo (generado cuando el Concesionario llama a `POST /api/v1/dealers/me/sales-agents`).
+   * Define su contraseña e inicia sesión por la pantalla común `/login`.
 
+---
 
+### 8.2. Matriz de Redirecciones del Frontend
 
+| Rol Retornado en JWT (`user.roles`) | Ruta de Redirección en Frontend | Vista / Módulo a Renderizar |
+| :--- | :--- | :--- |
+| `["ROLE_ADMIN"]` | `/admin/dashboard` | Gestión Global, Aprobaciones RUC, Usuarios |
+| `["ROLE_FINANCIAL_INSTITUTION"]` | `/bank/dashboard` | Evaluaciones Crediticias, Políticas de Crédito |
+| `["ROLE_DEALER"]` | `/dealer/dashboard` | Gestión de Catálogo de Vehículos, Alta de Agentes |
+| `["ROLE_SALES_AGENT"]` | `/agent/dashboard` | Cotizaciones Asignadas, Atencion de Citas |
+| `["ROLE_USER"]` | `/catalog` | Explorar Autos, Simular Crédito, Solicitar Evaluación |
+
+---
+*Especificación textual de integración técnica para agentes de IA y aplicaciones cliente - SmartFinance Drive Platform.*
