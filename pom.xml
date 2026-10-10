@@ -217,6 +217,13 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-XX:+EnableDynamicAgentLoading --enable-final-field-mutation=ALL-UNNAMED -Xshare:off</argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
