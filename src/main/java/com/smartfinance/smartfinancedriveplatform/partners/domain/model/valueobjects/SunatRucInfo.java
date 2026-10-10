@@ -35,10 +35,20 @@ public record SunatRucInfo(
     }
 
     public boolean isFinancialInstitutionCiiu() {
-        if (ciiu == null || ciiu.isBlank()) {
-            return false;
+        if (ciiu != null && !ciiu.isBlank()) {
+            // CIIU 64xx and 66xx represent financial intermediation & auxiliary financial activities
+            return ciiu.startsWith("64") || ciiu.startsWith("66");
         }
-        // CIIU 64xx and 66xx represent financial intermediation & auxiliary financial activities
-        return ciiu.startsWith("64") || ciiu.startsWith("66");
+        // Fallback: when provider does not include CIIU (e.g. Factiliza), infer from trade name
+        if (razonSocial != null) {
+            String upper = razonSocial.toUpperCase();
+            return upper.contains("BANCO") || upper.contains("BANK") || upper.contains("FINANCIER") ||
+                   upper.contains("CREDITO") || upper.contains("CAJA") || upper.contains("BCP") ||
+                   upper.contains("BBVA") || upper.contains("INTERBANK") || upper.contains("SCOTIABANK") ||
+                   upper.contains("BANBIF") || upper.contains("PICHINCHA") || upper.contains("SANTANDER") ||
+                   upper.contains("MIBANCO") || upper.contains("FALABELLA") || upper.contains("RIPLEY") ||
+                   upper.contains("GNB") || upper.contains("COOPERATIVA");
+        }
+        return false;
     }
 }
