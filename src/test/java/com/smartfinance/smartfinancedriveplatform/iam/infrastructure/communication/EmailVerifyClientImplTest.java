@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EmailVerifyClientImpl Unit Tests")
+@SuppressWarnings({"rawtypes", "unchecked"})
 class EmailVerifyClientImplTest {
 
     @Mock
