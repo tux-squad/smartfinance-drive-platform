@@ -40,6 +40,7 @@ public class CorporateDomainCatalog {
         register("20100078016", CorporateEntityType.DEALERSHIP, "grupopana.com.pe");
         register("20100174091", CorporateEntityType.DEALERSHIP, "limautos.pe");
         register("20506308151", CorporateEntityType.DEALERSHIP, "mitsuiautomotriz.com");
+        register("20256211310", CorporateEntityType.DEALERSHIP, "mitsuiautomotriz.com");
         register("20512686811", CorporateEntityType.DEALERSHIP, "wigo.pe");
     }
 

@@ -18,11 +18,20 @@ public record SunatRucInfo(
     }
 
     public boolean isAutomotiveCiiu() {
-        if (ciiu == null || ciiu.isBlank()) {
-            return false;
+        if (ciiu != null && !ciiu.isBlank()) {
+            // CIIU 45 covers wholesale/retail and repair of motor vehicles & parts (4510, 4520, 4530, 4540)
+            return ciiu.startsWith("45");
         }
-        // CIIU 451 / 4510 / 45100 represents sale of motor vehicles
-        return ciiu.startsWith("451");
+        // Fallback: when provider does not include CIIU (e.g. Factiliza), infer from trade name
+        if (razonSocial != null) {
+            String upper = razonSocial.toUpperCase();
+            return upper.contains("AUTOMOTRIZ") || upper.contains("MOTORS") || upper.contains("AUTOS") ||
+                   upper.contains("CONCESIONARI") || upper.contains("VEHICUL") || upper.contains("AUTOMOTOR") ||
+                   upper.contains("MITSUI") || upper.contains("TOYOTA") || upper.contains("NISSAN") ||
+                   upper.contains("HYUNDAI") || upper.contains("DERCO") || upper.contains("DIVEMOTOR") ||
+                   upper.contains("AUTOLAND") || upper.contains("BRAILLARD") || upper.contains("EUROMOTORS");
+        }
+        return false;
     }
 
     public boolean isFinancialInstitutionCiiu() {
